@@ -1,3 +1,5 @@
 name = "webpage"
 compatibility_date = "2026-09-04"
-pages_build_output_dir = "./out"
+
+[assets]
+directory = "./out"
