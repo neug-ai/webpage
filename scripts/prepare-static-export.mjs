@@ -1,0 +1,23 @@
+import { copyFile, readdir } from "node:fs/promises";
+import path from "node:path";
+
+const outputDirectory = path.join(process.cwd(), "out");
+let copied = 0;
+
+async function visit(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await visit(entryPath);
+      continue;
+    }
+    if (entry.name !== "index.txt" || directory === outputDirectory) continue;
+
+    const relativeDirectory = path.relative(outputDirectory, directory);
+    await copyFile(entryPath, path.join(outputDirectory, `${relativeDirectory}.txt`));
+    copied += 1;
+  }
+}
+
+await visit(outputDirectory);
+console.log(`Created ${copied} static route payload aliases.`);

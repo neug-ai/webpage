@@ -1,0 +1,331 @@
+---
+title: "NeuG's High-Performance MVCC for Graph Workloads"
+description: "An in-depth look at the transaction mechanism behind NeuG's high-throughput transactional processing and serializable isolation guarantees."
+date: "2026-02-11"
+author: "NeuG Team"
+category: engineering
+tags:
+  - NeuG
+  - MVCC
+  - transactions
+  - graph database
+cover: "/images/blog/neug-transaction-mechanism/2026-02-11-neug-transaction-title.jpg"
+locale: en
+translationKey: neug-transaction-mechanism
+draft: false
+aliases:
+  - "/blog/2026/02/11/NeuG-Transaction-Mechanism.html"
+  - "/blog/tech/2026/02/11/NeuG-Transaction-Mechanism.html"
+---
+
+This article provides an in-depth look at NeuG's transaction mechanism, which powers its high-throughput Transactional Processing (TP) capabilities while maintaining serializable isolation guarantees.
+
+**NeuG Repository**: [https://github.com/alibaba/neug](https://github.com/alibaba/neug)
+
+---
+
+## Executive Summary
+
+NeuG is an embedded graph database supporting both Transactional Processing (TP) and Analytical Processing (AP) workloads through distinct execution models.
+
+### Operational Models & Concurrency
+
+- **Embedded mode**: Analytical queries run in embedded mode with concurrency managed at the Connection level. Within a given AP Connection, all queries (reads or writes) are executed serially. This model does not utilize the fine-grained parallel MVCC mechanism detailed for TP.
+
+- **Service mode**: High-throughput TP operations are achieved via a single Write Connection managed by an internal service layer. This connection spawns multiple worker threads that execute in parallel, utilizing the MVCC and version management system described herein to enable lock-free read-insert parallelism and serializable isolation.
+
+**Scope**: This document details the transaction mechanism powering the TP execution model. AP mode uses a simpler, connection-serialized approach for consistency.
+
+---
+
+## Core Architecture & Design Philosophy
+
+The transaction design is driven by the need for maximal throughput on common graph operations. Recognizing that a dominant pattern is highly concurrent reads mixed with blind inserts, the system categorizes transactions to eliminate unnecessary synchronization. A global versioning system creates immutable snapshots for readers, while inserters proceed in parallel, coordinated only when modifying the same adjacency list.
+
+---
+
+## Transaction Classification
+
+NeuG categorizes transactions into three types to optimize concurrency:
+
+| Type | Purpose | Key Property | Concurrency |
+|---|---|---|---|
+| **Read** | Graph traversal, point lookup | Pure read; sees a versioned snapshot | Parallel with all Inserts via MVCC |
+| **Insert** | Add vertices/edges | Blind write; does not read existing graph | Parallel with all Reads; fine-grained locks for edge adjacency lists |
+| **Update** | Complex CRUD | Sees its own writes; can abort/rollback | Currently exclusive; future two-phase design |
+
+*Focus: This article details the mechanisms for Read and Insert transactions within the TP worker pool.*
+
+---
+
+## Version Management: The Foundation of Consistency
+
+NeuG maintains a global, monotonically increasing version timeline through two counters:
+
+- **Global Write Version (GWV)**: Atomic counter assigning unique IDs to write transactions
+- **Global Read Version (GRV)**: The highest version where all prior writes are guaranteed committed
+
+### Transaction Version Assignment
+
+- **Read Transaction**: Starts with the current GRV as its snapshot version. GRV remains unchanged.
+- **Insert Transaction**: Acquires the current GWV as its write version; GWV is atomically incremented.
+
+### GRV Advancement Logic
+
+GRV advances only when a contiguous prefix of the version sequence is complete. A bit-set tracks completion within a sliding window.
+
+![GRV Advancement](/images/blog/neug-transaction-mechanism/2026-02-11-grv-advancement.png)
+
+The example above demonstrates how GRV advances only when a contiguous prefix of transaction versions have completed. Although v₄ was already committed in STATE 1, GRV could not advance beyond v₀ because v₁ was still pending. Once v₁ commits, the continuous sequence v₀-v₂ becomes complete, allowing GRV to advance to v₂.
+
+---
+
+## MVCC Storage & Visibility
+
+NeuG implements a lightweight MVCC model optimized for graph workloads:
+
+- **Single-Version Model**: Each vertex/edge stores exactly one `write_version` (its creation version)
+- **Visibility Rule**: A Read transaction with version `Tₓ` sees an element if and only if:
+  ```
+  element.write_version ≤ Tₓ
+  ```
+
+This single-version approach simplifies storage and memory management while providing snapshot isolation for readers.
+
+---
+
+## Concurrency and Isolation Guarantees
+
+### Read-Insert Parallelism
+
+Lock-free parallelism between reads and inserts is achieved because:
+
+1. **No Read-Write Conflicts**: Insert transactions perform zero reads on existing graph data
+2. **Non-Blocking Snapshot Reads**: Reads operate on an immutable version snapshot
+
+### Write-Write Coordination
+
+- **Vertex Insertion**: Uniqueness is the caller's precondition (assumed non-existent)
+- **Edge Insertion**: Fine-grained, per-vertex adjacency locks prevent corruption when concurrent transactions add edges from the same source vertex. Lock atomicity prevents deadlocks.
+
+### Serializable Isolation Guarantee
+
+- **Reads**: A single version snapshot is inherently serializable
+- **Inserts**: Linearized by GWV assignment and persisted via WAL (see below). No internal read-dependencies ensure a deterministic, serializable order.
+
+---
+
+## Insert Transaction Lifecycle & Durability
+
+The lifecycle of an Insert transaction follows a carefully designed protocol to ensure both performance and durability:
+
+```
+1. START & VERSION
+   └── Assign GWV (e.g., v₇); atomically increment GWV to v₈
+
+2. PREPROCESSING (Read-Only Phase)
+   └── Validate IDs, schema, encode properties
+   └── No graph modifications
+
+3. COMMIT PERSISTENCE (Write-Ahead Log - WAL)
+   └── Flush all mutation data to durable WAL
+   └── This point defines durability
+   └── On abort: log a minimal abort marker
+
+4. ATOMIC APPLY
+   └── Acquire necessary per-vertex adjacency locks
+   └── Apply all vertex/edge inserts atomically, stamping with version v₇
+   └── Update indexes
+
+5. COMPLETION
+   └── Mark transaction v₇ as complete in tracking bit-set
+   └── Advance GRV if possible (e.g., from v₆ to v₇)
+```
+
+### Recovery
+
+After a crash, the system restores the last checkpoint and replays all committed WAL entries to guarantee durability. This design ensures that no committed transaction is lost while minimizing recovery time.
+
+---
+
+## Performance Characteristics
+
+The design choices in NeuG's transaction mechanism deliver several performance benefits:
+
+### High Read Throughput
+
+- **Zero Lock Contention**: Read transactions never block on locks
+- **No Version Chain Traversal**: Single-version model eliminates multi-version lookup overhead
+- **Snapshot Isolation**: Readers see a consistent view without coordination
+
+### Efficient Insert Processing
+
+- **Parallel Execution**: Multiple insert transactions execute simultaneously
+- **Fine-Grained Locking**: Only edges sharing the same source vertex require coordination
+- **Minimal Synchronization**: No read-write conflicts to manage
+
+### Predictable Latency
+
+- **Lock-Free Reads**: Query latency is independent of write workload
+- **Deterministic Version Assignment**: Clear ordering of all transactions
+- **WAL-Based Durability**: Fast commit with background persistence
+
+---
+
+## Design Trade-offs
+
+### Advantages
+
+1. **Optimal for Read-Heavy Workloads**: Zero overhead for the common case of concurrent reads
+2. **Simple Implementation**: Single-version storage reduces complexity
+3. **Strong Guarantees**: Serializable isolation without complex protocols
+4. **Predictable Performance**: Lock-free reads provide consistent latency
+
+### Current Limitations
+
+1. **Update Transactions**: Currently serialized; future work will enable greater concurrency
+2. **Delete Operations**: Handled through Update transactions
+3. **Long-Running Transactions**: May delay GRV advancement temporarily
+
+---
+
+## Use Cases
+
+NeuG's transaction mechanism is particularly well-suited for:
+
+### Real-Time Graph Analytics
+
+- **Social Network Analysis**: Concurrent queries on user relationships while ingesting new connections
+- **Recommendation Systems**: Read-heavy workloads with periodic batch inserts
+- **Fraud Detection**: Real-time pattern matching on continuously growing transaction graphs
+
+### Knowledge Graph Applications
+
+- **RAG Systems**: High-throughput entity lookups while incrementally building the knowledge base
+- **AI Agents**: Parallel knowledge retrieval with concurrent fact insertion
+- **Semantic Search**: Snapshot-consistent queries during graph expansion
+
+### Edge Computing
+
+- **Local-First Applications**: Embedded TP capabilities without distributed coordination
+- **IoT Data Processing**: Continuous sensor data ingestion with real-time queries
+- **Mobile Applications**: ACID guarantees in resource-constrained environments
+
+---
+
+## Future Work
+
+The NeuG team is actively working on several enhancements to the transaction system:
+
+### Two-Phase Update Transactions
+
+Refining the Update transaction model to allow greater concurrency through:
+- Optimistic concurrency control
+- Conflict detection and resolution
+- Selective retry mechanisms
+
+### Distributed Transactions
+
+Extending the mechanism for distributed deployment:
+- Multi-node version coordination
+- Distributed WAL replication
+- Cross-shard transaction support
+
+### Advanced Optimizations
+
+- **Adaptive Concurrency Control**: Dynamic adjustment based on workload patterns
+- **Version Garbage Collection**: Automatic cleanup of old versions
+- **Intelligent Lock Management**: Reducing lock contention for hot vertices
+
+---
+
+## Implementation Details
+
+For developers interested in the technical implementation:
+
+### Version Counter Design
+
+```python
+class VersionManager:
+    def __init__(self):
+        self.gwv = AtomicCounter(0)  # Global Write Version
+        self.grv = AtomicCounter(0)  # Global Read Version
+        self.completion_bits = SlidingBitSet()
+    
+    def assign_write_version(self):
+        return self.gwv.fetch_and_increment()
+    
+    def get_read_version(self):
+        return self.grv.load()
+    
+    def mark_complete(self, version):
+        self.completion_bits.set(version)
+        self.try_advance_grv()
+```
+
+### Adjacency Lock Protocol
+
+```python
+class EdgeInserter:
+    def insert_edge(self, src, dst, properties):
+        # Acquire lock on source vertex's adjacency list
+        with self.vertex_locks[src]:
+            # Stamp with transaction version
+            edge = Edge(src, dst, properties, self.tx_version)
+            self.adjacency_lists[src].append(edge)
+```
+
+### WAL Format
+
+Each WAL entry contains:
+- Transaction ID (version)
+- Operation type (INSERT/UPDATE/ABORT)
+- Payload (vertices/edges with properties)
+- Checksum for integrity
+
+---
+
+## Comparison with Other Approaches
+
+### vs. Traditional RDBMS MVCC
+
+| Feature | NeuG | Traditional RDBMS |
+|---------|------|-------------------|
+| Version Storage | Single version per element | Multi-version chains |
+| Read Overhead | Zero lock contention | May need version traversal |
+| Write Model | Optimized for blind inserts | General-purpose updates |
+| Isolation Level | Serializable | Typically snapshot isolation |
+
+### vs. Graph-Specific Systems
+
+| Feature | NeuG | Neo4j | JanusGraph |
+|---------|------|-------|------------|
+| Concurrency Model | MVCC | Lock-based | Optimistic locking |
+| Read Parallelism | Lock-free | Lock-based | Lock-free |
+| Transaction Scope | Local (embedded) | Local | Distributed |
+| Performance Focus | TP workloads | Mixed OLTP | OLAP-oriented |
+
+---
+
+## Conclusion
+
+NeuG's transaction mechanism delivers high-throughput serializable isolation for graph workloads by:
+
+1. **Categorizing transactions** into Read and Insert types
+2. **Isolating them** via MVCC and versioned snapshots
+3. **Synchronizing writes** with fine-grained locking and a global version order
+4. **Guaranteeing durability** with a WAL-based commit protocol
+
+This design provides an optimal balance between performance, simplicity, and correctness for embedded graph database workloads. The system achieves lock-free read scalability while maintaining strong consistency guarantees—making it ideal for modern AI and analytics applications that require both high throughput and transactional integrity.
+
+---
+
+## Learn More
+
+- **GitHub**: [https://github.com/alibaba/neug](https://github.com/alibaba/neug)
+- **Documentation**: [/docs/overview/introduction/](/docs/overview/introduction/)
+- **Previous Post**: [Opensourcing NeuG](/blog/open-sourcing-neug/)
+
+---
+
+**Building robust graph transactions for the embedded era.**

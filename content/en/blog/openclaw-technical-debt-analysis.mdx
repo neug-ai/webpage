@@ -1,0 +1,228 @@
+---
+title: "We X-Rayed OpenClaw with a Graph Database — Here's the Technical Debt We Found"
+description: "A graph-based analysis of OpenClaw uncovers high-risk functions, zombie code, and an over-coupled agents module hidden across the codebase."
+date: "2026-03-19"
+author: "NeuG Team"
+category: "case-study"
+tags:
+  - "OpenClaw"
+  - "Technical Debt"
+  - "Code Graph"
+  - "CodeGraph"
+  - "NeuG"
+cover: "/images/blog/openclaw-technical-debt-analysis/2026-03-19-openclaw-technical-debt-title.png"
+locale: "en"
+translationKey: "openclaw-technical-debt-analysis"
+draft: false
+aliases:
+  - "/blog/2026/03/19/OpenClaw-Technical-Debt-Analysis.html"
+  - "/blog/2026/03/19/openclaw-technical-debt-analysis.html"
+---
+
+> *When a codebase grows to 21,000 functions connected by 35,000 call edges, code review alone isn't enough. We ran OpenClaw through NeuG's graph database and surfaced structural problems that traditional tools can't see.*
+
+---
+
+## Why a Graph Perspective?
+
+[OpenClaw](https://github.com/openclaw/openclaw) is a popular AI gateway project — 18,000+ commits, 6,000+ TypeScript files, and 21,000+ functions, with new versions shipping almost daily. In our previous post, we looked at OpenClaw from the user's perspective and found that the heartbeat mechanism was consuming far more tokens than anyone expected.
+
+This time, we go deeper. From a developer's perspective: **what structural debt has fast iteration quietly accumulated?**
+
+Traditional code review and static analysis tools catch a lot, but they struggle to answer structural questions:
+
+- Which functions are "time bombs" — where a bug would cause maximum blast radius?
+- Which code is dead weight, confusing new contributors who think it's still active?
+- Which module is the system's structural hub — touch it, and half the codebase shakes?
+
+The answers to these questions live in **relationships**, not in lines of code.
+
+---
+
+## The Approach: Turn the Codebase into a Graph
+
+We built a code knowledge graph using [NeuG](https://github.com/alibaba/neug) (graph database) and [zvec](https://github.com/alibaba/zvec) (vector database):
+
+- **Nodes**: functions, classes, modules, files
+- **Edges**: call relationships, import dependencies, commit history
+
+Here's what the graph looks like at scale:
+
+| Type | Count |
+|------|-------|
+| Source files | 6,062 |
+| Functions | 21,057 |
+| Call edges | 35,761 |
+| Import edges | 25,883 |
+| Classes | 233 |
+| Modules | 318 |
+
+21,000 functions connected by 35,000 call edges. Once the graph is built, hard structural questions become Cypher queries.
+
+The full analysis pipeline is packaged as [CodeGraph Skill](https://github.com/alibaba/neug/tree/main/skills/codegraph) — open source and fully reproducible.
+
+---
+
+## Finding 1: High-Risk Functions
+
+### Defining Risk Score
+
+We define a **risk score** for each function to quantify its potential blast radius:
+
+```
+Risk Score = fan_in × fan_out
+```
+
+- **fan-in**: how many functions call it (dependency pressure)
+- **fan-out**: how many functions it calls (dependency complexity)
+
+The product represents the blast radius — how much of the system breaks if this function has a bug.
+
+Detecting fan-out is straightforward; most IDE tools can do it. But fan-in requires a full-codebase scan — exactly where a graph database shines. This is one of the built-in capabilities of our [CodeGraph Skill](https://github.com/alibaba/neug/tree/main/skills/codegraph): it ships with a `hotspots()` method that handles the full-graph traversal for you, so finding the highest-risk functions across the entire codebase is a single call:
+
+```python
+functions = cs.hotspots(topk=30)
+```
+
+**Top 5 by risk score:**
+
+| Function | File | fan-in | fan-out | Risk Score |
+|----------|------|--------|---------|------------|
+| **startGatewayServer** | src/gateway/server.impl.ts | 10 | 103 | **1030** |
+| **createConfigIO** | src/config/io.ts | 18 | 56 | **1008** |
+| **runEmbeddedPiAgent** | src/agents/pi-embedded-runner/run.ts | 14 | 67 | **938** |
+| **loadOpenClawPlugins** | src/plugins/loader.ts | 20 | 36 | **720** |
+| **runCronIsolatedAgentTurn** | src/cron/isolated-agent/run.ts | 11 | 60 | **660** |
+
+These functions sit at the core of critical execution paths. `startGatewayServer` bootstraps the entire service; `createConfigIO` generates all configuration; `runEmbeddedPiAgent` orchestrates embedded Pi Agent execution.
+
+Here's an interesting observation about `createConfigIO`: configuration parsing rarely gets prioritized for test coverage — it "seems safe." But with 18 callers and 56 outgoing calls, **by structural risk metrics it's one of the most dangerous functions in the entire codebase**.
+
+### Filtering for the Real High-Risk Core
+
+We wrote a custom Cypher query to filter out low-level utility functions (high fan-in, low fan-out) and focus on functions that are simultaneously heavily depended upon *and* highly complex:
+
+```cypher
+MATCH (f:Function)-[:CALLS]->(g:Function)
+WITH f, COUNT(DISTINCT g) as fan_out
+MATCH (f)<-[:CALLS]-(h:Function)
+WITH f, fan_out, COUNT(DISTINCT h) as fan_in
+WHERE fan_in > 10 AND fan_out > 10
+RETURN f.name, fan_in, fan_out
+LIMIT 100
+```
+
+The result was surprising: **only 17 functions** in the entire codebase meet both criteria. Every one of them is a critical, high-risk node:
+
+| Function | File | fan-in | fan-out | Risk Score |
+|----------|------|--------|---------|------------|
+| startGatewayServer | src/gateway/server.impl.ts | 10 | 103 | 1030 |
+| createConfigIO | src/config/io.ts | 18 | 56 | 1008 |
+| runEmbeddedPiAgent | src/agents/pi-embedded-runner/run.ts | 14 | 67 | 938 |
+| loadOpenClawPlugins | src/plugins/loader.ts | 20 | 36 | 720 |
+| runCronIsolatedAgentTurn | src/cron/isolated-agent/run.ts | 11 | 60 | 660 |
+| getReplyFromConfig | src/auto-reply/reply/get-reply.ts | 20 | 24 | 480 |
+| runMessageAction | src/infra/outbound/message-action-runner.ts | 21 | 22 | 462 |
+| loadPluginManifestRegistry | src/plugins/manifest-registry.ts | 22 | 16 | 352 |
+| createOpenClawTools | src/agents/openclaw-tools.ts | 10 | 24 | 240 |
+| fetchWithSsrFGuard | src/infra/net/fetch-guard.ts | 24 | 10 | 240 |
+| resolveCommandSecretRefsViaGateway | src/cli/command-secret-gateway.ts | 15 | 14 | 210 |
+| fetchRemoteMedia | src/media/fetch.ts | 18 | 11 | 198 |
+| loadModelCatalog | src/agents/model-catalog.ts | 18 | 11 | 198 |
+| resolveApiKeyForProvider | src/agents/model-auth.ts | 13 | 15 | 195 |
+| start | src/gateway/client.ts | 12 | 13 | 156 |
+| resolveAuthProfileOrder | src/agents/auth-profiles/order.ts | 11 | 11 | 121 |
+| createClackPrompter | src/wizard/clack-prompter.ts | 10 | 11 | 110 |
+
+These 17 functions are the structural pressure points of the system. Any change to them deserves extra scrutiny.
+
+### Finding Zombie Functions
+
+We plotted the fan-in distribution across all functions as a histogram. NeuG's Python SDK makes this straightforward — query results flow directly into pandas or matplotlib. The distribution reveals that most functions have fan-in and fan-out values below 2, meaning OpenClaw's code is largely linear: most functions sit in a simple "one-in, one-out" position in the call chain.
+
+![Fan-in and fan-out distribution histogram](/images/blog/openclaw-technical-debt-analysis/2026-03-19-openclaw-technical-debt-1.png)
+
+What stands out: **over 20% of all functions have fan-in = 0** — they are never called by anything. After filtering out legitimate entry points and framework hooks, **more than 2,000 functions remain that are true zombie code**.
+
+Here's a concrete example. `assertPublicHostname` in `src/infra/net/ssrf.ts` has zero callers in the current codebase. A git bisect reveals:
+
+- Commit `5bd550`: the function is introduced and actively used
+- Commit `b62355`: its logic is migrated to `resolvePinnedHostname`
+- The old function is never deleted — likely out of caution — and silently becomes a zombie
+
+The real harm isn't the wasted lines. It's what happens next: a new contributor finds the function, assumes it's still relevant, builds something on top of it, and then spends hours debugging a dead code path.
+
+In a project with OpenClaw's pace of change, a 20% zombie function rate is a significant cognitive tax on everyone who reads the code.
+
+---
+
+## Finding 2: The Over-Coupled Module
+
+We analyzed the 20 most recent bug reports. Of 57 root-cause function candidates, **24 — 42% — pointed to `src/agents`**.
+
+To understand why, we ran a Cypher query to inspect `agents`' call relationships with the rest of the system:
+
+```cypher
+MATCH (m1:Module {name: 'agents'})<-[:BELONGS_TO]-(f1:File)-[:DEFINES_FUNC]->(func1:Function)
+MATCH (func1)-[:CALLS]->(func2:Function)<-[:DEFINES_FUNC]-(f2:File)-[:BELONGS_TO]->(m2:Module)
+WHERE m2.name <> 'agents'
+RETURN m2.name, count(*) as call_count
+ORDER BY call_count DESC
+LIMIT 10
+```
+
+The numbers below show bidirectional call counts between modules (a→b = calls from module a into module b):
+
+```
+agents <-> reply              a→b=19    b→a=117
+agents <-> infra              a→b=108   b→a=15
+agents <-> pi-embedded-runner a→b=19    b→a=88
+agents <-> tools              a→b=38    b→a=55
+agents <-> plugins            a→b=45    b→a=40
+agents <-> gateway            a→b=9     b→a=60
+agents <-> src                a→b=35    b→a=31
+agents <-> models             a→b=1     b→a=63
+agents <-> sessions           a→b=46    b→a=5
+agents <-> auth-profiles      a→b=24    b→a=12
+```
+
+In total, **30+ modules have bidirectional dependencies with `agents`**. The `reply` module calls into `agents` 117 times; `pi-embedded-runner` calls it 88 times; `models` calls it 63 times. The vast majority of the system's business logic flows through this one module.
+
+We visualized the `reply->agents` call relationships using neug-ui:
+
+![Agents module call relationship visualization](/images/blog/openclaw-technical-debt-analysis/2026-03-19-openclaw-technical-debt-2.png)
+
+`agents` is the structural hub of the system. A single-line change there can ripple across half the codebase. The fact that 42% of bugs trace back to this module isn't bad luck — it's an architectural consequence.
+
+---
+
+## What Graph Analysis Reveals That Other Tools Don't
+
+Code review catches function-level issues. Static analysis handles syntax and import-level concerns. Graph analysis fills the gap between them — **cross-file, cross-module structural problems**:
+
+Traditional tools can tell you:
+
+- Which line has a syntax error
+- Which function has high cyclomatic complexity
+
+NeuG can tell you:
+
+- How many functions are affected by a single change
+- Which code is dead but still confusing contributors
+- Which module is the structural load-bearing wall of the system
+
+> When a codebase outgrows what human reviewers can hold in their heads, structural problems can only be found through structural queries.
+
+---
+
+## Three Recommendations for OpenClaw
+
+Based on this analysis, the three highest-leverage improvements:
+
+1. **Decouple `src/agents`**: With 30+ modules in bidirectional dependency, start by defining clear interface boundaries between `agents` and its heaviest callers (`reply`, `pi-embedded-runner`, `models`). Even partial decoupling would significantly reduce blast radius.
+2. **Prioritize test coverage for high-risk functions**: Functions like `createConfigIO` and `startGatewayServer` are structurally critical but likely undertested. A bug there propagates everywhere. Cover them first.
+3. **Clean up zombie functions**: 2,000+ dead functions are actively misleading contributors. Running a graph-based dead code analysis and removing confirmed zombies is a high-ROI cleanup with low risk.
+
+---
+
+*Analysis powered by [NeuG](https://github.com/alibaba/neug) graph database and CodeScope code analysis engine. Full index completed in approximately 4 minutes.*

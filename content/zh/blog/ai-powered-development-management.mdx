@@ -1,0 +1,209 @@
+---
+title: "AI 驱动的开源研发管理：NeuG 的探索与实践"
+description: "NeuG 团队如何让 AI 以研发管理者的角色参与需求分析、任务拆解、GitHub 同步和进度跟踪。"
+date: "2026-02-12"
+author: "NeuG Team"
+category: engineering
+tags:
+  - NeuG
+  - AI
+  - 开源
+  - Spec-Driven
+  - 项目管理
+cover: "/images/blog/ai-powered-development-management/2026-02-12-neug-ai-dev-title.jpg"
+locale: zh
+translationKey: ai-powered-development-management
+draft: false
+aliases:
+  - "/blog/2026/02/12/AI-Powered-Development-Management-NeuG.html"
+  - "/blog/tech/2026/02/12/AI-Powered-Development-Management-NeuG.html"
+---
+
+[NeuG](https://github.com/alibaba/neug) 是由 [GraphScope](https://graphscope.io) 团队开源的一款轻量、高性能嵌入式图数据库。只需执行 `pip install neug` 即可安装，适用于本地分析和实时事务处理。本文将分享我们如何利用 AI 能力管理 NeuG 的研发工作流。未来，我们还将进一步探索 NeuG 的图计算能力如何反过来赋能 AI。
+
+欢迎关注并 Star [NeuG 仓库](https://github.com/alibaba/neug)！
+
+更多技术细节请参阅 [NeuG 官方文档](/zh/docs/overview/introduction/)。
+
+---
+
+## 开源研发的痛点：缺少全面的项目管理
+
+开源软件项目的管理是研发过程中最大的痛点之一。如果工程师只专注于编写代码，却没有高效的管理和跟踪机制，最终产品就很难按时交付。这是因为开源项目天然具有动态不确定性，需求随时可能发生变化。
+
+近几个月，AI Coding 能力飞速提升。然而我们发现，开发与管理之间的失衡反而加剧了：开发者可以利用最新、最强大的模型快速生成大量代码，但这些代码看似可用，实际可读性差、架构薄弱，只会进一步增加项目管理负担。随着代码不断累积，最终也许只有大语言模型本身才能拆解这样复杂的代码仓库。
+
+事实上，我们并不缺少编码能力。恰恰相反，在开源项目中，方案的设计与拆解，以及研发进度的跟踪要重要得多。以我们团队开发 [NeuG](https://github.com/alibaba/neug) 为例，前期 PRD 设计和讨论可能占整个开发周期的三分之一，甚至更多。近来流行的“vibe-coding”其实只适合从零开始的个人项目，对于数据库这样的严肃研发场景几乎无法适用。
+
+基于这些思考，我们尝试在 NeuG 研发中引入 AI 工具，让它扮演“管理者”而不是“开发者”，覆盖从需求分析、任务拆解到 GitHub 同步与跟踪的完整生命周期。
+
+## Spec-Driven：最适合 NeuG 的研发范式
+
+在早期探索中，我们仍然沿用类似“vibe-coding”的工作流，让 AI 直接管理需求。我们迭代了多个版本：
+
+* 开发者编写 PRD 文档，由 Coding Agent 解析上下文、拆解任务并同步到 GitHub。
+
+* Coding Agent 先解析 PRD 文档的 Markdown 结构，再拆解任务。
+
+* Coding Agent 先将 PRD 文档转换为标准化中间格式，再解析并拆解任务。
+
+在探索过程中，我们不断遇到长上下文导致细节丢失、输出不一致等常见问题。但我们逐渐意识到，结构化上下文可能是最适合 NeuG 研发的范式。许多 AI 产品也采用类似的结构化上下文，例如钉钉会议纪要允许预先选择模板，一些项目文档工具则提供完全自定义的模板。经过测试，我们发现，强制对齐输出格式虽然会让部分内容读起来略显僵硬（例如某些开发任务确实不需要对应的单元测试），但文档的完整性可以有效减少遗漏——删减永远比补漏容易。
+
+与此同时，大量 Spec-Driven 工具陆续开源，我们也是较早的一批尝试者。实践表明，“先编写项目规范，再生成项目代码”的范式与我们的需求高度契合。下面以 GitHub 官方的 [speckit](https://github.com/github/spec-kit/tree/main) 为例，简要说明 Spec-Driven 包含哪些阶段，以及每个阶段的作用：
+
+1. **Specify**。在此阶段，用户提供需求描述。该阶段不涉及具体技术栈，而是聚焦产品层面的分析：谁会使用它？它提供哪些功能？解决什么问题？输入和输出是什么？交互流程如何？
+
+2. **Plan**。在此阶段，AI 工具生成完整的开发计划。重点是设计如何将需求融入现有代码库、会影响哪些模块，以及必须遵守哪些约束。因此，该阶段需要全面的代码、架构和约束信息，并由研发专家严格确认。
+
+3. **Tasks**。在此阶段，AI 工具进一步将 Plan 拆解为若干可执行任务。每项任务都是可独立运行的最小代码单元，方便 AI 工具在完成编码后进行测试。简单来说，每项任务都可以视为一个独立函数。
+
+4. **Implement**。在此阶段，AI 工具逐步完成 Tasks 阶段中的每项任务。得益于准备充分的 Specify、Plan 和 Tasks，AI 工具可以生成更准确、与现有上下文融合得更好的代码。
+
+此外，这些 Spec-Driven 工具通过 Slash Command 与 Coding Agent 交互。这种调用方式完全透明且灵活，用户可以自由调整 Markdown 文件中的 Prompt，创建自己的规范。面对生成内容过于冗长的问题，我们开始把日常开发习惯沉淀到 Prompt 中，结果得到显著改善。下面用一个简单示例说明 NeuG 如何利用 Spec-Driven 研发范式提高效率。
+
+## 应用案例：为 NeuG 增加多线程事务测试
+
+> **背景**：事务功能是数据库中最重要、也最容易出错的模块之一。NeuG 的事务引擎基于 MVCC 实现无锁读插入并行与可串行化隔离（详情参阅 [NeuG 事务机制解析](/zh/blog/neug-transaction-mechanism/)）。为确保该模块正确执行，我们需要增加多种事务测试。我们尝试采用 Spec-Driven 方法，让大语言模型负责整个流程。
+
+### Specify 阶段：任务扩展与分析
+
+在 Specify 阶段，用户可以提供简要的需求描述和一些文档草稿（对格式和内容没有要求），模型会自行整理、扩展并生成完整的 PRD 文档。
+
+在 NeuG 以往的研发流程中，PRD 文档设计是至关重要的一步。然而，编写一份完整的 PRD 文档极其繁琐，也很难覆盖所有边界条件和特殊场景。在模型生成文档的过程中，我们强制规定文档结构：一项需求拆分为多个 Module，每个 Module 进一步拆解为多项 Task，并要求每项 Task 都包含相应的测试与验证，以确保文档完整。
+
+即使某项任务确实不需要测试或验证（例如环检测可以直接调用第三方库），我们仍会要求模型尽可能列出相关内容。如果某些冗余内容确实需要删除，可以由我们直接编辑，也可以提示模型修改文档。根据实践经验，“删掉多余内容”永远比“补齐遗漏内容”容易。
+
+![Specify 阶段截图](/images/blog/ai-powered-development-management/2026-02-12-neug-ai-dev-specify.png)
+
+### Plan 阶段：沉淀实现细节
+
+Plan 阶段主要负责进一步细化 Specify 阶段未涵盖的技术细节和技术选型。
+
+在 NeuG 产品研发过程中，我们发现许多设计决策很难直观地体现在代码中，而相关技术文档又往往缺少维护，直接导致协作和交接困难。为解决这一问题，我们选择在 Plan 阶段沉淀大量技术细节。这些内容既可作为 Coding Agent 生成代码时的补充上下文，也为日后产出技术报告提供便利。
+
+如下图所示，我们需要统一事务生成比例与数据格式，并确定多线程场景下的事务执行策略。此外，事务测试依赖特定的测试流程，因此需要详细描述依赖图构建、依赖分析和环检测算法。这些内容显著提高了后续代码生成的准确性与一致性。
+
+![Plan 阶段截图](/images/blog/ai-powered-development-management/2026-02-12-neug-ai-dev-plan.png)
+
+### Tasks 阶段：拆解任务并同步到 GitHub
+
+在 Tasks 阶段，Coding Agent 根据此前的文档生成多个 Module 和 Task，并将其同步为 GitHub Issues。我们的层级结构与 GitHub 的 Sub-Issue 功能完美对应，可以方便地端到端跟踪一项需求的完整研发进度。
+
+在 NeuG 以往的研发过程中，这些 Issue 都需要手动创建和关联，不仅耗时耗力，而且插入新需求后，旧需求常常被忽略。通过 Tasks 阶段的跟踪，我们不仅能一键生成 Issue，还能持续跟踪所有 Issue 的完成状态，避免开发任务中途停滞。
+
+![Tasks 阶段截图](/images/blog/ai-powered-development-management/2026-02-12-neug-ai-dev-tasks.png)
+
+此外，我们根据 NeuG 的研发习惯进行了定制：为每个 Module 创建独立的 Markdown 文件，保存每项任务的负责人、标签和实现细节。这种隔离方式可以避免一项需求横跨项目多个部分、需要多名开发者协作时产生冲突。
+
+#### GitHub 同步操作
+
+在 Tasks 阶段，我们需要把任务同步到 GitHub 进行跟踪。具体来说，主 Issue 下会创建多个 Module Issue，而每个 Module Issue 又包含多个 Task Issue。整体结构与文档保持一致，可以在 GitHub 上非常直观地展示。
+
+我们还根据团队的研发习惯设计了一套同步规则：最初只把整个 Module Content 同步到 Issue 正文，不创建具体的 Sub-Issue。只有当某项具体任务即将开始开发时，才创建对应的 Issue；任务完成后，合并 PR 并关闭 Issue。这样设计是因为总体计划会随着开发推进持续调整，期间可能插入新需求或修改已有需求。如果一开始就固定完整工作流，后续修改成本会很高。
+
+下图展示了上述事务测试需求的一个研发快照（显示内容略有不同）。我们规划了两个 Module，每个 Module 需要完成 3 项 Task。目前 Task 101、102、201 和 202 已完成，剩余两项 Task 涉及复杂的多查询场景，需要进一步支持后才能实现。
+
+![GitHub 同步截图](/images/blog/ai-powered-development-management/2026-02-12-neug-ai-dev-github-sync.png)
+
+为适应这种使用模式，我们设计了两个独立的 Command：sync-module 和 sync-task。它们接收 Module ID 或 Task ID，生成对应的 Issue，并自动完成 Sub-Issue 关联。当这些 Module 或 Task 的内容发生变化时，可以继续使用同样的两个命令完成更新，无需重新创建。
+
+### Implement 阶段：保留传统开发方式
+
+在这一阶段，我们不强制使用 `/speckit.implement`，而是允许将任务交给对应的开发者实现。至于使用什么工具生成代码，甚至是否采用“传统手工编码”，都不重要，因为完备的上下文和规范已经提供了足够的约束，自然能够产出高质量代码。
+
+我们也充分认识到测试的重要性，因此要求所有 Task 在实现后都必须补充相应的 CI 测试，确保它们可以在隔离的测试环境中正确运行。这也是当前大语言模型擅长的领域，因此不再赘述。
+
+## GitHub 集成：更自动化的 Issue/PR 体验
+
+受 Command 功能启发，我们进一步将更多 GitHub 操作集成到 Coding Agent 中。目前已经实现两项核心能力：创建 Issue 和创建 PR。在这两个 Command 中，我们引入了两个非常重要的范式：
+
+### 上下文收集
+
+对于 Bug Issue 而言，上下文至关重要。虽然创建 Issue 和 PR 时，模板已经鼓励用户尽量完整地填写上下文，但这一过程非常繁琐。我们的开发者经常需要多次复制终端错误信息、相关代码片段和错误复现命令，而这些日志中的有效信息很少，可读性也很差。
+
+我们引入了 create-issue 和 create-pr 命令。用户可以直接选中相关内容，由模型读取对应的终端或文件内容，自动解析并生成结构化的提交内容。开发者只需审核最终生成的结果，非常方便。
+
+下面是一个简单示例：通过引用终端中的错误信息和相关源代码，我们让模型提交一个 Issue，并自动配置 Parent Issue、Assignee 和 Project 信息。在大语言模型时代，这些信息不必完全精确，只需粗略描述，模型就能推断出最合适的匹配项。
+
+```plaintext
+`/create-issue` [bash:15-20][main.cpp:150:210] 检查错误信息和执行的代码，创建一个 bug 类型的 Issue，关联父 Issue #xx，分配给 "@user-xxx"，并添加到项目 "Project-xxx"。
+```
+
+### 创建前确认
+
+Git 执行 merge 或 rebase 等危险操作时，通常会展示确认文件供用户检查。受此启发，我们认为创建 Issue 和 PR 也可以加入类似的确认流程，用于核对 Issue 配置。
+
+具体来说，在创建 Issue 或 PR 之前，Agent 会提供一个供用户交互的文件，以确认即将提交的信息，其结构大致如下：
+
+```plaintext
+Issue 类型：Bug
+Issue 标题：[BUG] <标题>
+负责人：<负责人>
+标签：bug, <其他标签>
+项目：NeuG v0.1
+父 Issue：#<父 Issue ID>
+
+**描述 Bug**
+清晰、简洁地描述该 Bug。
+
+**执行日志**
+可以复现该问题的命令。
+1. 命令 1：...
+2. 命令 2：...
+...
+
+**预期行为**
+清晰、简洁地描述预期结果。
+
+**错误信息**
+终端中的错误信息。
+```
+
+这个临时文件会详细列出创建 Issue 的配置参数和具体正文。用户可以通过该文件清楚地确认 Issue 类型、负责人、标签、项目、父 Issue 等信息。只有在用户确认后，Agent 才会创建并执行对应命令。这种半结构化模板还能让后续生成的命令更加一致，显著减少用户不熟悉命令所导致的意外情况。
+
+## Agent Skills 支持
+
+就在我们撰写这篇博客时，另一种新范式——Agent Skills——开始广泛流行。这里不讨论 Command 与 Skill 的对比，但从产品设计角度看，Agent Skills 的优势在于鼓励用户将大型脚本、模板和其他信息存放在独立目录中，而核心文件只保留简洁但关键的描述。此外，Agent Skills 与 Command 操作完全兼容，可以通过 Slash Command 显式调用。因此，我们很快将原有 Command 迁移为 Skills 格式，把模板、脚本等内容从 Prompt 中移到独立文件。
+
+```markdown
+.cursor
+└── skills
+    ├── speckit.specify
+    │   ├── templates
+    │   │   └── spec-template.md
+    │   └── SKILL.md
+    │
+    ├── speckit.plan
+    │   ├── templates
+    │   │   └── plan-template.md
+    │   └── SKILL.md
+    │
+    ├── speckit.tasks
+    │   ├── templates
+    │   │   ├── tasks-metadata-template.md
+    │   │   └── tasks-module-template.md
+    │   └── SKILL.md
+    │
+    ├── sync-modules
+    │   └── SKILL.md
+    │
+    ├── sync-tasks
+    │   └── SKILL.md
+    │
+    ├── create-issue
+    │   ├── scripts
+    │   │   └── gh-update.sh
+    │   ├── templates
+    │   │   ├── bug-issue.md
+    │   │   └── feature-issue.md
+    │   └── SKILL.md
+    │
+    └── create-pr
+        ├── templates
+        │   └── pull-request.md
+        └── SKILL.md
+```
+
+## 结语
+
+在使用 Spec 工具的过程中，我们逐渐认识到，要有效使用 Coding Agent，需要掌握大量技巧——从整体产品应用场景，到单个 Prompt 的设计，再到不同交互范式和生成逻辑。这些细节才是真正释放模型能力的关键，也解释了为什么同样的编程工具在不同人手中会产生截然不同的结果。未来，我们将继续探索大语言模型编程工具在各种项目研发场景中的应用，让 AI 真正释放生产力。

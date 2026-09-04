@@ -1,0 +1,35 @@
+{
+  "current": "v0.2.0",
+  "versions": [
+    {
+      "version": "v0.2.0",
+      "label": "v0.2.0 (Latest)",
+      "isLatest": true,
+      "releaseDate": "2026-09-03"
+    },
+    {
+      "version": "v0.1.3",
+      "label": "v0.1.3",
+      "isLatest": false,
+      "releaseDate": "2026-07-01"
+    },
+    {
+      "version": "v0.1.2",
+      "label": "v0.1.2",
+      "isLatest": false,
+      "releaseDate": "2026-06-08"
+    },
+    {
+      "version": "v0.1.0",
+      "label": "v0.1.0",
+      "isLatest": false,
+      "releaseDate": "2026-02-10"
+    },
+    {
+      "version": "v0.1",
+      "label": "v0.1",
+      "isLatest": false,
+      "releaseDate": "2026-01-15"
+    }
+  ]
+}

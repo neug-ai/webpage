@@ -1,0 +1,196 @@
+---
+title: "Opensourcing NeuG"
+description: "Introducing NeuG, a lightweight, high-performance embedded graph database for local analytics and real-time transaction processing."
+date: "2026-02-11"
+author: "NeuG Team"
+category: release
+tags:
+  - NeuG
+  - open source
+  - embedded database
+  - graph database
+cover: "/images/blog/open-sourcing-neug/2026-02-11-neug-title.jpg"
+locale: en
+translationKey: open-sourcing-neug
+draft: false
+aliases:
+  - "/blog/2026/02/11/Opensourcing-NeuG.html"
+  - "/blog/tech/2026/02/11/Opensourcing-NeuG.html"
+---
+
+We are pleased to announce the open source release of **NeuG** (pronounced "new-gee"), a lightweight, high-performance embedded graph database designed for local analytics and real-time transaction processing.
+
+**GitHub**: [https://github.com/alibaba/neug](https://github.com/alibaba/neug)  
+**Documentation**: [/docs/overview/introduction/](/docs/overview/introduction/)
+
+---
+
+## Why NeuG
+
+The [GraphScope](https://graphscope.io) team has spent the past few years building large-scale graph computing engines. Along the way, we received consistent feedback from our community: many users don't need distributed clusters. What they want is a graph database they can `pip install`, explore data in Jupyter notebooks, run graph queries in Python scripts, and quickly spin up as a service when needed for production.
+
+This reminded us of what DuckDB did for relational data processing—an embeddable analytics database that doesn't require deploying servers or configuring connection pools. Just `import duckdb` and start working. We wanted to bring that same experience to graph data.
+
+NeuG is the result of that effort. It reuses the storage and query engine from GraphScope Flex (which achieved strong results on the [LDBC SNB Interactive benchmark](https://ldbcouncil.org/benchmarks/snb/interactive/2025-04-21-graphscope-flex-sf300/)), but with a redesigned interface layer that allows it to be embedded directly as a Python library. We also kept the `db.serve()` interface for switching to service mode when concurrent access is needed.
+
+NeuG is suited for scenarios where you need to process graph data locally and quickly: data science exploration, ML feature engineering, AI application prototyping, and lightweight applications where deployment simplicity matters.
+
+---
+
+## Key Features
+
+### Lightweight & Embeddable
+
+- **Lightweight**, all dependencies managed via third_party submodules
+- **Embeddable** design, currently supporting Python applications with more languages and platforms coming soon
+- Get started with `pip install neug`
+
+```python
+import neug
+
+db = neug.Database("/path/to/data")
+conn = db.connect()
+
+result = conn.execute("""
+    MATCH (a:Person)-[:KNOWS]->(b:Person)
+    RETURN a.name, b.name
+""")
+```
+
+### Dual-Mode Architecture (HTAP)
+
+NeuG provides two operational modes through a single lightweight core:
+
+| Mode | Use Case | Characteristics |
+|------|----------|-----------------|
+| **Embedded Mode** | Offline analytics, ML/AI pipelines | Import as a Python library, ideal for Jupyter notebooks, batch ETL, graph algorithm development |
+| **Service Mode** | Online transactions, concurrent access | Call `db.serve()` to start a network service with multi-session ACID transactions |
+
+This design allows NeuG to adapt flexibly from prototyping to production deployment without changing your technology stack.
+
+### Cypher-Native
+
+- Industry-standard Cypher query language
+- Built on [GOpt](https://graphscope.io/blog/tech/2024/02/22/GOpt-A-Unified-Graph-Query-Optimization-Framework-in-GraphScope)'s unified intermediate representation, designed for future [ISO/GQL](https://www.gqlstandards.org/) compatibility
+
+### Extensible by Design
+
+- Extension system inspired by PostgreSQL/DuckDB
+- Keep the core lean; add graph algorithms, vector search, and custom procedures through an extensible framework
+
+### ACID Transactions
+
+- Embedded mode: Single-connection serial access with data consistency guarantees
+- Service mode: Multi-session concurrent transactions with read-write isolation
+
+---
+
+## Performance
+
+NeuG is built on the GraphScope Flex engine, which achieved industry-leading results on the **LDBC SNB Interactive benchmark** using Cypher queries:
+
+| Metric | Result |
+|--------|--------|
+| **Throughput** | 80,000+ QPS |
+| **Scale Factor** | SF300 (~1 billion edges) |
+| **Audit Status** | Officially audited by LDBC |
+
+These results validate NeuG's capability for high-concurrency transactional workloads. The full audit report is available on the [LDBC website](https://ldbcouncil.org/benchmarks/snb/interactive/2025-04-21-graphscope-flex-sf300/).
+
+---
+
+## Use Cases
+
+NeuG v0.1 is particularly suited for:
+
+- **AI/LLM Application Development**: Knowledge graph storage and querying for RAG systems and AI Agents
+- **Data Science & Research**: Graph exploration in Jupyter Notebooks—social network analysis, relationship mining, pattern discovery
+- **ML Feature Engineering**: Computing graph-structural features (node centrality, community structure, path patterns) as machine learning inputs
+- **Prototype to Production**: Use embedded mode for rapid iteration during development, switch to service mode for deployment—no technology stack changes required
+- **Edge Computing & Local-First Applications**: Run graph queries in resource-constrained environments without network connectivity
+
+---
+
+## Quick Start
+
+```bash
+# Installation
+pip install neug
+
+# Verify installation
+python -c "import neug; print('NeuG is ready!')"
+```
+
+```python
+import neug
+
+# Create database and load sample data
+db = neug.Database("./my_graph")
+conn = db.connect()
+db.load_builtin_dataset("tinysnb")
+
+# Execute queries
+result = conn.execute("""
+    MATCH (a:person)-[:knows]->(b:person)-[:knows]->(c:person),
+          (a)-[:knows]->(c)
+    RETURN a.fName, b.fName, c.fName
+""")
+
+for record in result:
+    print(f"{record} are mutual friends")
+
+# Switch to service mode
+conn.close()
+db.serve(port=8080)
+```
+
+---
+
+## Coming Soon (v0.2)
+
+v0.2 focuses on enhanced AI scenario support and data ecosystem integration:
+
+| Feature | Description | Use Case |
+|---------|-------------|----------|
+| **Node.js Binding** | TypeScript/JavaScript language binding | AI Agent development, web backend integration |
+| **Graph Algorithm Extensions** | Leiden community detection and more | Knowledge graph clustering, entity grouping in GraphRAG |
+| **Vector DB Extension** | Graph + vector hybrid retrieval | GraphRAG, semantic search + relationship reasoning |
+| **Data Lake Integration** | S3/OSS + Parquet format | Large-scale offline analytics, data platform integration |
+| **Foreign Tables** | Direct querying of external data sources | Interoperability with PostgreSQL, DuckDB, and relational ecosystems |
+
+---
+
+## Technology Stack
+
+- **Query Language**: Cypher (ISO/GQL compatibility planned)
+- **Query Optimization**: GOpt unified optimization framework
+- **Storage Engine**: GraphScope Flex
+- **Language Bindings**: Python (C++ API available, Node.js in development)
+- **Platform Support**: Linux, macOS (x86_64, ARM64)
+
+---
+
+## License
+
+NeuG is released under the Apache License 2.0.
+
+---
+
+## Contributing
+
+We welcome community participation and contributions:
+
+- **Star & Watch**: [https://github.com/alibaba/neug](https://github.com/alibaba/neug)
+
+---
+
+## Acknowledgments
+
+NeuG is developed by the [GraphScope](https://graphscope.io) team at Alibaba, incorporating years of expertise in large-scale graph computing. We thank all developers who have contributed to this project.
+
+---
+
+**Making graph data simple.**
+
+GitHub: [https://github.com/alibaba/neug](https://github.com/alibaba/neug)  
+Documentation: [/docs/overview/introduction/](/docs/overview/introduction/)

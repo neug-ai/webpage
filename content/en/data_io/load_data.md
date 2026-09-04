@@ -1,0 +1,197 @@
+# Load Data
+
+`LOAD FROM` is the foundation of NeuG's data ingestion pipeline. It reads external files, **automatically infers the schema** (column names and types), and produces a temporary result set that exists only during query execution. No upfront schema definition is needed.
+
+You can apply standard relational operations — projection, filtering, type casting, aggregation, sorting — directly on the loaded data. This makes `LOAD FROM` ideal for data exploration, validation, and ad-hoc analysis.
+
+> **Tip:** To materialize loaded data as a persistent or temporary graph, use [`COPY FROM` / `COPY TEMP`](import_data). `LOAD FROM` can be used as a subquery inside `COPY` to preprocess data before import.
+
+---
+
+## Basic Syntax
+
+```cypher
+LOAD FROM "<file_path>" (<options>)
+[WHERE <condition>]
+RETURN <column_list>
+[ORDER BY <column> [ASC|DESC]]
+[LIMIT <n>];
+```
+
+### Parameters
+
+- **`<file_path>`** — Path to the external data source. Currently only local file system paths are supported.
+- **`<options>`** — Format-specific and performance-related options (see below).
+- **`RETURN <column_list>`** — Columns to return. Use `*` to return all columns.
+
+## Format Options
+
+### CSV
+
+CSV is the built-in format. The following options control how CSV files are parsed:
+
+| Option     | Type | Default | Description |
+| ---------- | ---- | ------- | ----------- |
+| `delim`    | char | `\|`    | Field delimiter. Can be a single character (e.g. `','`) or an escape character (e.g. `'\t'`) |
+| `header`   | bool | `true`  | Whether the first row contains column names |
+| `quote`    | char | `"`     | Quote character used to enclose field values |
+| `escape`   | char | `\`     | Escape character for special characters |
+| `quoting`  | bool | `true`  | Whether to enable quote processing |
+| `escaping` | bool | `true`  | Whether to enable escape character processing |
+
+Example:
+
+```cypher
+LOAD FROM "person.csv" (delim=',', header=true)
+RETURN name, age;
+```
+
+NeuG supports reading `ARRAY` data from CSV, JSON,
+and Parquet files. NeuG does not implicitly convert input values to `ARRAY`;
+explicitly cast the column to a fixed-size `ARRAY` type in the `RETURN`
+clause.
+
+For example, given a `person_array.csv` file with an array column:
+
+```csv
+id,name,address
+1,Alice,"[Beijing,Hangzhou,Shanghai]"
+2,Bob,"[London,Paris,Berlin]"
+```
+
+```cypher
+LOAD FROM "person_array.csv" (delim=',')
+RETURN id, name, CAST(address, 'STRING[3]') AS addresses;
+```
+
+### JSON / JSONL
+
+Since NeuG v0.1.2, JSON/JSONL is a built-in format — no extension installation is needed. You can use `LOAD FROM` to read `.json` and `.jsonl` files directly:
+
+```cypher
+LOAD FROM "person.json"
+RETURN *;
+```
+
+> **Version Note:** Since version v0.1.2, we made JSON support a built-in functionality, so you do not need to install the JSON extension before using it. For NeuG version < 0.1.2, JSON support was provided via the JSON Extension and required `INSTALL json; LOAD json;` before use.
+
+See the [JSON Extension](../extensions/load_json) page for format-specific options and examples.
+
+### Parquet
+
+Parquet is supported via the PARQUET extension (available since v0.1.1). After a one-time install and load, you can use `LOAD FROM` to read `.parquet` files directly:
+
+```cypher
+INSTALL PARQUET;
+LOAD PARQUET;
+
+LOAD FROM "person.parquet"
+RETURN *;
+```
+
+See the [Parquet Extension](../extensions/load_parquet) page for format-specific options (`buffered_stream`, `pre_buffer`, `enable_io_coalescing`, `parquet_batch_rows`) and examples, including how to export query results to Parquet via `COPY TO`.
+
+## Relational Operations
+
+`LOAD FROM` supports a rich set of relational operations on the loaded data. All the following examples use the [Modern dataset](../cypher_manual/dml_clause.md#loading-node-data).
+
+### Column Projection and Reordering
+
+Columns can be returned in any order, independent of their order in the source file:
+
+```cypher
+LOAD FROM "knows.csv" (delim=',')
+RETURN weight, dst_name, src_name;
+```
+
+### Column Aliases
+
+Use `AS` to assign aliases to columns:
+
+```cypher
+LOAD FROM "knows.csv" (delim=',')
+RETURN src_name AS src, dst_name AS dst, weight AS score;
+```
+
+### Distinct Values
+
+Use `RETURN DISTINCT` to remove duplicate rows from the result:
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+RETURN DISTINCT name;
+```
+
+You can also use `DISTINCT` with multiple columns:
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+RETURN DISTINCT name, age;
+```
+
+### Type Casting
+
+Use the `CAST` function to convert column values to a specific type:
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+RETURN name, CAST(age, 'DOUBLE') AS double_age;
+```
+
+### WHERE Filtering
+
+Filter rows using the `WHERE` clause. Multiple conditions can be combined using `AND`, `OR`, and `NOT`:
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+WHERE age > 25 AND age < 40
+RETURN name, age;
+```
+
+### Aggregation
+
+`LOAD FROM` supports common aggregate functions (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`) and grouped aggregation:
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+RETURN
+    COUNT(*) AS total,
+    AVG(age) AS avg_age,
+    MIN(age) AS min_age,
+    MAX(age) AS max_age;
+```
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+RETURN name, AVG(age) AS avg_age;
+```
+
+### Sorting and Limiting
+
+```cypher
+LOAD FROM "person.csv" (delim=',')
+RETURN name, age
+ORDER BY age DESC, name ASC
+LIMIT 10;
+```
+
+## Performance Options
+
+For large files, the following option can improve read performance:
+
+| Option       | Type  | Default        | Description |
+| ------------ | ----- | -------------- | ----------- |
+| `parallel`   | bool  | `false` | Enable parallel reading using multiple threads (max core number). When enabled for Parquet files, row groups are scanned concurrently and row order is **not** preserved. |
+
+> **Note:** Batch reading options (`batch_read`, `batch_size`) are currently supported in [`COPY FROM`](import_data#performance-options), not in `LOAD FROM`. 
+
+Example:
+
+```cypher
+LOAD FROM "large_person.csv" (
+    delim = ',',
+    header = true,
+    parallel = true
+)
+RETURN name, age;
+```

@@ -1,0 +1,216 @@
+---
+title: "把代码仓库交给 LLM Wiki：一次知识构建节省 6 倍 Token"
+description: "面向代码仓库的 LLM Wiki 如何摄取代码、跨项目对齐模块、支持团队协作，并将查询 token 消耗降至约六分之一。"
+date: "2026-05-28"
+author: "NeuG Team"
+category: "ecosystem"
+tags:
+  - LLM Wiki
+  - 代码仓库
+  - 知识库
+  - 开发者工具
+  - NeuG
+cover: "/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-banner.png"
+locale: "zh"
+translationKey: "llm-wiki-code-repositories"
+draft: false
+aliases:
+  - "/blog/2026/05/28/LLM-Wiki-Code-Repositories.html"
+---
+
+Andrej Karpathy 提出的 **LLM Wiki** 重塑了知识库范式：不切片，不建立向量索引。由 LLM 自行对知识执行创建、读取、更新和删除操作，wiki 也会在使用过程中动态演化。
+
+如果说向量检索知识库是知识的“**解释器**”，那么 LLM Wiki 就是“**编译器**”。每次查询时都不必重新读取原始资料；这些资料会被*编译*成简洁的 wiki 摘要，只要摘要足以回答问题，LLM 就会直接使用它们。
+
+![LLM Wiki 概念](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image0.png)
+
+Karpathy 的提案在几周内获得了数百万浏览量和数千个 GitHub star，引发了一波复现热潮。但几乎所有复现都止步于**文本数据**，例如论文、技术文档和学习笔记。我们的日常工作经常需要调研竞品代码、比较架构，因此产生了另一个问题：**如果把代码仓库本身交给 wiki，会怎么样？**
+
+---
+
+## 1. 面向代码仓库的知识管理
+
+在处理文档时，复现方案可以把整个文件放进上下文窗口，让 LLM 提取、总结和建立链接。代码仓库打破了这一假设：**上下文会爆炸，知识密度高，而且结构具有层次性**。因此，我们不得不重新设计流水线来处理代码。
+
+### 1.1 三层目录结构
+
+我们保留了 LLM Wiki 标准的 `raw / wiki / schema` 布局，但当数据源是代码时，每一层承载着不同的语义。
+
+#### `raw` 目录
+
+大多数 LLM Wiki 实现会把原始文件存放在 `raw` 中，以保证**答案的真实性**。这对纯文本有效，对代码却行不通：代码仓库体积庞大，而且持续变化。作为参考，我们用于基准测试的三个数据库分别为 **MySQL 6.36 GB · PostgreSQL 958 MB · NeuG 38 MB**，远远超过我们愿意随知识库一起携带的体量。
+
+我们的解决方案是使用 **Git submodule**。submodule 只是指向特定仓库特定分支的指针，只有当 LLM 明确需要读取源代码时才下载代码。submodule 还天然提供了**增量更新**能力：两个分支之间的 `git diff` 能准确告诉我们哪些 wiki 条目需要刷新，因此不必重新摄取整个仓库。
+
+![raw 目录结构](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image1.png)
+
+#### `wiki` 目录
+
+代码仓库太大，无法浓缩成一个 wiki 页面。我们会**按模块拆分代码库**，为每个模块创建一个 wiki 页面来说明其功能。这些页面沿用从文本生成的 wiki 风格，包括摘要、标签和密集的引用链接，使用户能快速定位事实，也减少 LLM 产生幻觉的机会。
+
+![wiki 模块页面](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image2.png)
+
+除了模块之外，单个代码组件还可以链接到**概念页面**。PostgreSQL 和 MySQL 都实现了基于成本的优化；在摄取过程中，LLM 会用两个仓库的内容更新同一个共享概念页面，**自然形成跨仓库的比较与关联**。
+
+![跨仓库概念页面](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image3.png)
+
+#### `schema` 目录
+
+`schema` 目录保存 LLM 管理 wiki 时所遵循的规则。代码仓库在存储、提取和查询方面具有自身特点，因此我们编写了一套**专用提示词**来规范整个流水线，下一节会具体介绍。
+
+![schema 目录](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image4.png)
+
+### 1.2 知识摄取
+
+LLM Wiki 定义了三项核心操作：**Ingest、Query 和 Linter**。Query 与 Linter 可以原样复用现有 wiki，因此真正的挑战是在 Ingest 阶段生成准确的 wiki。
+
+代码仓库无法像普通文档一样直接放进上下文窗口。我们调研了 **DeepWiki** 和 **RepoWiki** 等工具，最终采用了**两阶段生成**策略：
+
+- **架构阶段。** LLM 扫描描述性元数据，包括 README、顶层文档、目录树以及构建和配置脚本，从而形成对项目的高层理解。随后，它把仓库拆分成模块，并为每个模块创建一个占位 wiki 页面。这个阶段只确定模块的*名称*，暂不生成内容。
+- **细节阶段。** 模块划分确定后，LLM 读取每个模块的实际代码，填充详细的 wiki 内容。
+
+这种拆分方式让 LLM 可以根据仓库的规模和复杂度，**自主决定需要多少个 wiki 页面**，同时把每个模块的代码量控制在上下文可容纳的范围内。它还为用户提供了一个成本很低的检查点：在为昂贵的细节阶段付费前，先检查模块划分是否合理。
+
+---
+
+## 2. 对齐概念与模块
+
+### 2.1 概念对齐
+
+从原始文档中提取概念是构建知识库的核心，共享概念能把彼此孤立的文档连接成图。
+
+在 LLM 出现之前，这很难做到：“数据修改”和“数据更新”含义相同，而“量化交易”和“量化压缩”却不同。现代 LLM 在获得恰当上下文后，**几乎可以完美完成概念对齐**。我们调研的 LLM Wiki 实现虽然各不相同，但最终都可以归纳为三条规则：
+
+> 阅读 LLM Wiki 中已有的每一个概念。
+>
+> 从新文档中总结 3–5 个概念。
+>
+> 最多只允许引入一个新概念。
+
+与自由形式的摘要相比，这些规则约束 LLM 去**匹配和更新已有概念**，而不是不断创造新概念，从而避免 wiki 碎片化为噪声。
+
+### 2.2 模块对齐
+
+受到概念对齐方法的启发，我们会在解析新仓库之前，把此前已摄取仓库的 wiki 目录注入上下文，并要求 LLM 在拆分新仓库时参考已有模块标题。
+
+这样一来，模块划分就**从“填空题”变成了“选择题”**。LLM 不再凭空构思模块名称，而是反向检查新代码库中是否存在每个已知模块，只有当某项功能确实没有对应项时才创建新标签。
+
+### 2.3 实验对比
+
+我们对 PostgreSQL 进行了两次模块划分：一次完全独立进行，另一次参考 MySQL 和 NeuG 的 wiki。
+
+| **独立划分** | **对齐划分（提供参考）** |
+| --- | --- |
+| 处理流水线 | SQL 前端<br />优化器<br />执行 |
+| 存储 | 存储 |
+| 事务 | 事务<br />WAL 恢复 |
+| 复制 | 复制 |
+| 实用工具与客户端工具 | 实用工具 |
+| 构建系统 | — |
+
+从内容角度看，两种结果都不能说“错误”。但**优化器**和 **WAL** 这类关键架构组件很少有明确的文字描述，所占文件比例也很小，因此在独立提取时很容易被**淹没**。
+
+在数据库工程中，优化器和 WAL 至关重要，周围还有大量理论、论文和运维经验。显然，把它们作为独立模块呈现更合理。相反，**构建系统**等辅助模块没有那么核心，在其他数据库中也缺少对应项，因此不将其纳入 wiki 是合理的取舍。
+
+---
+
+## 3. 团队协作
+
+Karpathy 的设想和大多数复现都把 LLM Wiki 当作**个人知识库**：在 wiki 目录中打开 LLM 工具，然后开始对话。这留下了两个缺口：如何从其他项目*内部调用 wiki*，以及如何在*不同用户之间共享 wiki*。
+
+### 3.1 跨项目共享
+
+为了让任何项目都能与 wiki 对话，我们把它封装成了一个 **skill**。我们将 `AGENT.md` 重命名为 `SKILL.md`，并把整个文件夹放到 `.agents/skills/llm-wiki` 下。现在，任何项目都能通过标准 skill 机制调用 wiki：
+
+> `paper-101.pdf` /neug-wiki 将这篇论文添加到 wiki。
+
+### 3.2 跨用户共享
+
+为了支持多用户访问，我们把 LLM Wiki 托管在 GitHub 上。只需一条命令即可完成设置：`cd .agents/skills/llm-wiki && git clone …`。克隆完成后，编码工具会解析该 skill。
+
+GitHub 的读取路径很简单：用户拉取整个 wiki，由 LLM 在本地读取。写入路径则更值得关注，因为多人编辑会带来**并发冲突**。我们的解决方式是要求每次更新（几乎总是一次摄取）都必须经过 **Pull Request**。完整工作流由 SKILL.md 编排，用户只需在 Web 界面确认，其余步骤全部自动完成。
+
+![跨用户 PR 工作流](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image5.png)
+
+### 3.3 Linter 与 CI 检查
+
+托管在 GitHub 上后，我们就能把 wiki 规则编码进 **CI 流水线**。规则分为两类：
+
+- **强制规则**：每次更新都必须满足，违反规则会阻止合并。例如，链接路径必须可解析、`raw` 目录只能追加、文件大小不得超过限制。还有一项检查会拒绝意外上传的 `SKILL.md` 文件，因为它们会干扰其他 skill 的注册。
+
+  ![CI 强制规则](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image6.png)
+
+- **建议规则**：用于处理僵化规则无法判断的情况。系统会把这些问题作为 PR 评论展示，由用户确认。一个健康的 PR 应当上传原始数据、生成摘要、提取概念并更新 wiki。如果出现异常，例如一个原始文件生成了两个 wiki，系统就会标记问题并请求确认。
+
+![CI 建议规则](/images/blog/llm-wiki-code-repositories/2026-05-28-llm-wiki-image7.png)
+
+---
+
+## 4. 案例研究：单次查询节省 6 倍 Token
+
+在技术选型过程中，对比竞品实现是我们最常执行的查询之一。我们选择了两个知名数据库 **MySQL** 和 **PostgreSQL**，以及团队开源的 **NeuG**，然后要求 LLM Wiki 横向比较三者的事务管理设计。
+
+### 4.1 数据准备
+
+三个仓库都通过完整流水线完成了摄取。实验分为两组：
+
+- **实验组**：LLM 根据 wiki 回答。
+- **对照组**：LLM 通过阅读原始代码回答。
+
+### 4.2 回答质量
+
+回答的具体措辞各不相同，因此我们比较它们的结构提纲。
+
+**实验组（使用 wiki）：**
+
+```plaintext
+# Comparative Analysis Report on Transaction Strategies of Three Major Databases
+## I. Overall Architecture Overview
+## II. MVCC Implementation Comparison
+## III. Lock Mechanism Comparison
+## IV. Isolation Level Comparison
+## V. WAL and Crash Recovery
+## VI. Garbage Collection / Space Reclamation
+## VII. Featured Mechanisms
+## VIII. Summary
+```
+
+**对照组（仅使用原始代码）：**
+
+```plaintext
+# Report on Transaction Strategies of Three Databases
+## I. Transaction Architecture Overview
+## II. Transaction Isolation Levels
+## III. MVCC Implementation Details
+## IV. Concurrency Control Mechanisms
+## V. WAL (Write-Ahead Logging) Mechanism
+## VI. Transaction Commit Process
+## VII. Two-Phase Commit (XA / 2PC) and Distributed Transactions
+## VIII. Savepoints and Sub-transactions
+## IX. Deadlock Detection
+## X. Overall Assessment
+```
+
+两组都识别出了关键模块：**MVCC、并发控制、隔离级别和 WAL**。把代码放在上下文中的对照组更偏向实现细节；读取 wiki 的实验组更偏向架构层面的组织方式，但无须接触源代码就完整回答了问题。**从“技术总结”的角度看，两组回答质量都很高。**
+
+### 4.3 资源开销
+
+由于多轮上下文会推高原始 token 数量，而且不同 token 类型的定价不同，我们使用最终计费 credits 作为同口径比较基准。两次运行均使用 DeepSeek-V4-Pro，并在开始前清除了记忆。
+
+| 分组 | 上下文长度 | Credit 成本 | 金钱成本 | 执行时间 |
+| --- | --- | --- | --- | --- |
+| 实验组 | 30k | 3.11 | $0.04 | 3 分钟 |
+| 对照组 | 110k | 18.44 | $0.27 | 13 分钟 |
+| **提升** | **3.66x** | **5.92x** | **6.75x** | **4.33x** |
+
+使用 wiki 后，token 消耗降至约 **1/6**。由于生成速度基本固定，更低的 token 消耗会直接带来**超过 4 倍的执行速度提升**。节省 token 的查询不仅省钱，也节省时间。
+
+---
+
+## 5. 总结与展望
+
+这次 **LLM Wiki + Code** 实践是我们首次尝试把 wiki 式数据管理扩展到多模态领域。我们认为，由 LLM 管理的 wiki 应该像 LLM 本身一样，能够**摄取和输出任意格式的数据**。这种管理方式也打破了数据源之间的边界：借助 LLM 的理解能力建立桥梁，**所有数据——文本、代码以及更多形式——都可以存在于一个统一的知识库中**。
+
+---
+
+**链接：** [NeuG](https://github.com/alibaba/neug) · [LLM Wiki（Karpathy）](https://github.com/karpathy/llm-wiki)

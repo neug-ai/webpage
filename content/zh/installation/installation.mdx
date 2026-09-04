@@ -1,0 +1,175 @@
+# 安装
+
+NeuG 可在现代 Linux 和 macOS 系统上运行，并支持 x86 和 ARM 架构。对于 Windows 用户，我们建议使用 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)。
+
+NeuG 支持多种语言绑定。请选择下方您偏好的语言以开始使用。
+
+import { Tabs } from 'nextra/components'
+
+<Tabs items={['Python', 'Node.js', 'C++']}>
+
+<Tab>
+
+**要求**：Python 3.8 或更高版本
+
+### 安装
+
+```bash
+pip install neug
+```
+
+使用虚拟环境（推荐）：
+
+```bash
+python3 -m venv neug-env
+source neug-env/bin/activate
+pip install neug
+```
+
+备用源（例如阿里云镜像）：
+
+```bash
+pip install neug -i https://mirrors.aliyun.com/pypi/simple/
+```
+
+### 验证安装
+
+```python
+import neug
+
+# 使用内存数据库进行测试
+db = neug.Database("")
+conn = db.connect()
+print("✅ NeuG is ready!")
+```
+
+### 命令行界面
+
+CLI 工具已随 Python 安装自动包含：
+
+```bash
+neug-cli --version
+
+# 使用内存数据库快速启动
+neug-cli
+```
+
+有关更多详细信息，请参阅 [CLI 文档](../../user_clients/cli)。
+
+### 故障排除
+
+**权限错误？**
+```bash
+pip install --user neug
+```
+
+**导入错误？**
+```bash
+pip install --upgrade neug
+```
+
+</Tab>
+
+<Tab>
+
+**系统要求**：Node.js 20.0.0 或更高版本（自 NeuG v0.1.3 起支持）
+
+### 安装
+
+```bash
+npm install @graphscope-neug/neug
+```
+
+或者从本地 tarball 安装：
+
+```bash
+npm install /path/to/neug-0.2.0.tgz
+```
+
+### 验证安装
+
+```javascript
+const { Database } = require('@graphscope-neug/neug');
+
+// 使用内存数据库进行测试
+const db = new Database({ databasePath: '', mode: 'w' });
+const conn = db.connect();
+console.log("✅ NeuG is ready!");
+conn.close();
+db.close();
+```
+
+</Tab>
+
+<Tab>
+
+### 从源码构建
+
+有关详细的构建说明，请参阅[开发者指南](../../development/dev_guide)。快速概览：
+
+```bash
+git clone https://github.com/alibaba/neug.git
+cd neug
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/neug # 更多 cmake 选项请参见 CMakeLists.txt。
+make -j$(proc)
+make install
+```
+
+### 验证安装
+
+在您的 cmake 项目中，使用以下命令查找并链接 NeuG 库：
+
+```cmake
+cmake_minimum_required (VERSION 3.16)
+project (
+  NeuGTest
+  VERSION 0.1
+  LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+
+find_package(neug REQUIRED)
+add_executable(test test.cc)
+include_directories(${NEUG_INCLUDE_DIRS})
+target_link_libraries(test ${NEUG_LIBRARIES})
+```
+
+示例 test.cc 如下所示：
+
+```cpp
+#include <neug/main/neug_db.h>
+#include <iostream>
+
+int main() {
+  neug::NeugDB db;
+  db.Open("test_db");
+  auto conn = db.Connect();
+  std::cout << "NeuG C++ client installation successful!" << std::endl;
+  return 0;
+}
+```
+
+构建并运行测试：
+
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_PREFIX_PATH=/opt/neug
+./test
+```
+
+</Tab>
+
+</Tabs>
+
+## 故障排除
+
+**需要帮助？** 访问我们的 [GitHub issues](https://github.com/graphscope/neug/issues) 或查阅特定语言的参考文档：[Python](../../reference/python_api)、[Node.js](../../reference/nodejs_api)、[C++](../../reference/cpp_api)。
+
+## 后续步骤
+
+🚀 **[入门指南](../../getting_started/getting_started)** - 您的第一个图数据库
+
+📚 **[TinySnb 教程](../../tutorials/tinysnb_tutorial)** - 动手实践示例

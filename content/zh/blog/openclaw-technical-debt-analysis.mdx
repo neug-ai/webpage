@@ -1,0 +1,228 @@
+---
+title: "我们用图数据库为 OpenClaw 做了一次 X 光检查——这些技术债浮出了水面"
+description: "通过图分析 OpenClaw，找出散落在代码库中的高风险函数、僵尸代码，以及过度耦合的 agents 模块。"
+date: "2026-03-19"
+author: "NeuG Team"
+category: "case-study"
+tags:
+  - "OpenClaw"
+  - "技术债"
+  - "代码图"
+  - "CodeGraph"
+  - "NeuG"
+cover: "/images/blog/openclaw-technical-debt-analysis/2026-03-19-openclaw-technical-debt-title.png"
+locale: "zh"
+translationKey: "openclaw-technical-debt-analysis"
+draft: false
+aliases:
+  - "/blog/2026/03/19/OpenClaw-Technical-Debt-Analysis.html"
+  - "/blog/2026/03/19/openclaw-technical-debt-analysis.html"
+---
+
+> *当一个代码库增长到 21,000 个函数、由 35,000 条调用边连接时，仅靠代码审查已经不够了。我们使用 NeuG 图数据库扫描 OpenClaw，揭示了传统工具看不到的结构性问题。*
+
+---
+
+## 为什么要采用图视角？
+
+[OpenClaw](https://github.com/openclaw/openclaw) 是一个广受欢迎的 AI 网关项目，拥有 18,000 多次提交、6,000 多个 TypeScript 文件和 21,000 多个函数，几乎每天都会发布新版本。在上一篇文章中，我们从用户视角审视了 OpenClaw，并发现 heartbeat 机制消耗的 Token 远超所有人的预期。
+
+这一次，我们将进一步深入。从开发者视角来看：**快速迭代在不知不觉中积累了哪些结构性技术债？**
+
+传统代码审查和静态分析工具能发现很多问题，但很难回答结构性问题：
+
+- 哪些函数是“定时炸弹”——一旦出错，会造成最大的影响范围？
+- 哪些代码只是无用负担，让误以为它仍在运行的新贡献者感到困惑？
+- 哪个模块是系统的结构枢纽——动它一下，半个代码库都会震动？
+
+这些问题的答案存在于**关系**中，而不是某几行代码里。
+
+---
+
+## 方法：把代码库变成图
+
+我们使用 [NeuG](https://github.com/alibaba/neug)（图数据库）和 [zvec](https://github.com/alibaba/zvec)（向量数据库）构建了一张代码知识图谱：
+
+- **节点**：函数、类、模块、文件
+- **边**：调用关系、导入依赖、提交历史
+
+整张图的规模如下：
+
+| 类型 | 数量 |
+|------|------|
+| 源文件 | 6,062 |
+| 函数 | 21,057 |
+| 调用边 | 35,761 |
+| 导入边 | 25,883 |
+| 类 | 233 |
+| 模块 | 318 |
+
+21,000 个函数由 35,000 条调用边连接。图构建完成后，棘手的结构性问题就变成了 Cypher 查询。
+
+完整分析流水线已封装为 [CodeGraph Skill](https://github.com/alibaba/neug/tree/main/skills/codegraph)，完全开源且可复现。
+
+---
+
+## 发现一：高风险函数
+
+### 定义风险分数
+
+我们为每个函数定义了一个**风险分数**，用于量化其潜在影响范围：
+
+```
+Risk Score = fan_in × fan_out
+```
+
+- **fan-in**：有多少函数调用它（依赖压力）
+- **fan-out**：它调用了多少函数（依赖复杂度）
+
+二者的乘积代表影响范围，也就是该函数一旦出现 bug，系统中有多大范围会受到破坏。
+
+检测 fan-out 很直接，大多数 IDE 工具都能做到。但 fan-in 需要扫描整个代码库，这正是图数据库擅长的领域。我们的 [CodeGraph Skill](https://github.com/alibaba/neug/tree/main/skills/codegraph) 内置了这项能力：它提供 `hotspots()` 方法，替你完成全图遍历，因此只需一次调用，就能找出整个代码库中风险最高的函数：
+
+```python
+functions = cs.hotspots(topk=30)
+```
+
+**风险分数最高的 5 个函数：**
+
+| 函数 | 文件 | fan-in | fan-out | 风险分数 |
+|------|------|--------|---------|----------|
+| **startGatewayServer** | src/gateway/server.impl.ts | 10 | 103 | **1030** |
+| **createConfigIO** | src/config/io.ts | 18 | 56 | **1008** |
+| **runEmbeddedPiAgent** | src/agents/pi-embedded-runner/run.ts | 14 | 67 | **938** |
+| **loadOpenClawPlugins** | src/plugins/loader.ts | 20 | 36 | **720** |
+| **runCronIsolatedAgentTurn** | src/cron/isolated-agent/run.ts | 11 | 60 | **660** |
+
+这些函数位于关键执行路径的核心。`startGatewayServer` 负责引导整个服务；`createConfigIO` 生成全部配置；`runEmbeddedPiAgent` 编排嵌入式 Pi Agent 的执行。
+
+关于 `createConfigIO`，有一点很值得注意：配置解析很少被优先纳入测试覆盖，因为它“看起来很安全”。但它有 18 个调用方和 56 个外部调用，**从结构风险指标来看，它是整个代码库中最危险的函数之一**。
+
+### 筛选真正的高风险核心
+
+我们编写了一条自定义 Cypher 查询，过滤掉底层工具函数（高 fan-in、低 fan-out），聚焦那些既被大量依赖、*自身又高度复杂*的函数：
+
+```cypher
+MATCH (f:Function)-[:CALLS]->(g:Function)
+WITH f, COUNT(DISTINCT g) as fan_out
+MATCH (f)<-[:CALLS]-(h:Function)
+WITH f, fan_out, COUNT(DISTINCT h) as fan_in
+WHERE fan_in > 10 AND fan_out > 10
+RETURN f.name, fan_in, fan_out
+LIMIT 100
+```
+
+结果令人意外：整个代码库中**只有 17 个函数**同时满足这两个条件，而且每一个都是关键的高风险节点：
+
+| 函数 | 文件 | fan-in | fan-out | 风险分数 |
+|------|------|--------|---------|----------|
+| startGatewayServer | src/gateway/server.impl.ts | 10 | 103 | 1030 |
+| createConfigIO | src/config/io.ts | 18 | 56 | 1008 |
+| runEmbeddedPiAgent | src/agents/pi-embedded-runner/run.ts | 14 | 67 | 938 |
+| loadOpenClawPlugins | src/plugins/loader.ts | 20 | 36 | 720 |
+| runCronIsolatedAgentTurn | src/cron/isolated-agent/run.ts | 11 | 60 | 660 |
+| getReplyFromConfig | src/auto-reply/reply/get-reply.ts | 20 | 24 | 480 |
+| runMessageAction | src/infra/outbound/message-action-runner.ts | 21 | 22 | 462 |
+| loadPluginManifestRegistry | src/plugins/manifest-registry.ts | 22 | 16 | 352 |
+| createOpenClawTools | src/agents/openclaw-tools.ts | 10 | 24 | 240 |
+| fetchWithSsrFGuard | src/infra/net/fetch-guard.ts | 24 | 10 | 240 |
+| resolveCommandSecretRefsViaGateway | src/cli/command-secret-gateway.ts | 15 | 14 | 210 |
+| fetchRemoteMedia | src/media/fetch.ts | 18 | 11 | 198 |
+| loadModelCatalog | src/agents/model-catalog.ts | 18 | 11 | 198 |
+| resolveApiKeyForProvider | src/agents/model-auth.ts | 13 | 15 | 195 |
+| start | src/gateway/client.ts | 12 | 13 | 156 |
+| resolveAuthProfileOrder | src/agents/auth-profiles/order.ts | 11 | 11 | 121 |
+| createClackPrompter | src/wizard/clack-prompter.ts | 10 | 11 | 110 |
+
+这 17 个函数是系统的结构性压力点。对它们的任何修改都值得格外谨慎地审查。
+
+### 找出僵尸函数
+
+我们把所有函数的 fan-in 分布绘制成直方图。NeuG 的 Python SDK 让这个过程非常直接，查询结果可以直接传入 pandas 或 matplotlib。分布显示，大多数函数的 fan-in 和 fan-out 都低于 2，这意味着 OpenClaw 的代码整体上较为线性：多数函数在调用链中处于简单的“一进一出”位置。
+
+![fan-in 与 fan-out 分布直方图](/images/blog/openclaw-technical-debt-analysis/2026-03-19-openclaw-technical-debt-1.png)
+
+最引人注目的是：**超过 20% 的函数 fan-in = 0**，也就是说，它们从未被任何函数调用。过滤掉合理的入口点和框架钩子之后，仍有**超过 2,000 个函数是真正的僵尸代码**。
+
+来看一个具体例子。`src/infra/net/ssrf.ts` 中的 `assertPublicHostname` 在当前代码库中没有任何调用方。git bisect 显示：
+
+- 提交 `5bd550`：引入该函数，并且当时确实在使用
+- 提交 `b62355`：其逻辑被迁移到 `resolvePinnedHostname`
+- 旧函数没有被删除——可能是出于谨慎——于是悄无声息地变成了僵尸函数
+
+真正的危害并不是浪费了几行代码，而是接下来发生的事：一位新贡献者发现这个函数，以为它仍然有效，在它之上构建功能，然后花费数小时调试一条早已失效的代码路径。
+
+对于 OpenClaw 这样快速变化的项目，20% 的僵尸函数比例会给每一位代码阅读者带来沉重的认知负担。
+
+---
+
+## 发现二：过度耦合的模块
+
+我们分析了最近 20 份 bug 报告。在 57 个根因候选函数中，**有 24 个——占 42%——指向 `src/agents`**。
+
+为理解原因，我们运行了一条 Cypher 查询，检查 `agents` 与系统其他部分的调用关系：
+
+```cypher
+MATCH (m1:Module {name: 'agents'})<-[:BELONGS_TO]-(f1:File)-[:DEFINES_FUNC]->(func1:Function)
+MATCH (func1)-[:CALLS]->(func2:Function)<-[:DEFINES_FUNC]-(f2:File)-[:BELONGS_TO]->(m2:Module)
+WHERE m2.name <> 'agents'
+RETURN m2.name, count(*) as call_count
+ORDER BY call_count DESC
+LIMIT 10
+```
+
+以下数字展示了模块之间的双向调用次数（a→b 表示模块 a 调用模块 b）：
+
+```
+agents <-> reply              a→b=19    b→a=117
+agents <-> infra              a→b=108   b→a=15
+agents <-> pi-embedded-runner a→b=19    b→a=88
+agents <-> tools              a→b=38    b→a=55
+agents <-> plugins            a→b=45    b→a=40
+agents <-> gateway            a→b=9     b→a=60
+agents <-> src                a→b=35    b→a=31
+agents <-> models             a→b=1     b→a=63
+agents <-> sessions           a→b=46    b→a=5
+agents <-> auth-profiles      a→b=24    b→a=12
+```
+
+总计有 **30 多个模块与 `agents` 存在双向依赖**。`reply` 模块调用 `agents` 117 次，`pi-embedded-runner` 调用 88 次，`models` 调用 63 次。系统绝大多数业务逻辑都会流经这一个模块。
+
+我们使用 neug-ui 将 `reply->agents` 调用关系可视化：
+
+![agents 模块调用关系可视化](/images/blog/openclaw-technical-debt-analysis/2026-03-19-openclaw-technical-debt-2.png)
+
+`agents` 是系统的结构枢纽。这里仅仅修改一行代码，都可能波及半个代码库。42% 的 bug 都可追溯到这个模块，这并非运气不好，而是架构导致的必然结果。
+
+---
+
+## 图分析揭示了哪些其他工具看不到的问题
+
+代码审查能发现函数级问题，静态分析能处理语法和导入层面的隐患。图分析则填补了二者之间的空白，即**跨文件、跨模块的结构性问题**。
+
+传统工具可以告诉你：
+
+- 哪一行存在语法错误
+- 哪个函数的圈复杂度很高
+
+NeuG 可以告诉你：
+
+- 一次变更会影响多少函数
+- 哪些代码已经死亡，却仍在误导贡献者
+- 哪个模块是系统结构上的承重墙
+
+> 当代码库的规模超过人类审查者能够在脑中完整把握的范围时，结构性问题只能通过结构化查询发现。
+
+---
+
+## 给 OpenClaw 的三项建议
+
+基于这次分析，杠杆效应最高的三项改进是：
+
+1. **解耦 `src/agents`**：目前有 30 多个模块与其双向依赖。可以先在 `agents` 与调用最频繁的模块（`reply`、`pi-embedded-runner`、`models`）之间定义清晰的接口边界。即使只完成部分解耦，也能显著缩小影响范围。
+2. **优先覆盖高风险函数的测试**：`createConfigIO` 和 `startGatewayServer` 等函数在结构上至关重要，却很可能缺乏足够测试。它们一旦出现 bug，影响会向各处传播，应优先为其补齐测试。
+3. **清理僵尸函数**：2,000 多个无效函数正在持续误导贡献者。运行基于图的死代码分析并删除确认无用的僵尸函数，是一项低风险、高回报的清理工作。
+
+---
+
+*本分析由 [NeuG](https://github.com/alibaba/neug) 图数据库和 CodeScope 代码分析引擎提供支持。完整索引约在 4 分钟内完成。*

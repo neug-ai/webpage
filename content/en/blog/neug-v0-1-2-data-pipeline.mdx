@@ -1,0 +1,274 @@
+---
+title: "NeuG v0.1.2: Your Graph Database Is No Longer a Data Island"
+description: "NeuG v0.1.2 makes the graph database a native part of the data lake ecosystem with cloud storage reads, schema-on-read, and Parquet export."
+date: "2026-06-01"
+author: "NeuG Team"
+category: release
+tags:
+  - NeuG
+  - release
+  - data pipeline
+  - object storage
+  - Parquet
+cover: "/images/blog/neug-v0-1-2-data-pipeline/2026-06-01-neug-v0.1.2-banner.png"
+locale: en
+translationKey: neug-v0-1-2-data-pipeline
+draft: false
+aliases:
+  - "/blog/2026/06/01/NeuG-v0.1.2-Data-Pipeline.html"
+  - "/blog/tech/2026/06/01/NeuG-v0.1.2-Data-Pipeline.html"
+---
+
+NeuG v0.1.2 is out. The theme of this release: **making the graph database a native part of the data lake ecosystem.** Data lives in OSS — NeuG reads it there. Files have schemas — NeuG infers them. Query results need to go downstream — write them back as Parquet.
+
+Here's why we built this, and what exactly shipped.
+
+---
+
+## The Biggest Problem with Graph Databases Isn't Performance
+
+If you've ever tried to introduce a graph database into your team — Neo4j, TigerGraph, JanusGraph, or anything else — you've had this conversation:
+
+> "Our data is on OSS. How do I get it in?"
+> "Download it locally, write a schema definition, then run COPY FROM."
+> "How do I feed query results to Spark?"
+> "Write a script to export CSV. Nested fields? Flatten them manually."
+> "Can query results go back to OSS directly? Downstream pipelines pull from there."
+> "No. Export locally first, then upload with ossutil."
+
+Each round trip raises the real barrier to adoption. Not because the query language is hard to learn. Not because performance is lacking. Because **graph databases don't fit into your existing data infrastructure**.
+
+Data from the lake needs a "format adaptation" to enter the graph. Query results need a "format conversion" to return to the lake. Every adaptation is engineering cost. Every conversion can lose information.
+
+This isn't a bug in any single product — it's the default paradigm of graph databases as a category: **they treat themselves as the destination for data, not as a compute node in the data flow.**
+
+---
+
+## The Design Shift in v0.1.2
+
+NeuG v0.1.2 shipped three features. Individually, each looks like a routine enhancement. Together, they form a clear design statement:
+
+| Feature | What it does | What it means |
+|---------|-------------|---------------|
+| [Cloud Object Storage Extension #179](https://github.com/alibaba/neug/pull/179) | Direct read from S3 / OSS / HTTPS | NeuG goes to where the data lives, instead of demanding data be moved |
+| [COPY FROM Without DDL #134](https://github.com/alibaba/neug/pull/134) | Auto-infer schema from data files | Data defines structure, not humans pre-defining structure |
+| [Parquet Export #241](https://github.com/alibaba/neug/pull/241) | Query results output as Parquet, with write-back to OSS/S3 | Graph computation results flow back to the data lake with zero friction |
+
+The combined effect: **NeuG adapts to your data infrastructure — not the other way around.**
+
+The graph database shifts from "destination for data" to "a plug-and-play graph compute layer in the data flow" — read from OSS, run graph analytics, write results back to OSS, with no local disk involvement.
+
+---
+
+## Feature 1: Direct Cloud Storage Read
+
+### Why "No Download" Matters More Than "Fast Download"
+
+Reading remote files directly isn't just about "saving one download step." In production, it changes the operational model:
+
+- **No local disk usage**: Data stays in OSS / S3. NeuG fetches on demand. No need to provision separate storage for the graph database.
+- **No sync maintenance**: When the source updates, your next `LOAD FROM` reads the new version automatically. No ETL pipeline to keep things in sync.
+- **Cleaner permission isolation**: Access control stays in the object storage layer. No need to replicate ACLs inside the graph database.
+
+### Usage
+
+v0.1.2 adds the `httpfs` extension:
+
+```cypher
+-- First-time setup: download and load extensions (one-time)
+install httpfs;
+install parquet;
+load httpfs;
+load parquet;
+
+-- HTTPS direct read (simplest, zero config for public data)
+LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+RETURN * LIMIT 5;
+
+-- OSS scheme (requires credentials and endpoint)
+LOAD FROM "oss://graphscope/neug/vPerson.parquet" (
+    CREDENTIALS_KIND='Anonymous',
+    ENDPOINT_OVERRIDE='oss-cn-beijing.aliyuncs.com'
+)
+RETURN *;
+```
+
+Same data, three protocols (HTTPS / OSS / S3) — only the URL prefix differs. For typical OSS deployments, configure the endpoint and AK/SK and you're set.
+
+---
+
+## Feature 2: Schema-on-Read
+
+### Graph Databases Finally Catch Up to the Data Lake's Core Principle
+
+The data lake philosophy is **schema-on-read**: don't enforce structure when storing data; infer it when reading. Spark reads Parquet without requiring you to define a table first. DuckDB reads CSV without requiring column type definitions. This is the baseline experience for modern data tools.
+
+Graph databases haven't always worked this way. Before v0.1.2, importing data into NeuG looked like:
+
+```cypher
+-- First, examine the file's columns and types...
+-- Then hand-write DDL:
+CREATE NODE TABLE person (
+    ID INT64,
+    fName STRING,
+    gender INT64,
+    isStudent BOOLEAN,
+    isWorker BOOLEAN,
+    age INT64,
+    eyeSight DOUBLE,
+    -- ... 9 more columns to list one by one ...
+    PRIMARY KEY (ID)
+);
+
+-- Only then can you import
+COPY person FROM "vPerson.parquet";
+```
+
+A 16-column table requires 16 lines of DDL. Get a type wrong (INT64 vs INT32, DATE vs STRING) and the import fails or silently loses precision.
+
+**After v0.1.2:**
+
+```cypher
+COPY person FROM (
+    LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+    RETURN *
+);
+```
+
+One statement. NeuG automatically infers column names and types from the Parquet schema. The first column becomes the primary key. Table creation and import happen in a single step.
+
+Edges work the same way — just specify which node tables are connected:
+
+```cypher
+COPY meets FROM (
+    LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/eMeets.parquet"
+    RETURN *
+) (from="person", to="person");
+```
+
+Tested: all 16 columns of vPerson.parquet correctly inferred (INT64 / STRING / BOOL / DOUBLE), 8 vertices imported successfully.
+
+---
+
+## Feature 3: Parquet Export, Direct Write-Back to Cloud
+
+### Bidirectional: Data Comes In, and It Goes Back Out
+
+Another long-standing complaint about graph databases: "data goes in but can't come out." To feed query results to downstream Spark / pandas / DuckDB, the traditional approach is exporting CSV with manual type mapping. Nested structures (edges, paths) make it worse — you decide how to serialize.
+
+v0.1.2 solves not just "how to export" but "where to export" — COPY TO supports remote paths just like LOAD FROM. Query results can be written back directly to OSS / S3, making the entire pipeline a true cloud-native closed loop.
+
+```cypher
+-- Export graph query results: only socially active young people
+COPY (
+    MATCH (p:person)-[m:meets]->(friend:person)
+    WHERE p.age < 35
+    RETURN p.fName AS name, p.age AS age, friend.fName AS met_person, m.location
+) TO 'active_young_people.parquet';
+
+-- Same query, results written directly to OSS (zero local disk)
+COPY (
+    MATCH (p:person)-[m:meets]->(friend:person)
+    WHERE p.age < 35
+    RETURN p.fName AS name, p.age AS age, friend.fName AS met_person, m.location
+) TO "oss://my-bucket/output/active_young_people.parquet" (
+    CREDENTIALS_KIND='Explicit',
+    OSS_ACCESS_KEY_ID='<your-ak>',
+    OSS_ACCESS_KEY_SECRET='<your-sk>',
+    ENDPOINT_OVERRIDE='oss-cn-hangzhou.aliyuncs.com'
+);
+```
+
+What's being exported is **the result of graph computation** — data that has been filtered, joined, and projected. This is the value of graph databases as a compute layer: you analyze using graph patterns (who knows whom, under what conditions), then send conclusions directly back to the data lake for downstream consumption.
+
+The entire pipeline truly runs **without touching local disk**: read from OSS → graph compute → write results back to OSS. For lightweight compute tasks running in containers, this is critical — no need to mount local volumes.
+
+---
+
+## Full Demo: Cloud to Data Lake, End to End
+
+The following demonstrates the complete flow using NeuG v0.1.2's Python binding. The dataset is public test data from NeuG's CI — anyone can reproduce this.
+
+```python
+from neug import Database
+import tempfile
+
+# 1. Create database
+db = Database(db_path=tempfile.mkdtemp(), mode="w")
+conn = db.connect()
+
+# 2. Install and load extensions
+conn.execute("install httpfs")
+conn.execute("install parquet")
+conn.execute("load httpfs")
+conn.execute("load parquet")
+
+# 3. Remote preview
+result = conn.execute('''
+    LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+    RETURN ID, fName, age, isStudent
+    LIMIT 3
+''')
+for row in result:
+    print(row)  # [0, 'Alice', 35, True], [2, 'Bob', 30, True], [3, 'Carol', 45, False]
+
+# 4. One-line table creation + node import (no CREATE NODE TABLE needed)
+conn.execute('''
+    COPY person FROM (
+        LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+        RETURN *
+    )
+''')
+
+# 5. One-line table creation + edge import (no CREATE REL TABLE needed)
+conn.execute('''
+    COPY meets FROM (
+        LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/eMeets.parquet"
+        RETURN *
+    ) (from="person", to="person")
+''')
+
+# 6. Graph query
+result = conn.execute('''
+    MATCH (a:person)-[m:meets]->(b:person)
+    WHERE a.age > 30
+    RETURN a.fName, b.fName, m.location
+''')
+for row in result:
+    print(row)
+
+# 7. Export graph query results to Parquet
+conn.execute('''
+    COPY (
+        MATCH (a:person)-[m:meets]->(b:person)
+        WHERE a.age < 35
+        RETURN a.fName AS name, a.age AS age, b.fName AS met_person, m.location
+    ) TO '/tmp/young_social.parquet'
+''')
+```
+
+**Read from OSS → auto-create tables → graph query → Parquet export to OSS. Zero DDL written, zero manual data movement.** In production, swap the export path to `oss://` or `s3://` for a fully cloud-native closed loop.
+
+---
+
+## Also Worth Noting
+
+A few more features in v0.1.2:
+
+- **MERGE clause** ([#312](https://github.com/alibaba/neug/pull/312)): `MERGE (p:person {ID: 1}) ON CREATE SET p.name = 'Alice'` — match if exists, create if not. Idempotent graph writes.
+- **neug-cli autocomplete + syntax highlighting** ([#373](https://github.com/alibaba/neug/pull/373)): Major improvement to CLI interactive experience.
+- **QueryResult → pyarrow Table** ([#270](https://github.com/alibaba/neug/pull/270)): `result.to_arrow()` converts graph query results to a pyarrow Table in one call — hand off directly to pandas / polars / DuckDB for further analysis, zero intermediate format conversion.
+
+Full release notes: [PR #404](https://github.com/alibaba/neug/pull/404).
+
+---
+
+## Try It
+
+```bash
+pip install neug==0.1.2
+```
+
+Copy-paste the demo code above and run it. For a detailed step-by-step tutorial (including common pitfalls and OSS/S3 credential configuration), see: [Data Pipeline Tutorial](/docs/tutorials/data-pipeline/).
+
+GitHub: [https://github.com/alibaba/neug](https://github.com/alibaba/neug).

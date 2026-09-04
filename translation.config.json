@@ -1,0 +1,10 @@
+{
+  "name": "neug",
+  "sourceRepo": "https://github.com/alibaba/neug.git",
+  "docsPath": "doc/source",
+  "sourceLanguage": "en",
+  "targetLanguages": [
+    "zh"
+  ],
+  "outputDir": "content"
+}

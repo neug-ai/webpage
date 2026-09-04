@@ -1,0 +1,274 @@
+---
+title: "NeuG v0.1.2：你的图数据库不再是数据孤岛"
+description: "NeuG v0.1.2 通过云存储直读、读时建模和 Parquet 导出，让图数据库成为数据湖生态中的原生组成部分。"
+date: "2026-06-01"
+author: "NeuG Team"
+category: release
+tags:
+  - NeuG
+  - 版本发布
+  - 数据管道
+  - 对象存储
+  - Parquet
+cover: "/images/blog/neug-v0-1-2-data-pipeline/2026-06-01-neug-v0.1.2-banner.png"
+locale: zh
+translationKey: neug-v0-1-2-data-pipeline
+draft: false
+aliases:
+  - "/blog/2026/06/01/NeuG-v0.1.2-Data-Pipeline.html"
+  - "/blog/tech/2026/06/01/NeuG-v0.1.2-Data-Pipeline.html"
+---
+
+NeuG v0.1.2 正式发布。本次版本的主题是：**让图数据库成为数据湖生态中的原生组成部分。** 数据存放在 OSS，NeuG 就地读取；文件自带 Schema，NeuG 自动推断；查询结果需要流向下游，就将其写回为 Parquet。
+
+下面我们来谈谈为什么要构建这些能力，以及本次版本究竟发布了什么。
+
+---
+
+## 图数据库最大的难题并不是性能
+
+如果你曾尝试在团队中引入图数据库——无论是 Neo4j、TigerGraph、JanusGraph 还是其他产品——你大概经历过这样的对话：
+
+> “我们的数据在 OSS 上，怎么导入？”
+> “先下载到本地，编写 Schema 定义，再运行 COPY FROM。”
+> “怎么把查询结果提供给 Spark？”
+> “写个脚本导出 CSV。嵌套字段怎么办？手动展平。”
+> “查询结果能直接写回 OSS 吗？下游管道会从那里拉取。”
+> “不能。先导出到本地，再用 ossutil 上传。”
+
+每一次数据往返都在提高真正的采用门槛。不是因为查询语言难学，也不是因为性能不足，而是因为**图数据库无法融入现有的数据基础设施**。
+
+数据从湖中进入图数据库，需要一次“格式适配”；查询结果返回数据湖，又需要一次“格式转换”。每次适配都有工程成本，每次转换都可能丢失信息。
+
+这并非某个产品的缺陷，而是图数据库这一品类的默认范式：**它们把自己视为数据的终点，而不是数据流中的计算节点。**
+
+---
+
+## v0.1.2 的设计转向
+
+NeuG v0.1.2 发布了三项功能。单独看，每项都像是常规增强；结合起来，它们传达出清晰的设计主张：
+
+| 功能 | 作用 | 意义 |
+|------|------|------|
+| [云对象存储扩展 #179](https://github.com/alibaba/neug/pull/179) | 直接读取 S3 / OSS / HTTPS | NeuG 主动前往数据所在之处，而不是要求搬迁数据 |
+| [无需 DDL 的 COPY FROM #134](https://github.com/alibaba/neug/pull/134) | 从数据文件自动推断 Schema | 由数据定义结构，而不是由人预先定义结构 |
+| [Parquet 导出 #241](https://github.com/alibaba/neug/pull/241) | 以 Parquet 输出查询结果，并支持写回 OSS/S3 | 图计算结果无障碍地流回数据湖 |
+
+它们共同带来的效果是：**由 NeuG 适配你的数据基础设施，而不是反过来。**
+
+图数据库由“数据的终点”转变为“数据流中即插即用的图计算层”：从 OSS 读取数据、执行图分析、将结果写回 OSS，全程无需本地磁盘参与。
+
+---
+
+## 功能一：直接读取云存储
+
+### 为什么“不下载”比“快速下载”更重要
+
+直接读取远程文件并不只是“省去一次下载”。在生产环境中，它改变了整个运维模式：
+
+- **不占用本地磁盘**：数据保留在 OSS / S3，NeuG 按需获取，无需为图数据库单独配置存储。
+- **无需维护同步**：数据源更新后，下一次 `LOAD FROM` 会自动读取新版本，不需要 ETL 管道来保持同步。
+- **权限隔离更清晰**：访问控制保留在对象存储层，无需在图数据库内部复制 ACL。
+
+### 用法
+
+v0.1.2 新增了 `httpfs` 扩展：
+
+```cypher
+-- 首次设置：下载并加载扩展（仅需一次）
+install httpfs;
+install parquet;
+load httpfs;
+load parquet;
+
+-- 通过 HTTPS 直接读取（最简单，公共数据无需配置）
+LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+RETURN * LIMIT 5;
+
+-- OSS 协议（需要凭证和 Endpoint）
+LOAD FROM "oss://graphscope/neug/vPerson.parquet" (
+    CREDENTIALS_KIND='Anonymous',
+    ENDPOINT_OVERRIDE='oss-cn-beijing.aliyuncs.com'
+)
+RETURN *;
+```
+
+同一份数据可以通过三种协议（HTTPS / OSS / S3）读取，区别只在 URL 前缀。对于典型的 OSS 部署，只需配置 Endpoint 和 AK/SK 即可。
+
+---
+
+## 功能二：读时建模（Schema-on-Read）
+
+### 图数据库终于跟上数据湖的核心原则
+
+数据湖的理念是**读时建模（schema-on-read）**：存储数据时不强制规定结构，而是在读取时推断。Spark 读取 Parquet 前不要求先定义表，DuckDB 读取 CSV 前也不要求先定义列类型。这是现代数据工具的基准体验。
+
+图数据库并非一直如此。在 v0.1.2 之前，将数据导入 NeuG 的过程是这样的：
+
+```cypher
+-- 首先检查文件的列和类型……
+-- 然后手写 DDL：
+CREATE NODE TABLE person (
+    ID INT64,
+    fName STRING,
+    gender INT64,
+    isStudent BOOLEAN,
+    isWorker BOOLEAN,
+    age INT64,
+    eyeSight DOUBLE,
+    -- ……还有 9 列需要逐一列出……
+    PRIMARY KEY (ID)
+);
+
+-- 然后才能导入
+COPY person FROM "vPerson.parquet";
+```
+
+一个 16 列的表需要 16 行 DDL。只要有一种类型写错（如 INT64 与 INT32、DATE 与 STRING），导入就可能失败，或在无提示的情况下损失精度。
+
+**v0.1.2 之后：**
+
+```cypher
+COPY person FROM (
+    LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+    RETURN *
+);
+```
+
+只需一条语句。NeuG 会从 Parquet Schema 自动推断列名和类型，以第一列作为主键，并在一个步骤中完成建表与导入。
+
+边也采用相同方式，只需指定连接的节点表：
+
+```cypher
+COPY meets FROM (
+    LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/eMeets.parquet"
+    RETURN *
+) (from="person", to="person");
+```
+
+实测结果：vPerson.parquet 的全部 16 列均被正确推断（INT64 / STRING / BOOL / DOUBLE），并成功导入 8 个顶点。
+
+---
+
+## 功能三：导出 Parquet，直接写回云端
+
+### 双向流动：数据既能进，也能出
+
+关于图数据库，另一个长期存在的抱怨是“数据进得去，出不来”。为了把查询结果提供给下游的 Spark / pandas / DuckDB，传统做法是导出 CSV，并手动映射类型。遇到嵌套结构（边、路径）时问题更严重，你还得自行决定如何序列化。
+
+v0.1.2 不仅解决了“如何导出”，还解决了“导出到哪里”：COPY TO 与 LOAD FROM 一样支持远程路径。查询结果可以直接写回 OSS / S3，让整条管道真正形成云原生闭环。
+
+```cypher
+-- 导出图查询结果：仅保留社交活跃的年轻人
+COPY (
+    MATCH (p:person)-[m:meets]->(friend:person)
+    WHERE p.age < 35
+    RETURN p.fName AS name, p.age AS age, friend.fName AS met_person, m.location
+) TO 'active_young_people.parquet';
+
+-- 同一查询，将结果直接写入 OSS（不使用本地磁盘）
+COPY (
+    MATCH (p:person)-[m:meets]->(friend:person)
+    WHERE p.age < 35
+    RETURN p.fName AS name, p.age AS age, friend.fName AS met_person, m.location
+) TO "oss://my-bucket/output/active_young_people.parquet" (
+    CREDENTIALS_KIND='Explicit',
+    OSS_ACCESS_KEY_ID='<your-ak>',
+    OSS_ACCESS_KEY_SECRET='<your-sk>',
+    ENDPOINT_OVERRIDE='oss-cn-hangzhou.aliyuncs.com'
+);
+```
+
+这里导出的是**图计算的结果**，也就是已经经过过滤、连接和投影的数据。这正是图数据库作为计算层的价值：使用图模式（谁认识谁、在什么条件下认识）进行分析，再将结论直接送回数据湖，供下游消费。
+
+整条管道真正实现了**不接触本地磁盘**：从 OSS 读取 → 执行图计算 → 将结果写回 OSS。对于运行在容器中的轻量计算任务，这一点至关重要，因为无需挂载本地卷。
+
+---
+
+## 完整演示：从云端到数据湖的端到端流程
+
+下面使用 NeuG v0.1.2 的 Python Binding 展示完整流程。数据集来自 NeuG CI 中的公开测试数据，任何人都可以复现。
+
+```python
+from neug import Database
+import tempfile
+
+# 1. 创建数据库
+db = Database(db_path=tempfile.mkdtemp(), mode="w")
+conn = db.connect()
+
+# 2. 安装并加载扩展
+conn.execute("install httpfs")
+conn.execute("install parquet")
+conn.execute("load httpfs")
+conn.execute("load parquet")
+
+# 3. 远程预览
+result = conn.execute('''
+    LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+    RETURN ID, fName, age, isStudent
+    LIMIT 3
+''')
+for row in result:
+    print(row)  # [0, 'Alice', 35, True], [2, 'Bob', 30, True], [3, 'Carol', 45, False]
+
+# 4. 一行完成建表 + 节点导入（无需 CREATE NODE TABLE）
+conn.execute('''
+    COPY person FROM (
+        LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/vPerson.parquet"
+        RETURN *
+    )
+''')
+
+# 5. 一行完成建表 + 边导入（无需 CREATE REL TABLE）
+conn.execute('''
+    COPY meets FROM (
+        LOAD FROM "https://graphscope.oss-cn-beijing.aliyuncs.com/neug/eMeets.parquet"
+        RETURN *
+    ) (from="person", to="person")
+''')
+
+# 6. 图查询
+result = conn.execute('''
+    MATCH (a:person)-[m:meets]->(b:person)
+    WHERE a.age > 30
+    RETURN a.fName, b.fName, m.location
+''')
+for row in result:
+    print(row)
+
+# 7. 将图查询结果导出为 Parquet
+conn.execute('''
+    COPY (
+        MATCH (a:person)-[m:meets]->(b:person)
+        WHERE a.age < 35
+        RETURN a.fName AS name, a.age AS age, b.fName AS met_person, m.location
+    ) TO '/tmp/young_social.parquet'
+''')
+```
+
+**从 OSS 读取 → 自动建表 → 图查询 → 将 Parquet 导出到 OSS。零 DDL、零手动数据搬运。** 在生产环境中，将导出路径替换为 `oss://` 或 `s3://`，即可形成完全云原生的闭环。
+
+---
+
+## 其他值得关注的功能
+
+v0.1.2 还有几项新功能：
+
+- **MERGE 子句**（[#312](https://github.com/alibaba/neug/pull/312)）：`MERGE (p:person {ID: 1}) ON CREATE SET p.name = 'Alice'`——存在则匹配，不存在则创建，实现幂等的图写入。
+- **neug-cli 自动补全与语法高亮**（[#373](https://github.com/alibaba/neug/pull/373)）：显著改善 CLI 交互体验。
+- **QueryResult → pyarrow Table**（[#270](https://github.com/alibaba/neug/pull/270)）：通过 `result.to_arrow()` 一次调用即可将图查询结果转换为 pyarrow Table，并直接交给 pandas / polars / DuckDB 继续分析，无需中间格式转换。
+
+完整发布说明：[PR #404](https://github.com/alibaba/neug/pull/404)。
+
+---
+
+## 立即体验
+
+```bash
+pip install neug==0.1.2
+```
+
+复制上面的演示代码并运行即可。有关详细的分步教程（包括常见问题和 OSS/S3 凭证配置），请参阅：[数据管道教程](/zh/docs/tutorials/data-pipeline/)。
+
+GitHub：[https://github.com/alibaba/neug](https://github.com/alibaba/neug)。

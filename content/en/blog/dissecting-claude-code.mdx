@@ -1,0 +1,350 @@
+---
+title: "Dissecting Claude Code: A Graph-Powered Deep Dive into an AI Coding Agent's Architecture"
+description: "A CodeGraph analysis of 1,906 files, 9,848 functions, and 22,678 call edges reveals Claude Code's architecture."
+date: "2026-04-02"
+author: "NeuG Team"
+category: "case-study"
+tags:
+  - NeuG
+  - CodeGraph
+  - Claude Code
+  - code intelligence
+cover: "/images/blog/dissecting-claude-code/01-architecture.png"
+locale: "en"
+translationKey: "dissecting-claude-code"
+draft: false
+aliases:
+  - "/blog/2026/04/02/Dissecting-Claude-Code.html"
+---
+
+> We indexed **1,906 source files**, **9,848 functions**, and **22,678 call edges** using [CodeGraph](https://github.com/alibaba/neug/tree/main/skills/codegraph) — a code intelligence skill powered by [NeuG](https://github.com/alibaba/neug), an open-source embedded graph database — to reveal what lies beneath the surface of one of the most ambitious AI coding tools ever built.
+
+---
+
+## The Numbers at a Glance
+
+| Metric | Count |
+|--------|-------|
+| Source Files | 1,906 |
+| Functions | 9,848 |
+| Call Edges | 22,678 |
+| Import Edges | 15,743 |
+| Modules | 306 |
+| Classes | 128 |
+
+Claude Code is a **TypeScript monolith** running on **Bun + Ink** (React for terminals). `main.tsx` alone exceeds 4,700 lines, and `REPL.tsx` tops 5,000 lines with 288 outgoing function calls — the highest fan-out of any component in the system.
+
+---
+
+## 1. Architecture: Five Layers, One Gravity Well
+
+![Architecture Overview](/images/blog/dissecting-claude-code/01-architecture.png)
+
+CodeGraph's layer discovery reveals an **onion-ring architecture** with `src/utils` as the gravitational center. The five layers, from top to bottom:
+
+**Entry Points** — `REPL.tsx` (288 calls, 236 imports), `main.tsx` (275 calls, 163 imports), and `print.ts` (164 calls, CLI pipeline). These are the three doors into Claude Code.
+
+**UI Layer** — 131 files including the 113-file `components/` directory, `PromptInput` (105 outgoing calls), the Buddy virtual pet system, and Ink's custom terminal renderer (52 methods).
+
+**Logic Layer** — 120 hooks, 80+ slash commands, 42 tools (from the 151-function BashTool to the 1-function SleepTool), and 14 keybinding files.
+
+**Service Layer** — Analytics (428 callers), MCP protocol (41 files), Permissions (41 files), Bridge remote control (33 files), the Swarm multi-agent system, and 7 task types.
+
+**Foundation** — The `utils/` directory with 299 files absorbing **5,951 incoming calls** — 6x more than the next highest module. It's not a utility folder; it's the bedrock of reality for this codebase.
+
+### The REPL: A Component That Imports the Universe
+
+`REPL.tsx` imports from **236 files** — more than any other file in the codebase. It connects to hooks, components, services, bridge, swarm, voice, cost-tracking, MCP, and keybindings. Yet it has **0 callers** (fan-in = 0). It's the root UI leaf that nobody calls into; it only calls out.
+
+---
+
+## 2. Bridge Functions: The Nervous System
+
+![Bridge Functions](/images/blog/dissecting-claude-code/02-bridge-functions.png)
+
+A **bridge function** is one called from the most distinct modules — the glue holding disparate subsystems together. CodeGraph identified these top bridges:
+
+| Function | File | Modules Spanned | Total Callers |
+|----------|------|-----------------|---------------|
+| `logForDebugging` | debug.ts | **90** | 911 |
+| `logEvent` | analytics/index.ts | **94** | 428 |
+| `logError` | log.ts | **77** | 413 |
+| `set` | fileStateCache.ts | **64** | 290 |
+| `jsonStringify` | slowOperations.ts | **63** | 248 |
+| `isEnvTruthy` | envUtils.ts | **47** | 194 |
+| `getGlobalConfig` | config.ts | **44** | 163 |
+| `getCwd` | cwd.ts | **43** | 135 |
+
+`logForDebugging` is called from **90 out of 306 modules** — nearly 1 in 3 modules feeds debug info through this single function. It's the all-seeing eye of Claude Code.
+
+Notice the file name `slowOperations.ts` housing `jsonStringify` (248 callers, 63 modules). The team explicitly wraps JSON operations in a module named "slow" — a candid acknowledgment that serialization is a performance bottleneck they want to track.
+
+The top 3 bridge functions alone account for **1,752 call edges** across **261 module-boundaries**. Removing any one would fracture the entire system.
+
+---
+
+## 3. The Permission Gateway: A Single Chokepoint
+
+![Permission Gateway](/images/blog/dissecting-claude-code/03-permission-gateway.png)
+
+One of the most architecturally significant findings: **every tool execution flows through a single function** — `checkPermissionsAndCallTool`. It has only **1 caller** (`streamedCheckPermissionsAndCallTool`) but calls **30 different functions** spanning telemetry, permission rules, classifier checks, error handling, and analytics.
+
+This is a textbook **Policy Enforcement Point (PEP)** — a single chokepoint where all 42 tools must pass through for authorization. The downstream functions include:
+
+- **checkRuleBasedPermissions** — evaluates the rule engine
+- **startSpeculativeClassifierCheck** — the "YOLO mode" classifier
+- **resolveHookPermissionDecision** — hook-based overrides
+- **logEvent + logOTelEvent** — dual telemetry (analytics + OpenTelemetry)
+- **startToolSpan / endToolSpan** — tracing boundaries
+- **formatZodValidationError** — schema validation
+
+This architecture makes it trivially easy to add security policies, audit logging, and rate limiting without modifying any individual tool.
+
+### The 151:1 Complexity Ratio
+
+Not all tools are created equal. BashTool has **151 functions** (command parsing, sandboxing, permission verification, timeout management, output capture, cross-platform compatibility). SleepTool has **1 function**. That's a 151:1 complexity range across a unified interface.
+
+| Tool | Functions | Category |
+|------|-----------|----------|
+| BashTool | **151** | Shell execution |
+| PowerShellTool | **101** | Windows shell |
+| AgentTool | **91** | Multi-agent orchestration |
+| LSPTool | 35 | Language server |
+| FileEditTool | 31 | File operations |
+| GrepTool | 8 | Search |
+| SleepTool | 1 | Wait |
+
+---
+
+## 4. The Buddy System: A Gacha Game Inside a Dev Tool
+
+![Buddy System](/images/blog/dissecting-claude-code/04-buddy-system.png)
+
+Perhaps the most delightful discovery: Claude Code contains a complete **virtual pet system** with gacha mechanics, ASCII art animations, and RPG stats.
+
+### How Companion Generation Works
+
+1. **Hash the User ID** with a salt (`friend-2026-401`) using `hashString()`
+2. **Seed a Mulberry32 PRNG** with the hash value
+3. **Roll deterministically** for species, rarity, eyes, hat, and stats
+4. **Cache the result** (the buddy renders every 500ms, can't re-roll each frame)
+
+The "bones" (species, rarity, stats) are **regenerated from hash on every read** and never persisted to disk. Only the "soul" (user-chosen name and personality) is saved. This means:
+
+- **Anti-cheat**: Users can't edit their config to fake a Legendary rarity
+- **Schema-safe**: Changes to the species array won't break saved companions
+- **Deterministic**: Same user = same companion forever
+
+### The Hex Obfuscation Trick
+
+All 18 species names are encoded as hex character codes to dodge a build-time string filter:
+
+```typescript
+const duck = String.fromCharCode(0x64, 0x75, 0x63, 0x6b)  // "duck"
+```
+
+One species name collides with an internal model codename listed in `excluded-strings.txt`, so the team encoded ALL species uniformly.
+
+### Gacha Rarity Distribution
+
+| Rarity | Probability |
+|--------|-------------|
+| Common | 60% |
+| Uncommon | 25% |
+| Rare | 10% |
+| Epic | 4% |
+| Legendary | **1%** |
+
+Each companion has **5 RPG stats**: DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK. The ASCII sprites are 5 lines tall, 12 columns wide, with 2-3 frames for idle animation. Frame `-1` in the 15-frame idle sequence triggers a rare blink animation.
+
+Here's an actual duck sprite from the codebase:
+
+```
+    __
+  <(· )___
+   (  ._>
+    `--´
+```
+
+CodeGraph's impact analysis traces the call chain: `getCompanion()` → `CompanionSprite` → `PromptInput` (105 calls) → `REPL` (288 calls) → Terminal UI.
+
+---
+
+## 5. Dream Task: The AI That Dreams While You Code
+
+![Dream Task](/images/blog/dissecting-claude-code/05-dream-task.png)
+
+Claude Code has a **background memory consolidation system** that literally runs while you work — the AI "dreams" about past sessions to improve its memory.
+
+### The Four Gates (Cheapest First)
+
+Before dreaming begins, four gates must pass — ordered by computational cost:
+
+1. **Time Gate** (cost: 1 `stat()` call) — Has 24 hours elapsed since the last dream?
+2. **Scan Throttle** (cost: memory timestamp check) — Has 10 minutes passed since the last scan?
+3. **Session Gate** (cost: `readdir`) — Are there 5+ new sessions to consolidate?
+4. **Lock Gate** (cost: `flock`) — Is the file-based mutex free?
+
+This ordering ensures **cheap rejections happen first**. Most API turns exit at gate 1 with a single stat call.
+
+### The Four Phases of Dreaming
+
+Once the gates pass, a restricted subagent forks with **read-only Bash permissions** (only `ls`, `grep`, `cat`, `head`, `tail`):
+
+1. **Orient** — `ls` the memory directory to understand current state
+2. **Gather** — `grep` recent session transcripts for patterns and reusable knowledge
+3. **Consolidate** — Write/update memory files with distilled knowledge
+4. **Prune** — Keep the memory index under 25KB, entries under 150 characters
+
+### The Filesystem Retry Trick
+
+When a dream is killed mid-flight, it calls `rollbackConsolidationLock(priorMtime)` to **rewind the lock file's modification time**. This makes the Time Gate pass again on the next API turn — a retry mechanism built into the filesystem itself.
+
+---
+
+## 6. Swarm: Multi-Agent Orchestration
+
+![Swarm System](/images/blog/dissecting-claude-code/06-swarm-system.png)
+
+The most architecturally ambitious module: a **three-tier backend abstraction** for spawning and managing teams of AI agents.
+
+### Backend Detection Priority Chain
+
+When a teammate is spawned, the system probes the environment:
+
+| Priority | Backend | Lines | Detection Method |
+|----------|---------|-------|------------------|
+| P1 | **TmuxBackend** | 765 | `ORIGINAL_USER_TMUX` env var |
+| P2 | **ITermBackend** | 370 | `TERM_PROGRAM` + `it2 session list` |
+| P3 | **InProcessBackend** | 340 | Always available (fallback) |
+
+The **PaneBackendExecutor** adapter wraps tmux/iTerm2 into the same **TeammateExecutor** interface that InProcessBackend implements directly. This lets the system degrade gracefully: tmux → iTerm2 → in-process.
+
+### Why AsyncLocalStorage?
+
+When agents are backgrounded (Ctrl+B), multiple agents run **concurrently in the same Node.js process**. AppState is a single shared mutable object. If Agent A's telemetry reads it, it might get Agent B's context.
+
+AsyncLocalStorage isolates each async execution chain, giving each agent its own identity bubble — without requiring process isolation.
+
+### Task ID Design
+
+Each task gets a unique ID: a **single-letter prefix** + 8 random base-36 characters:
+
+- `b` = bash, `a` = agent, `r` = remote, `t` = teammate, `w` = workflow, `m` = monitor, `d` = dream
+
+This gives instant type identification from the ID string alone, with 36^8 ≈ 2.8 trillion combinations.
+
+---
+
+## 7. Cost Tracker: Follow the Money
+
+![Cost Tracker](/images/blog/dissecting-claude-code/07-cost-tracker.png)
+
+The cost tracking system handles **7 pricing tiers** with dynamic tier selection for Opus 4.6:
+
+| Model | Input/1M | Output/1M |
+|-------|----------|-----------|
+| Haiku 3.5 | $0.80 | $4 |
+| Sonnet | $3 | $15 |
+| Opus 4.5 | $5 | $25 |
+| Opus 4/4.1 | $15 | $75 |
+| Opus 4.6 (fast) | **$30** | **$150** |
+
+`getOpus46CostTier(fastMode)` dynamically selects the tier based on `response_speed` — fast mode costs 2x.
+
+### The Billing Access Gate
+
+The display logic reveals thoughtful product thinking:
+
+- **Subscribers (Max/Pro)**: Costs are **hidden** (flat rate — showing costs would be confusing)
+- **API-key users with admin/billing roles**: Costs are **displayed** (they're paying per-token)
+
+This is controlled by `hasConsoleBillingAccess()`, which checks `DISABLE_COST_WARNINGS` env, subscriber status, auth tokens, and org/workspace roles.
+
+### What Gets Tracked
+
+- `totalCostUSD` — cumulative dollar amount
+- `totalAPIDuration` — time spent waiting for API responses
+- `totalToolDuration` — time spent executing tools
+- `linesAdded / linesRemoved` — code change volume
+- `modelUsage` — per-model token breakdown
+- `fpsMetrics` — terminal rendering performance
+
+All of this persists to project config and survives session restarts via `restoreCostStateForSession()`.
+
+---
+
+## 8. The Loneliest 1,265
+
+CodeGraph found **1,265 isolated functions** — functions with zero callers AND zero callees. Out of 9,848 total, that's **12.8%** sitting in complete isolation.
+
+Where do they live?
+
+| File | Total Functions | Why Isolated |
+|------|-----------------|--------------|
+| `bootstrap/state.ts` | **212** | Getters/setters called dynamically |
+| `sessionStorage.ts` | **153** | Dynamic property access |
+| `yoga-layout/index.ts` | **134** | FFI binding layer |
+
+`bootstrap/state.ts` alone has 212 functions — the densest file in the codebase. It's a global state machine that vends getters and setters for everything from session IDs to model strings. Static analysis can't see dynamic property access, so they appear "isolated" even though they're heavily used at runtime.
+
+---
+
+## 9. The Class Hierarchy: OOP at the Boundaries
+
+With 128 classes in a primarily functional codebase, where does OOP live?
+
+| Class | Methods | Purpose |
+|-------|---------|---------|
+| `Node` | **91** | Yoga layout FFI binding |
+| `Cursor` | **59** | Terminal cursor management |
+| `Ink` | **52** | Custom React terminal renderer |
+| `YogaLayoutNode` | **50** | Flexbox layout engine |
+| `WebSocketTransport` | **30** | WebSocket client |
+| `TmuxBackend` | **20** | Tmux pane management |
+| `CCRClient` | **24** | API transport layer |
+
+The top 4 classes are all **rendering infrastructure**. The business logic (tools, permissions, cost tracking, buddy) is overwhelmingly functional — closures, hooks, and module-level state. Classes appear only at the boundaries: transport protocols, terminal abstractions, and system backends.
+
+---
+
+## 10. Patterns Worth Stealing
+
+### Deterministic Generation Without Persistence
+
+The buddy system regenerates `bones` from `hash(userId)` every time. Only `soul` persists. This eliminates schema migration headaches AND prevents config-file cheating.
+
+### Gate Ordering by Cost
+
+The dream task checks: in-memory flag → stat a file → list a directory → acquire a lock. Each gate is more expensive than the last, so cheap rejections happen first.
+
+### Single-Letter Task ID Prefixes
+
+`b`ash, `a`gent, `r`emote, `t`eammate, `w`orkflow, `m`onitor, `d`ream — instant type identification from the ID string alone.
+
+### Honest Function Names
+
+`getFeatureValue_CACHED_MAY_BE_STALE`, `slowOperations.ts`, `writeFileSyncAndFlush_DEPRECATED` — names that force callers to understand the tradeoffs.
+
+### AsyncLocalStorage for Concurrent Identity
+
+When multiple agents share a process, don't use global state for identity. Use AsyncLocalStorage to give each async execution chain its own context.
+
+### Single Permission Gateway
+
+Route all 42 tools through one function. Adding a new security policy means changing one file, not 42.
+
+---
+
+## Conclusion
+
+Claude Code is not just an AI coding assistant — it's a **miniature operating system** for AI agents. Through CodeGraph's structural analysis, we've uncovered:
+
+- A `utils` foundation with **5,951 incoming calls** acting as bedrock
+- A permission system where **all 42 tools pass through a single gateway**
+- A virtual pet with **gacha mechanics and anti-cheat architecture**
+- An AI that **dreams about its memories** during idle hours
+- A **three-tier multi-agent orchestration system** spanning tmux, iTerm2, and in-process
+- **1,265 isolated functions** (12.8%) sitting in silence
+
+The graph never lies. Behind every great product is an architecture that tells its own story — you just need the right tools to read it.

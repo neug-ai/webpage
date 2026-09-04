@@ -1,0 +1,196 @@
+---
+title: "NeuG 正式开源"
+description: "介绍 NeuG：一款面向本地分析与实时事务处理的轻量级高性能嵌入式图数据库。"
+date: "2026-02-11"
+author: "NeuG Team"
+category: release
+tags:
+  - NeuG
+  - 开源
+  - 嵌入式数据库
+  - 图数据库
+cover: "/images/blog/open-sourcing-neug/2026-02-11-neug-title.jpg"
+locale: zh
+translationKey: open-sourcing-neug
+draft: false
+aliases:
+  - "/blog/2026/02/11/Opensourcing-NeuG.html"
+  - "/blog/tech/2026/02/11/Opensourcing-NeuG.html"
+---
+
+我们很高兴地宣布 **NeuG**（读作 “new-gee”）正式开源。NeuG 是一款轻量级、高性能的嵌入式图数据库，专为本地分析与实时事务处理而设计。
+
+**GitHub**：[https://github.com/alibaba/neug](https://github.com/alibaba/neug)  
+**文档**：[/zh/docs/overview/introduction/](/zh/docs/overview/introduction/)
+
+---
+
+## 为什么选择 NeuG
+
+过去几年，[GraphScope](https://graphscope.io) 团队一直致力于构建大规模图计算引擎。在此过程中，我们不断从社区收到相似的反馈：很多用户并不需要分布式集群。他们真正想要的，是一款可以通过 `pip install` 安装、能在 Jupyter Notebook 中探索数据、能在 Python 脚本中运行图查询，并能在生产需要时快速启动为服务的图数据库。
+
+这让我们想起了 DuckDB 为关系数据处理带来的改变——一款无需部署服务器或配置连接池的嵌入式分析数据库。只需 `import duckdb`，即可开始工作。我们希望为图数据带来同样的体验。
+
+NeuG 正是这一努力的成果。它复用了 GraphScope Flex 的存储与查询引擎；后者在 [LDBC SNB Interactive 基准测试](https://ldbcouncil.org/benchmarks/snb/interactive/2025-04-21-graphscope-flex-sf300/)中取得了出色成绩。同时，NeuG 重新设计了接口层，使其能够作为 Python 库直接嵌入应用。我们也保留了 `db.serve()` 接口，以便在需要并发访问时切换至服务模式。
+
+NeuG 适用于需要在本地快速处理图数据的场景，包括数据科学探索、ML 特征工程、AI 应用原型开发，以及重视部署简洁性的轻量级应用。
+
+---
+
+## 核心特性
+
+### 轻量且可嵌入
+
+- **轻量**：所有依赖均通过 third_party 子模块管理
+- **可嵌入**：目前支持 Python 应用，未来将支持更多语言与平台
+- 通过 `pip install neug` 即可开始使用
+
+```python
+import neug
+
+db = neug.Database("/path/to/data")
+conn = db.connect()
+
+result = conn.execute("""
+    MATCH (a:Person)-[:KNOWS]->(b:Person)
+    RETURN a.name, b.name
+""")
+```
+
+### 双模式架构（HTAP）
+
+NeuG 通过同一个轻量级核心提供两种运行模式：
+
+| 模式 | 使用场景 | 特点 |
+|---|---|---|
+| **嵌入式模式** | 离线分析、ML/AI 流水线 | 作为 Python 库导入，非常适合 Jupyter Notebook、批量 ETL 与图算法开发 |
+| **服务模式** | 在线事务、并发访问 | 调用 `db.serve()` 启动网络服务，支持多会话 ACID 事务 |
+
+这一设计让 NeuG 能够灵活覆盖从原型开发到生产部署的全过程，而无需更换技术栈。
+
+### 原生支持 Cypher
+
+- 支持行业标准的 Cypher 查询语言
+- 基于 [GOpt](https://graphscope.io/blog/tech/2024/02/22/GOpt-A-Unified-Graph-Query-Optimization-Framework-in-GraphScope) 统一中间表示构建，并为未来兼容 [ISO/GQL](https://www.gqlstandards.org/) 而设计
+
+### 面向扩展而设计
+
+- 受 PostgreSQL/DuckDB 启发的扩展系统
+- 保持核心精简；通过可扩展框架加入图算法、向量搜索与自定义过程
+
+### ACID 事务
+
+- 嵌入式模式：单连接串行访问，并提供数据一致性保证
+- 服务模式：支持读写隔离的多会话并发事务
+
+---
+
+## 性能
+
+NeuG 构建于 GraphScope Flex 引擎之上。该引擎使用 Cypher 查询，在 **LDBC SNB Interactive 基准测试**中取得了行业领先的结果：
+
+| 指标 | 结果 |
+|---|---|
+| **吞吐量** | 80,000+ QPS |
+| **规模因子** | SF300（约 10 亿条边） |
+| **审计状态** | 已通过 LDBC 官方审计 |
+
+这些结果验证了 NeuG 处理高并发事务工作负载的能力。完整审计报告可在 [LDBC 网站](https://ldbcouncil.org/benchmarks/snb/interactive/2025-04-21-graphscope-flex-sf300/)查看。
+
+---
+
+## 使用场景
+
+NeuG v0.1 尤其适合以下场景：
+
+- **AI/LLM 应用开发**：为 RAG 系统与 AI Agent 存储和查询知识图谱
+- **数据科学与研究**：在 Jupyter Notebook 中探索图数据，包括社交网络分析、关系挖掘与模式发现
+- **ML 特征工程**：计算图结构特征（节点中心性、社区结构、路径模式），作为机器学习输入
+- **从原型到生产**：开发阶段使用嵌入式模式快速迭代，部署时切换至服务模式，无需更换技术栈
+- **边缘计算与本地优先应用**：无需网络连接，即可在资源受限环境中运行图查询
+
+---
+
+## 快速开始
+
+```bash
+# Installation
+pip install neug
+
+# Verify installation
+python -c "import neug; print('NeuG is ready!')"
+```
+
+```python
+import neug
+
+# Create database and load sample data
+db = neug.Database("./my_graph")
+conn = db.connect()
+db.load_builtin_dataset("tinysnb")
+
+# Execute queries
+result = conn.execute("""
+    MATCH (a:person)-[:knows]->(b:person)-[:knows]->(c:person),
+          (a)-[:knows]->(c)
+    RETURN a.fName, b.fName, c.fName
+""")
+
+for record in result:
+    print(f"{record} are mutual friends")
+
+# Switch to service mode
+conn.close()
+db.serve(port=8080)
+```
+
+---
+
+## 即将推出（v0.2）
+
+v0.2 将重点增强 AI 场景支持与数据生态集成：
+
+| 功能 | 说明 | 使用场景 |
+|---|---|---|
+| **Node.js Binding** | TypeScript/JavaScript 语言绑定 | AI Agent 开发、Web 后端集成 |
+| **图算法扩展** | Leiden 社区发现等算法 | 知识图谱聚类、GraphRAG 实体分组 |
+| **向量数据库扩展** | 图 + 向量混合检索 | GraphRAG、语义搜索 + 关系推理 |
+| **数据湖集成** | S3/OSS + Parquet 格式 | 大规模离线分析、数据平台集成 |
+| **外部表** | 直接查询外部数据源 | 与 PostgreSQL、DuckDB 及关系数据生态互操作 |
+
+---
+
+## 技术栈
+
+- **查询语言**：Cypher（计划兼容 ISO/GQL）
+- **查询优化**：GOpt 统一优化框架
+- **存储引擎**：GraphScope Flex
+- **语言绑定**：Python（已提供 C++ API，Node.js 正在开发）
+- **平台支持**：Linux、macOS（x86_64、ARM64）
+
+---
+
+## 许可证
+
+NeuG 采用 Apache License 2.0 发布。
+
+---
+
+## 参与贡献
+
+我们欢迎社区参与和贡献：
+
+- **Star 与 Watch**：[https://github.com/alibaba/neug](https://github.com/alibaba/neug)
+
+---
+
+## 致谢
+
+NeuG 由阿里巴巴 [GraphScope](https://graphscope.io) 团队开发，凝聚了团队多年构建大规模图计算系统的经验。感谢所有为该项目作出贡献的开发者。
+
+---
+
+**让图数据更简单。**
+
+GitHub：[https://github.com/alibaba/neug](https://github.com/alibaba/neug)  
+文档：[/zh/docs/overview/introduction/](/zh/docs/overview/introduction/)

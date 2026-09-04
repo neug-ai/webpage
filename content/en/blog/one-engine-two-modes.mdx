@@ -1,0 +1,181 @@
+---
+title: "NeuG: One Engine, Two Modes, Outperforming Established Graph Databases"
+description: "Explore NeuG's embedded and service modes, full Cypher support, and benchmark results against LadybugDB and Neo4j."
+date: "2026-04-11"
+author: "NeuG Team"
+category: engineering
+tags:
+  - NeuG
+  - Cypher
+  - benchmarks
+  - embedded database
+  - graph database
+cover: "/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-banner.png"
+locale: en
+translationKey: one-engine-two-modes
+draft: false
+aliases:
+  - "/blog/2026/04/12/neug-one-engine-two-modes.html"
+  - "/blog/tech/2026/04/12/neug-one-engine-two-modes.html"
+  - "/blog/tech/2026/04/11/neug-one-engine-two-modes.html"
+---
+
+Graph databases have become essential for applications built on relationships — social networks, knowledge graphs, fraud detection, recommendation engines. But integrating a graph database into your application often means managing a separate server process, dealing with network latency, and wrestling with deployment complexity.
+
+**NeuG** (pronounced "new-gee") is a new graph database designed to change that. Following the same philosophy as [DuckDB](https://duckdb.org/) — but for graph data — NeuG is **lightweight, minimal in dependencies, and easy to embed**. It runs directly inside your application process as an embedded library, supports full Cypher queries, and delivers sub-millisecond latency on complex graph traversals. Currently available for Python (`pip install neug`), with Node.js and more language bindings on the roadmap.
+
+In this article, we explore what NeuG can do today, how it compares with established graph databases, and why it might be the graph engine your next project needs.
+
+---
+
+## 1. Full Cypher Support, Ready Out of the Box
+
+NeuG provides rich Cypher query language support, including variable-length path matching (`*1..3`), shortest path queries (`*SHORTEST`, `ALL SHORTEST`), subqueries (`CALL { ... }`), multi-label node matching (`:POST:COMMENT`), and more.
+
+Here is a complete Python example showing the full workflow from schema creation, data import, to querying:
+
+```python
+from neug.database import Database
+
+db = Database("social.db")
+conn = db.connect()
+
+# Define graph schema
+conn.execute("CREATE NODE TABLE Person (id INT64, name STRING, PRIMARY KEY(id))")
+conn.execute("CREATE REL TABLE Knows (FROM Person TO Person, since DATE)")
+
+# Insert data
+conn.execute("CREATE (:Person {id: 1, name: 'Alice'})")
+conn.execute("CREATE (:Person {id: 2, name: 'Bob'})")
+conn.execute("CREATE (:Person {id: 3, name: 'Carol'})")
+conn.execute("""
+    MATCH (a:Person {id:1}), (b:Person {id:2})
+    CREATE (a)-[:Knows {since: date('2024-01-15')}]->(b)
+""")
+conn.execute("""
+    MATCH (b:Person {id:2}), (c:Person {id:3})
+    CREATE (b)-[:Knows {since: date('2024-06-01')}]->(c)
+""")
+
+# Bulk import from CSV
+conn.execute("COPY Person FROM 'persons.csv' (HEADER=true)")
+
+# Query: find 2nd-degree friends
+result = conn.execute("""
+    MATCH (a:Person {name:'Alice'})-[:Knows*1..2]->(f:Person)
+    RETURN DISTINCT f.name
+""")
+print(result.get_bolt_response())
+
+conn.close()
+db.close()
+```
+
+NeuG's Cypher implementation is powered by [GOpt](https://graphscope.io/blog/tech/2024/02/22/GOpt-A-Unified-Graph-Query-Optimization-Framework-in-GraphScope)'s unified intermediate representation (IR), making it also **GQL-ready** — when the [ISO/GQL](https://www.gqlstandards.org/) standard matures, migration cost will be minimal.
+
+---
+
+## 2. Dual-Mode Architecture and TP/AP Capabilities
+
+Most graph databases force you to choose between a heavy client-server deployment and a limited embedded store. NeuG offers both in a single lightweight package — a design unique among graph databases.
+
+![NeuG Dual-Mode Architecture](/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-dual-mode-architecture.png)
+
+**Embedded Mode** loads NeuG as a library directly into your process, just like SQLite or DuckDB. No daemon, no configuration files, no ports to manage — your graph database lives entirely inside your application. This mode is ideal for data science workflows, ML/AI pipelines, batch analytics, and rapid prototyping.
+
+**Service Mode** switches from embedded with a single line of code:
+
+```python
+uri = db.serve(host="localhost", port=10000, blocking=True)
+```
+
+NeuG then serves over HTTP/RPC with full MVCC transactions and multi-client concurrency, ready for web applications, real-time APIs, and multi-user collaboration.
+
+In both modes, you use **the same library, the same data, and the same queries**. This seamless transition means you can develop and validate in embedded mode, then expose the same database as a production service — no data migration, no query rewriting.
+
+On the capability side, NeuG covers both transactional (TP) and analytical (AP) workloads. ACID transactions and MVCC concurrency control ensure data consistency in service mode; the columnar execution engine with vectorized processing makes complex multi-hop traversals and subgraph matching equally efficient. NeuG also supports a Postgres/DuckDB-style extension model — load data source plugins on demand with `INSTALL JSON; LOAD JSON;` (supporting JSON, Parquet, S3/OSS), keeping the core engine lean.
+
+---
+
+## 3. Performance
+
+NeuG's dual-mode architecture lets us benchmark each mode against its natural competitor: **embedded mode against [LadybugDB](https://ladybugdb.com/) on analytical query latency**, and **service mode against [Neo4j](https://neo4j.com/) on transactional query throughput**.
+
+- **[Neo4j](https://neo4j.com/)** is the most widely deployed graph database, operating as a standalone server and the de facto standard for transactional graph workloads.
+- **[LadybugDB](https://ladybugdb.com/)** is an embeddable graph database built on [Kùzu](https://kuzudb.com/). Like NeuG, it runs in-process without a server, making it the closest architectural peer in the embedded graph space.
+
+All tests use the LDBC SNB SF1 dataset (~3M nodes, ~17M edges) on an Apple Silicon Mac.
+
+### Embedded Mode: LSQB Benchmark (NeuG vs LadybugDB)
+
+[LSQB (Labelled Subgraph Query Benchmark)](https://github.com/ldbc/lsqb) contains 9 complex subgraph matching queries that lean toward analytical workloads, making it an excellent test for embedded graph database query optimization and execution.
+
+> **Note on KNOWS Edges**: The original LSQB benchmark assumes KNOWS relationships are bidirectional (i.e., if A knows B, then B also knows A). In our tests, we modified all queries involving KNOWS edges to use directed traversal (`-[:KNOWS]->`). This adjustment allows the **same LDBC SNB SF1 dataset to be used for both SNB Interactive and LSQB benchmarks**, since the KNOWS relationships in the original LDBC SNB data are unidirectional. This modification does not affect the fairness of evaluating graph database query optimization and execution capabilities.
+
+We compared NeuG (single-threaded) against LadybugDB (Kuzu-based, using the best multi-threaded result for each query):
+
+![Embedded Mode: LSQB Benchmark Comparison](/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-lsqb-embedded-comparison.png)
+
+NeuG wins **8 out of 9 queries** with just a single thread. On Q3 (triangle pattern within the same country) it achieves a **287x** speedup; on Q2 (two-hop with filtering) a **91x** speedup. Even with LadybugDB using up to 8 threads, NeuG single-threaded significantly outperforms on most queries.
+
+On complex analytical queries involving multi-hop joins, triangle patterns, and long paths, NeuG's graph-native query optimizer demonstrates an overwhelming advantage. Notably, on Q9 — a simpler short-path traversal where multi-threading typically benefits competitors — NeuG still achieves a **1.7x** speedup. 
+
+### Service Mode: LDBC SNB Interactive Benchmark (NeuG vs Neo4j)
+
+[LDBC SNB Interactive](https://ldbcouncil.org/benchmarks/snb-interactive/) contains 14 complex read queries (IC1–IC14) covering multi-hop friend finding, shortest paths, and aggregation — typical transactional graph workloads. We ran 4 concurrent clients for 300 seconds, randomly issuing these queries against both NeuG in service mode and Neo4j in server mode.
+
+![Service Mode: LDBC SNB IC Throughput and Latency](/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-ldbc-service-throughput.png)
+
+NeuG achieves **617 QPS** — **50.6x** the throughput of Neo4j. On latency, NeuG's P50 is just 3.1ms with a P95 of 20.6ms, while Neo4j's P95 reaches 1,728ms. Over 300 seconds NeuG successfully executed 185,156 queries with zero failures, demonstrating the stability of its service path under high concurrency.
+
+### Why Is NeuG So Fast?
+
+NeuG's performance advantage comes from three technical foundations.
+
+First, NeuG is built on [GraphScope Flex](https://graphscope.io), the graph engine that [set the LDBC SNB Interactive Benchmark world record](https://ldbcouncil.org/benchmarks/snb/interactive/2025-04-21-graphscope-flex-sf300/) at **80,000+ QPS**. This is not a research prototype — it's the same battle-tested engine proven at enterprise scale at Alibaba. NeuG inherits its optimized CSR storage for cache-friendly traversals, a columnar vectorized execution engine, and efficient memory management.
+
+Second, unlike most graph databases that reuse relational optimizers, NeuG uses [GOpt](https://graphscope.io/blog/tech/2024/02/22/GOpt-A-Unified-Graph-Query-Optimization-Framework-in-GraphScope) — a graph-native query optimizer. GOpt performs cost-based optimization with graph-specific cardinality estimation, supports pattern decomposition and worst-case optimal join planning, and reasons about graph topology to select efficient execution strategies. This is exactly why NeuG achieves 287x speedup on LSQB Q3 (triangle patterns) and 91x on Q2 (multi-hop filtering) — complex patterns that traditional optimizers struggle with.
+
+Third, in embedded mode NeuG executes in-process with zero serialization overhead. For multi-hop traversal queries, this advantage compounds — each hop that would incur a network round-trip in a client-server model is instead a direct memory access.
+
+---
+
+## Reproducibility
+
+All performance results in this article are independently reproducible. We have published the following resources:
+
+- **Dataset**: The LDBC SNB SF1 dataset is available at https://neug.oss-cn-hangzhou.aliyuncs.com/datasets/ldbc-snb-sf1-lsqb.tar.gz (~282MB)
+- **Benchmark and Tutorial**: Benchmark Scripts are in https://github.com/alibaba/neug/tree/main/examples/, tutorial at /docs/tutorials/benchmark-neug-dual-mode/
+
+### Quick Reproduction
+
+**Embedded Mode (NeuG vs LadybugDB)**:
+```bash
+wget https://neug.oss-cn-hangzhou.aliyuncs.com/datasets/ldbc-snb-sf1-lsqb.tar.gz
+tar -xzf ldbc-snb-sf1-lsqb.tar.gz
+pip install neug real_ladybug
+cd neug/examples/lsqb_benchmark
+python run_neug_benchmark.py --data-dir social_network-sf1-CsvComposite-StringDateFormatter
+```
+
+**Service Mode (NeuG vs Neo4j)**:
+```bash
+wget https://neug.oss-cn-hangzhou.aliyuncs.com/datasets/ldbc-snb-sf1-lsqb.tar.gz
+tar -xzf ldbc-snb-sf1-lsqb.tar.gz
+pip install neug neo4j
+# Start Neo4j server (optional, for comparison)
+docker run -d --name neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/neo4j123 neo4j:latest
+cd neug/examples/ldbc_interactive_benchmark
+python run_interactive_benchmark.py --data-dir social_network-sf1-CsvComposite-StringDateFormatter
+```
+
+If you encounter any issues reproducing these results, please report them on [GitHub Issues](https://github.com/alibaba/neug/issues).
+
+## What's Next
+
+NeuG is under active development. The roadmap includes Node.js bindings (AI Agent integration), graph algorithm extensions (Leiden community detection, PageRank, K-Core), data lake support (S3/OSS + Parquet + GraphAr), and vector database extensions for RAG & GraphRAG workflows.
+
+If you're building applications that need fast, embedded graph queries without the operational overhead of a database server, give NeuG a try.
+
+**GitHub**: [github.com/alibaba/neug](https://github.com/alibaba/neug)
+**Install**: `pip install neug`

@@ -1,0 +1,183 @@
+---
+title: "NeuG：一个引擎，两种模式，性能超越成熟图数据库"
+description: "深入了解 NeuG 的嵌入式与服务两种模式、完整 Cypher 支持，以及与 LadybugDB 和 Neo4j 的基准测试结果。"
+date: "2026-04-11"
+author: "NeuG Team"
+category: engineering
+tags:
+  - NeuG
+  - Cypher
+  - 基准测试
+  - 嵌入式数据库
+  - 图数据库
+cover: "/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-banner.png"
+locale: zh
+translationKey: one-engine-two-modes
+draft: false
+aliases:
+  - "/blog/2026/04/12/neug-one-engine-two-modes.html"
+  - "/blog/tech/2026/04/12/neug-one-engine-two-modes.html"
+  - "/blog/tech/2026/04/11/neug-one-engine-two-modes.html"
+---
+
+图数据库已经成为关系驱动型应用的关键基础设施，广泛用于社交网络、知识图谱、欺诈检测与推荐引擎。然而，将图数据库集成到应用中，往往意味着需要管理独立的服务器进程、承受网络延迟，并应对复杂的部署工作。
+
+**NeuG**（读作 “new-gee”）是一款旨在改变这一现状的新型图数据库。它遵循与 [DuckDB](https://duckdb.org/) 相同的理念，只不过面向的是图数据：NeuG **轻量、依赖精简且易于嵌入**。它可以作为嵌入式库直接运行在应用进程内部，支持完整的 Cypher 查询，并能在复杂图遍历中实现亚毫秒级延迟。目前 NeuG 已支持 Python（`pip install neug`），Node.js 与更多语言绑定也已列入路线图。
+
+本文将介绍 NeuG 当前具备的能力、它与成熟图数据库的对比结果，以及它为何可能成为你下一个项目所需要的图引擎。
+
+---
+
+## 1. 开箱即用的完整 Cypher 支持
+
+NeuG 提供丰富的 Cypher 查询语言支持，包括变长路径匹配（`*1..3`）、最短路径查询（`*SHORTEST`、`ALL SHORTEST`）、子查询（`CALL { ... }`）、多标签节点匹配（`:POST:COMMENT`）等。
+
+下面是一个完整的 Python 示例，展示从创建 schema、导入数据到执行查询的全流程：
+
+```python
+from neug.database import Database
+
+db = Database("social.db")
+conn = db.connect()
+
+# Define graph schema
+conn.execute("CREATE NODE TABLE Person (id INT64, name STRING, PRIMARY KEY(id))")
+conn.execute("CREATE REL TABLE Knows (FROM Person TO Person, since DATE)")
+
+# Insert data
+conn.execute("CREATE (:Person {id: 1, name: 'Alice'})")
+conn.execute("CREATE (:Person {id: 2, name: 'Bob'})")
+conn.execute("CREATE (:Person {id: 3, name: 'Carol'})")
+conn.execute("""
+    MATCH (a:Person {id:1}), (b:Person {id:2})
+    CREATE (a)-[:Knows {since: date('2024-01-15')}]->(b)
+""")
+conn.execute("""
+    MATCH (b:Person {id:2}), (c:Person {id:3})
+    CREATE (b)-[:Knows {since: date('2024-06-01')}]->(c)
+""")
+
+# Bulk import from CSV
+conn.execute("COPY Person FROM 'persons.csv' (HEADER=true)")
+
+# Query: find 2nd-degree friends
+result = conn.execute("""
+    MATCH (a:Person {name:'Alice'})-[:Knows*1..2]->(f:Person)
+    RETURN DISTINCT f.name
+""")
+print(result.get_bolt_response())
+
+conn.close()
+db.close()
+```
+
+NeuG 的 Cypher 实现由 [GOpt](https://graphscope.io/blog/tech/2024/02/22/GOpt-A-Unified-Graph-Query-Optimization-Framework-in-GraphScope) 的统一中间表示（IR）提供支持，因此也已经为 **GQL 做好准备**：当 [ISO/GQL](https://www.gqlstandards.org/) 标准成熟后，迁移成本将非常低。
+
+---
+
+## 2. 双模式架构与 TP/AP 能力
+
+大多数图数据库都会迫使用户在笨重的客户端—服务器部署与能力有限的嵌入式存储之间作出选择。NeuG 则在同一个轻量级软件包中同时提供两者，这在图数据库中是一种独特设计。
+
+![NeuG 双模式架构](/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-dual-mode-architecture.png)
+
+**嵌入式模式**会像 SQLite 或 DuckDB 一样，将 NeuG 作为库直接加载到进程中。无需守护进程、配置文件或端口管理，你的图数据库完全存在于应用内部。该模式非常适合数据科学工作流、ML/AI 流水线、批量分析与快速原型开发。
+
+从嵌入式模式切换到**服务模式**只需一行代码：
+
+```python
+uri = db.serve(host="localhost", port=10000, blocking=True)
+```
+
+随后 NeuG 将通过 HTTP/RPC 提供服务，具备完整 MVCC 事务与多客户端并发能力，可用于 Web 应用、实时 API 和多用户协作。
+
+在两种模式中，你使用的都是**同一个库、同一份数据和相同的查询**。这种无缝切换意味着，你可以先在嵌入式模式中开发和验证，再将同一个数据库作为生产服务暴露出去，无需迁移数据，也无需改写查询。
+
+在能力层面，NeuG 同时覆盖事务型（TP）与分析型（AP）工作负载。ACID 事务和 MVCC 并发控制保证服务模式下的数据一致性；具备向量化处理能力的列式执行引擎，则让复杂的多跳遍历与子图匹配同样高效。NeuG 还支持类似 Postgres/DuckDB 的扩展模型：通过 `INSTALL JSON; LOAD JSON;` 按需加载数据源插件（支持 JSON、Parquet、S3/OSS），让核心引擎保持精简。
+
+---
+
+## 3. 性能
+
+NeuG 的双模式架构让我们可以将每种模式与其最自然的竞品进行比较：**嵌入式模式使用分析查询延迟与 [LadybugDB](https://ladybugdb.com/) 对比**，**服务模式使用事务查询吞吐量与 [Neo4j](https://neo4j.com/) 对比**。
+
+- **[Neo4j](https://neo4j.com/)** 是部署最广泛的图数据库，以独立服务器方式运行，也是事务型图工作负载事实上的行业标准。
+- **[LadybugDB](https://ladybugdb.com/)** 是一款基于 [Kùzu](https://kuzudb.com/) 构建的嵌入式图数据库。它与 NeuG 一样无需服务器、直接在进程内运行，因此是嵌入式图数据库领域架构最接近的对比对象。
+
+所有测试均在 Apple Silicon Mac 上使用 LDBC SNB SF1 数据集（约 300 万个节点、1,700 万条边）。
+
+### 嵌入式模式：LSQB 基准测试（NeuG vs LadybugDB）
+
+[LSQB（Labelled Subgraph Query Benchmark）](https://github.com/ldbc/lsqb)包含 9 个偏向分析工作负载的复杂子图匹配查询，非常适合测试嵌入式图数据库的查询优化与执行能力。
+
+> **关于 KNOWS 边的说明**：原始 LSQB 基准假设 KNOWS 关系为双向关系（即 A 认识 B 时，B 也认识 A）。在测试中，我们将所有涉及 KNOWS 边的查询改为使用有向遍历（`-[:KNOWS]->`）。由于原始 LDBC SNB 数据中的 KNOWS 关系是单向的，这一调整使 **SNB Interactive 与 LSQB 基准测试可以使用同一份 LDBC SNB SF1 数据集**。该修改不会影响对图数据库查询优化与执行能力进行评估的公平性。
+
+我们将单线程 NeuG 与 LadybugDB 进行了对比；LadybugDB 基于 Kuzu，并为每个查询选取其最佳多线程结果：
+
+![嵌入式模式：LSQB 基准测试对比](/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-lsqb-embedded-comparison.png)
+
+NeuG 仅使用一个线程，就在 **9 个查询中的 8 个**取得领先。在 Q3（同一国家内的三角形模式）上实现了 **287x** 加速，在 Q2（带过滤的两跳查询）上实现了 **91x** 加速。即便 LadybugDB 使用多达 8 个线程，单线程 NeuG 在大多数查询中依然明显更快。
+
+对于包含多跳连接、三角形模式与长路径的复杂分析查询，NeuG 的图原生查询优化器展现出压倒性优势。值得注意的是，在 Q9 这种更简单的短路径遍历中，多线程通常有利于竞品，但 NeuG 依然实现了 **1.7x** 加速。
+
+### 服务模式：LDBC SNB Interactive 基准测试（NeuG vs Neo4j）
+
+[LDBC SNB Interactive](https://ldbcouncil.org/benchmarks/snb-interactive/) 包含 14 个复杂读取查询（IC1–IC14），覆盖多跳好友查找、最短路径与聚合等典型事务型图工作负载。我们使用 4 个并发客户端运行 300 秒，分别向服务模式下的 NeuG 与服务器模式下的 Neo4j 随机发出这些查询。
+
+![服务模式：LDBC SNB IC 吞吐量与延迟](/images/blog/one-engine-two-modes/2026-04-13-neug-vs-others-ldbc-service-throughput.png)
+
+NeuG 达到 **617 QPS**，吞吐量是 Neo4j 的 **50.6x**。延迟方面，NeuG 的 P50 仅为 3.1ms，P95 为 20.6ms；而 Neo4j 的 P95 达到 1,728ms。在 300 秒内，NeuG 成功执行了 185,156 次查询，且零失败，证明其服务链路在高并发下具有出色稳定性。
+
+### NeuG 为什么如此之快？
+
+NeuG 的性能优势来自三项技术基础。
+
+首先，NeuG 构建于 [GraphScope Flex](https://graphscope.io) 之上。该图引擎曾以 **80,000+ QPS** [刷新 LDBC SNB Interactive Benchmark 世界纪录](https://ldbcouncil.org/benchmarks/snb/interactive/2025-04-21-graphscope-flex-sf300/)。这并非研究原型，而是在阿里巴巴企业级规模下得到充分验证的同一套引擎。NeuG 继承了其面向缓存友好遍历优化的 CSR 存储、列式向量化执行引擎与高效内存管理能力。
+
+其次，大多数图数据库会复用关系型优化器，而 NeuG 使用的是图原生查询优化器 [GOpt](https://graphscope.io/blog/tech/2024/02/22/GOpt-A-Unified-Graph-Query-Optimization-Framework-in-GraphScope)。GOpt 使用图专用的基数估计进行基于代价的优化，支持模式分解与最坏情况最优连接规划，并能根据图拓扑选择高效的执行策略。这正是 NeuG 能够在 LSQB Q3（三角形模式）上实现 287x 加速、在 Q2（多跳过滤）上实现 91x 加速的原因——传统优化器难以处理这类复杂模式。
+
+第三，在嵌入式模式下，NeuG 直接在进程内执行，没有任何序列化开销。对多跳遍历查询而言，这一优势会逐跳累积：客户端—服务器模型中每一跳可能产生的网络往返，在这里都变成了直接内存访问。
+
+---
+
+## 可复现性
+
+本文所有性能结果均可独立复现。我们已经发布以下资源：
+
+- **数据集**：LDBC SNB SF1 数据集可从 https://neug.oss-cn-hangzhou.aliyuncs.com/datasets/ldbc-snb-sf1-lsqb.tar.gz 下载（约 282MB）
+- **基准测试与教程**：基准测试脚本位于 https://github.com/alibaba/neug/tree/main/examples/，教程位于 /zh/docs/tutorials/benchmark-neug-dual-mode/
+
+### 快速复现
+
+**嵌入式模式（NeuG vs LadybugDB）**：
+
+```bash
+wget https://neug.oss-cn-hangzhou.aliyuncs.com/datasets/ldbc-snb-sf1-lsqb.tar.gz
+tar -xzf ldbc-snb-sf1-lsqb.tar.gz
+pip install neug real_ladybug
+cd neug/examples/lsqb_benchmark
+python run_neug_benchmark.py --data-dir social_network-sf1-CsvComposite-StringDateFormatter
+```
+
+**服务模式（NeuG vs Neo4j）**：
+
+```bash
+wget https://neug.oss-cn-hangzhou.aliyuncs.com/datasets/ldbc-snb-sf1-lsqb.tar.gz
+tar -xzf ldbc-snb-sf1-lsqb.tar.gz
+pip install neug neo4j
+# Start Neo4j server (optional, for comparison)
+docker run -d --name neo4j -p 7687:7687 -e NEO4J_AUTH=neo4j/neo4j123 neo4j:latest
+cd neug/examples/ldbc_interactive_benchmark
+python run_interactive_benchmark.py --data-dir social_network-sf1-CsvComposite-StringDateFormatter
+```
+
+如果在复现这些结果时遇到任何问题，请通过 [GitHub Issues](https://github.com/alibaba/neug/issues) 报告。
+
+## 后续规划
+
+NeuG 正在积极开发中。路线图包括 Node.js 绑定（AI Agent 集成）、图算法扩展（Leiden 社区发现、PageRank、K-Core）、数据湖支持（S3/OSS + Parquet + GraphAr），以及面向 RAG 与 GraphRAG 工作流的向量数据库扩展。
+
+如果你正在构建需要快速嵌入式图查询、同时又不希望承担数据库服务器运维开销的应用，不妨试试 NeuG。
+
+**GitHub**：[github.com/alibaba/neug](https://github.com/alibaba/neug)  
+**安装**：`pip install neug`
