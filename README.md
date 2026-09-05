@@ -80,7 +80,7 @@ npm run sync:docs
 
 The command modifies tracked content in place. Review the diff and run the validation commands before committing.
 
-## Synchronizing blog posts from GraphScope/neug-wiki
+## Synchronizing blog posts from neug-ai/wiki
 
 The canonical English source for an automatically published post is:
 
@@ -94,14 +94,17 @@ The first level-one heading in `blog-en.md` becomes the post title. Relative ref
 
 Automatic flow:
 
-1. A pull request in `GraphScope/neug-wiki` changes exactly one `raw/blogs/<slug>/` directory and is given the `blog` label.
+1. A pull request in `neug-ai/wiki` changes exactly one `raw/blogs/<slug>/` directory and is given the `blog` label.
 2. When the PR is merged into `main`, `.github/workflows/trigger-blog-sync.yml` dispatches the post to `neug-ai/webpage`.
 3. `.github/workflows/sync-neug-blog.yml` checks out the exact merge commit, generates NeuG blog frontmatter, copies managed images, and translates new or changed English content into Simplified Chinese with Qwen.
 4. The workflow creates or updates an `automation/neug-blog-*` pull request and publishes a PR preview.
 
-The `GraphScope/neug-wiki` repository needs the `WEBPAGE_DISPATCH_TOKEN` secret for dispatching to `neug-ai/webpage`.
+The private repositories need two narrowly scoped credentials:
 
-The translation secret and Qwen variables live only in `neug-ai/webpage`; they do not need to be copied to `GraphScope/neug-wiki`.
+- `neug-ai/wiki` needs `WEBPAGE_DISPATCH_TOKEN`, with access to dispatch events to `neug-ai/webpage`.
+- `neug-ai/webpage` needs `NEUG_WIKI_READ_TOKEN`, with read-only Contents access to `neug-ai/wiki`, so it can check out the exact source commit and its images.
+
+The translation secret and Qwen variables live only in `neug-ai/webpage`; they do not need to be copied to `neug-ai/wiki`.
 
 To synchronize a post manually, run the **Sync NeuG Blog Post** workflow in this repository and provide the source directory name as `slug`. For a local run:
 
