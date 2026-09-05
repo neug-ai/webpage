@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>NeuG Blog</title>
+<link>https://neug.io/blog/</link>
+<description>NeuG product releases, engineering insights, and real-world case studies.</description>
+<language>en-US</language>
+<atom:link href="https://neug.io/feed.xml" rel="self" type="application/rss+xml" />
+<item>
+<title>Is Your LLM Knowledge Base Getting Messier with Every Update? Use NeuG to Define Concept Boundaries and Pinpoint What Needs Updating</title>
+<link>https://neug.io/blog/code-graph-wiki/</link>
+<guid isPermaLink="true">https://neug.io/blog/code-graph-wiki/</guid>
+<pubDate>Mon, 03 Aug 2026 00:00:00 GMT</pubDate>
+<description>An LLM-generated code wiki can look impressive on the first run. It turns scattered code into readable sections and produces useful explanations in very little time.</description>
+<category>NeuG</category><category>Code Graph</category><category>LLM Wiki</category><category>Leiden</category><category>PageRank</category>
+</item>
+<item>
+<title>NeuG v0.1.3: The Era of Graph Computing Inside the Graph Database</title>
+<link>https://neug.io/blog/neug-v0-1-3-gds/</link>
+<guid isPermaLink="true">https://neug.io/blog/neug-v0-1-3-gds/</guid>
+<pubDate>Thu, 02 Jul 2026 00:00:00 GMT</pubDate>
+<description>NeuG v0.1.3 brings nine native graph algorithms through the GDS extension and adds COPY TEMP for temporary analysis of external data.</description>
+<category>NeuG</category><category>release</category><category>GDS</category><category>graph algorithms</category><category>COPY TEMP</category>
+</item>
+<item>
+<title>How Does AI Affect U.S. Employment? Replicating Harvard Business School Research with NeuGBI</title>
+<link>https://neug.io/blog/neugbi/</link>
+<guid isPermaLink="true">https://neug.io/blog/neugbi/</guid>
+<pubDate>Tue, 16 Jun 2026 00:00:00 GMT</pubDate>
+<description>NeuGBI autonomously analyzes 300 million U.S. employment records and reproduces Harvard research showing that AI-era job declines are concentrated in junior roles.</description>
+<category>NeuGBI</category><category>NeuG</category><category>graph database</category><category>business intelligence</category><category>AI employment</category>
+</item>
+<item>
+<title>NeuG v0.1.2: Your Graph Database Is No Longer a Data Island</title>
+<link>https://neug.io/blog/neug-v0-1-2-data-pipeline/</link>
+<guid isPermaLink="true">https://neug.io/blog/neug-v0-1-2-data-pipeline/</guid>
+<pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>
+<description>NeuG v0.1.2 makes the graph database a native part of the data lake ecosystem with cloud storage reads, schema-on-read, and Parquet export.</description>
+<category>NeuG</category><category>release</category><category>data pipeline</category><category>object storage</category><category>Parquet</category>
+</item>
+<item>
+<title>Feeding Code Repositories into LLM Wiki: 6x Token Savings in One Knowledge Build</title>
+<link>https://neug.io/blog/llm-wiki-code-repositories/</link>
+<guid isPermaLink="true">https://neug.io/blog/llm-wiki-code-repositories/</guid>
+<pubDate>Thu, 28 May 2026 00:00:00 GMT</pubDate>
+<description>How a repository-aware LLM Wiki ingests code, aligns modules across projects, supports team workflows, and cuts query token usage to roughly one-sixth.</description>
+<category>LLM Wiki</category><category>code repository</category><category>knowledge base</category><category>developer tools</category><category>NeuG</category>
+</item>
+<item>
+<title>You and Your LLM Can&apos;t Review Thousands of PRs at Once — But a Graph Database Can</title>
+<link>https://neug.io/blog/graph-database-driven-pr-review/</link>
+<guid isPermaLink="true">https://neug.io/blog/graph-database-driven-pr-review/</guid>
+<pubDate>Sun, 17 May 2026 00:00:00 GMT</pubDate>
+<description>How CodeGraph and NeuG turn large-scale pull request review into graph-powered risk scoring, conflict detection, and blast-radius analysis.</description>
+<category>CodeGraph</category><category>NeuG</category><category>graph database</category><category>pull request review</category><category>developer tools</category>
+</item>
+<item>
+<title>Star Counts Lied to Us: We Gave 74 Open Source Projects a Graph Database Health Check</title>
+<link>https://neug.io/blog/graph-database-health-check/</link>
+<guid isPermaLink="true">https://neug.io/blog/graph-database-health-check/</guid>
+<pubDate>Mon, 20 Apr 2026 00:00:00 GMT</pubDate>
+<description>A graph-based health check of 74 open source projects shows why Stars can conceal community decline and contributor churn.</description>
+<category>NeuG</category><category>open source</category><category>community health</category><category>graph analytics</category>
+</item>
+<item>
+<title>NeuG: One Engine, Two Modes, Outperforming Established Graph Databases</title>
+<link>https://neug.io/blog/one-engine-two-modes/</link>
+<guid isPermaLink="true">https://neug.io/blog/one-engine-two-modes/</guid>
+<pubDate>Sat, 11 Apr 2026 00:00:00 GMT</pubDate>
+<description>Explore NeuG&apos;s embedded and service modes, full Cypher support, and benchmark results against LadybugDB and Neo4j.</description>
+<category>NeuG</category><category>Cypher</category><category>benchmarks</category><category>embedded database</category><category>graph database</category>
+</item>
+<item>
+<title>Dissecting Claude Code: A Graph-Powered Deep Dive into an AI Coding Agent&apos;s Architecture</title>
+<link>https://neug.io/blog/dissecting-claude-code/</link>
+<guid isPermaLink="true">https://neug.io/blog/dissecting-claude-code/</guid>
+<pubDate>Thu, 02 Apr 2026 00:00:00 GMT</pubDate>
+<description>A CodeGraph analysis of 1,906 files, 9,848 functions, and 22,678 call edges reveals Claude Code&apos;s architecture.</description>
+<category>NeuG</category><category>CodeGraph</category><category>Claude Code</category><category>code intelligence</category>
+</item>
+<item>
+<title>Following 94 Million Relationships Down the Rabbit Hole</title>
+<link>https://neug.io/blog/following-94-million-relationships/</link>
+<guid isPermaLink="true">https://neug.io/blog/following-94-million-relationships/</guid>
+<pubDate>Tue, 24 Mar 2026 00:00:00 GMT</pubDate>
+<description>An exploratory analysis of 94 million OpenAIRE relationships reveals how the Russia-Ukraine conflict reshaped Russian academia.</description>
+<category>NeuG</category><category>exploratory BI</category><category>knowledge graph</category><category>OpenAIRE</category>
+</item>
+<item>
+<title>We X-Rayed OpenClaw with a Graph Database — Here&apos;s the Technical Debt We Found</title>
+<link>https://neug.io/blog/openclaw-technical-debt-analysis/</link>
+<guid isPermaLink="true">https://neug.io/blog/openclaw-technical-debt-analysis/</guid>
+<pubDate>Thu, 19 Mar 2026 00:00:00 GMT</pubDate>
+<description>A graph-based analysis of OpenClaw uncovers high-risk functions, zombie code, and an over-coupled agents module hidden across the codebase.</description>
+<category>OpenClaw</category><category>Technical Debt</category><category>Code Graph</category><category>CodeGraph</category><category>NeuG</category>
+</item>
+<item>
+<title>OpenClaw Users: Why Is Your Token Budget Disappearing Out of Nowhere?</title>
+<link>https://neug.io/blog/openclaw-token-cost-analysis/</link>
+<guid isPermaLink="true">https://neug.io/blog/openclaw-token-cost-analysis/</guid>
+<pubDate>Wed, 18 Mar 2026 00:00:00 GMT</pubDate>
+<description>A code-graph analysis of OpenClaw reveals how its heartbeat mechanism repeatedly loads full context and quietly drives up token usage.</description>
+<category>OpenClaw</category><category>Token Cost</category><category>Heartbeat</category><category>CodeGraph</category><category>NeuG</category>
+</item>
+<item>
+<title>AI-Powered Open Source Development Management: NeuG&apos;s Exploration and Practice</title>
+<link>https://neug.io/blog/ai-powered-development-management/</link>
+<guid isPermaLink="true">https://neug.io/blog/ai-powered-development-management/</guid>
+<pubDate>Thu, 12 Feb 2026 00:00:00 GMT</pubDate>
+<description>How the NeuG team uses AI as a development manager across requirements analysis, task decomposition, GitHub synchronization, and progress tracking.</description>
+<category>NeuG</category><category>AI</category><category>open source</category><category>spec-driven development</category><category>project management</category>
+</item>
+<item>
+<title>NeuG&apos;s High-Performance MVCC for Graph Workloads</title>
+<link>https://neug.io/blog/neug-transaction-mechanism/</link>
+<guid isPermaLink="true">https://neug.io/blog/neug-transaction-mechanism/</guid>
+<pubDate>Wed, 11 Feb 2026 00:00:00 GMT</pubDate>
+<description>An in-depth look at the transaction mechanism behind NeuG&apos;s high-throughput transactional processing and serializable isolation guarantees.</description>
+<category>NeuG</category><category>MVCC</category><category>transactions</category><category>graph database</category>
+</item>
+<item>
+<title>Opensourcing NeuG</title>
+<link>https://neug.io/blog/open-sourcing-neug/</link>
+<guid isPermaLink="true">https://neug.io/blog/open-sourcing-neug/</guid>
+<pubDate>Wed, 11 Feb 2026 00:00:00 GMT</pubDate>
+<description>Introducing NeuG, a lightweight, high-performance embedded graph database for local analytics and real-time transaction processing.</description>
+<category>NeuG</category><category>open source</category><category>embedded database</category><category>graph database</category>
+</item>
+</channel>
+</rss>

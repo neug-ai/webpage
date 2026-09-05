@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>NeuG 博客</title>
+<link>https://neug.io/zh/blog/</link>
+<description>NeuG 产品发布、工程实践与真实应用案例。</description>
+<language>zh-CN</language>
+<atom:link href="https://neug.io/zh/feed.xml" rel="self" type="application/rss+xml" />
+<item>
+<title>你的 LLM 知识库是否随着每次更新变得越来越混乱？使用 NeuG 定义概念边界并精准定位需要更新的内容</title>
+<link>https://neug.io/zh/blog/code-graph-wiki/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/code-graph-wiki/</guid>
+<pubDate>Mon, 03 Aug 2026 00:00:00 GMT</pubDate>
+<description>由 LLM 生成的代码 Wiki 在首次运行时往往令人印象深刻。它能将零散的代码转化为易于阅读的章节，并在极短的时间内生成有用的解释。</description>
+<category>NeuG</category><category>Code Graph</category><category>LLM Wiki</category><category>Leiden</category><category>PageRank</category>
+</item>
+<item>
+<title>NeuG v0.1.3：图计算走进图数据库的时代</title>
+<link>https://neug.io/zh/blog/neug-v0-1-3-gds/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/neug-v0-1-3-gds/</guid>
+<pubDate>Thu, 02 Jul 2026 00:00:00 GMT</pubDate>
+<description>NeuG v0.1.3 通过 GDS 扩展带来 9 种原生图算法，并新增 COPY TEMP，支持临时加载外部数据进行分析。</description>
+<category>NeuG</category><category>版本发布</category><category>GDS</category><category>图算法</category><category>COPY TEMP</category>
+</item>
+<item>
+<title>AI 如何影响美国就业？用 NeuGBI 复现哈佛商学院研究</title>
+<link>https://neug.io/zh/blog/neugbi/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/neugbi/</guid>
+<pubDate>Tue, 16 Jun 2026 00:00:00 GMT</pubDate>
+<description>NeuGBI 自主分析 3 亿条美国就业记录，复现哈佛研究，揭示 AI 时代的就业下降主要集中在初级岗位。</description>
+<category>NeuGBI</category><category>NeuG</category><category>图数据库</category><category>商业智能</category><category>AI 与就业</category>
+</item>
+<item>
+<title>NeuG v0.1.2：你的图数据库不再是数据孤岛</title>
+<link>https://neug.io/zh/blog/neug-v0-1-2-data-pipeline/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/neug-v0-1-2-data-pipeline/</guid>
+<pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>
+<description>NeuG v0.1.2 通过云存储直读、读时建模和 Parquet 导出，让图数据库成为数据湖生态中的原生组成部分。</description>
+<category>NeuG</category><category>版本发布</category><category>数据管道</category><category>对象存储</category><category>Parquet</category>
+</item>
+<item>
+<title>把代码仓库交给 LLM Wiki：一次知识构建节省 6 倍 Token</title>
+<link>https://neug.io/zh/blog/llm-wiki-code-repositories/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/llm-wiki-code-repositories/</guid>
+<pubDate>Thu, 28 May 2026 00:00:00 GMT</pubDate>
+<description>面向代码仓库的 LLM Wiki 如何摄取代码、跨项目对齐模块、支持团队协作，并将查询 token 消耗降至约六分之一。</description>
+<category>LLM Wiki</category><category>代码仓库</category><category>知识库</category><category>开发者工具</category><category>NeuG</category>
+</item>
+<item>
+<title>你和你的 LLM 无法一次审查数千个 PR，但图数据库可以</title>
+<link>https://neug.io/zh/blog/graph-database-driven-pr-review/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/graph-database-driven-pr-review/</guid>
+<pubDate>Sun, 17 May 2026 00:00:00 GMT</pubDate>
+<description>CodeGraph 与 NeuG 如何通过图驱动的风险评分、冲突检测和影响范围分析，将大规模 PR 审查从凭直觉转变为数据驱动。</description>
+<category>CodeGraph</category><category>NeuG</category><category>图数据库</category><category>PR 审查</category><category>开发者工具</category>
+</item>
+<item>
+<title>Star 数骗了我们：用图数据库给 74 个开源项目做健康体检</title>
+<link>https://neug.io/zh/blog/graph-database-health-check/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/graph-database-health-check/</guid>
+<pubDate>Mon, 20 Apr 2026 00:00:00 GMT</pubDate>
+<description>对 74 个开源项目进行基于图的健康检查，揭示 Star 数为何会掩盖社区衰退与贡献者流失。</description>
+<category>NeuG</category><category>开源</category><category>社区健康度</category><category>图分析</category>
+</item>
+<item>
+<title>NeuG：一个引擎，两种模式，性能超越成熟图数据库</title>
+<link>https://neug.io/zh/blog/one-engine-two-modes/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/one-engine-two-modes/</guid>
+<pubDate>Sat, 11 Apr 2026 00:00:00 GMT</pubDate>
+<description>深入了解 NeuG 的嵌入式与服务两种模式、完整 Cypher 支持，以及与 LadybugDB 和 Neo4j 的基准测试结果。</description>
+<category>NeuG</category><category>Cypher</category><category>基准测试</category><category>嵌入式数据库</category><category>图数据库</category>
+</item>
+<item>
+<title>解剖 Claude Code：用图深入剖析 AI 编程智能体架构</title>
+<link>https://neug.io/zh/blog/dissecting-claude-code/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/dissecting-claude-code/</guid>
+<pubDate>Thu, 02 Apr 2026 00:00:00 GMT</pubDate>
+<description>CodeGraph 对 1,906 个文件、9,848 个函数和 22,678 条调用边的分析，揭示了 Claude Code 的内部架构。</description>
+<category>NeuG</category><category>CodeGraph</category><category>Claude Code</category><category>代码智能</category>
+</item>
+<item>
+<title>沿着 9400 万条关系一路深挖</title>
+<link>https://neug.io/zh/blog/following-94-million-relationships/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/following-94-million-relationships/</guid>
+<pubDate>Tue, 24 Mar 2026 00:00:00 GMT</pubDate>
+<description>基于 OpenAIRE 的 9400 万条关系展开探索式分析，揭示俄乌冲突如何重塑俄罗斯学术界。</description>
+<category>NeuG</category><category>探索式商业智能</category><category>知识图谱</category><category>OpenAIRE</category>
+</item>
+<item>
+<title>我们用图数据库为 OpenClaw 做了一次 X 光检查——这些技术债浮出了水面</title>
+<link>https://neug.io/zh/blog/openclaw-technical-debt-analysis/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/openclaw-technical-debt-analysis/</guid>
+<pubDate>Thu, 19 Mar 2026 00:00:00 GMT</pubDate>
+<description>通过图分析 OpenClaw，找出散落在代码库中的高风险函数、僵尸代码，以及过度耦合的 agents 模块。</description>
+<category>OpenClaw</category><category>技术债</category><category>代码图</category><category>CodeGraph</category><category>NeuG</category>
+</item>
+<item>
+<title>OpenClaw 用户：为什么你的 Token 预算莫名其妙地消失了？</title>
+<link>https://neug.io/zh/blog/openclaw-token-cost-analysis/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/openclaw-token-cost-analysis/</guid>
+<pubDate>Wed, 18 Mar 2026 00:00:00 GMT</pubDate>
+<description>通过代码图分析 OpenClaw，揭示其 heartbeat 机制如何反复加载完整上下文，并在不知不觉中推高 Token 消耗。</description>
+<category>OpenClaw</category><category>Token 成本</category><category>Heartbeat</category><category>CodeGraph</category><category>NeuG</category>
+</item>
+<item>
+<title>AI 驱动的开源研发管理：NeuG 的探索与实践</title>
+<link>https://neug.io/zh/blog/ai-powered-development-management/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/ai-powered-development-management/</guid>
+<pubDate>Thu, 12 Feb 2026 00:00:00 GMT</pubDate>
+<description>NeuG 团队如何让 AI 以研发管理者的角色参与需求分析、任务拆解、GitHub 同步和进度跟踪。</description>
+<category>NeuG</category><category>AI</category><category>开源</category><category>Spec-Driven</category><category>项目管理</category>
+</item>
+<item>
+<title>NeuG 面向图工作负载的高性能 MVCC</title>
+<link>https://neug.io/zh/blog/neug-transaction-mechanism/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/neug-transaction-mechanism/</guid>
+<pubDate>Wed, 11 Feb 2026 00:00:00 GMT</pubDate>
+<description>深入解析 NeuG 的事务机制：在保证可串行化隔离的同时，为事务处理提供高吞吐能力。</description>
+<category>NeuG</category><category>MVCC</category><category>事务</category><category>图数据库</category>
+</item>
+<item>
+<title>NeuG 正式开源</title>
+<link>https://neug.io/zh/blog/open-sourcing-neug/</link>
+<guid isPermaLink="true">https://neug.io/zh/blog/open-sourcing-neug/</guid>
+<pubDate>Wed, 11 Feb 2026 00:00:00 GMT</pubDate>
+<description>介绍 NeuG：一款面向本地分析与实时事务处理的轻量级高性能嵌入式图数据库。</description>
+<category>NeuG</category><category>开源</category><category>嵌入式数据库</category><category>图数据库</category>
+</item>
+</channel>
+</rss>
