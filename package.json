@@ -9,9 +9,7 @@
     "serve": "npx serve out",
     "typecheck": "tsc --noEmit",
     "validate:content": "tsx scripts/validate-content.ts",
-    "clean-content": "bash scripts/clean-content.sh",
-    "sync": "qwen-translator sync && npm run clean-content && npm run post-sync",
-    "post-sync": "bash scripts/post-sync.sh"
+    "sync:docs": "node scripts/sync-neug-docs.mjs && node scripts/translate-neug-docs.mjs"
   },
   "keywords": [
     "neug",
@@ -25,7 +23,6 @@
   "author": "NeuG Team",
   "license": "Apache-2.0",
   "dependencies": {
-    "@qwen-code/translator": "^0.0.3",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.1.11",
@@ -57,12 +54,6 @@
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.0.1",
     "tw-animate-css": "^1.2.4"
-  },
-  "overrides": {
-    "@qwen-code/translator": {
-      "chalk": "4.1.2",
-      "inquirer": "8.2.5"
-    }
   },
   "devDependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
