@@ -1,8 +1,8 @@
 {
   "sourceRepository": "alibaba/neug",
-  "commit": "be6b56d862c3c11211fe5caa3e519dc5f86d7573",
+  "commit": "11c27a5d02832b1811a38cdba6a054aa343f1435",
   "version": "v0.2.0",
-  "timestamp": "2026-09-05T12:49:28.863Z",
+  "timestamp": "2026-09-05T14:34:46.985Z",
   "files": [
     "_meta.ts",
     "cypher_manual/_meta.ts",
