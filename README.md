@@ -95,14 +95,11 @@ The first level-one heading in `blog-en.md` becomes the post title. Relative ref
 Automatic flow:
 
 1. A pull request in `GraphScope/neug-wiki` changes exactly one `raw/blogs/<slug>/` directory and is given the `blog` label.
-2. When the PR is merged into `main`, `.github/workflows/trigger-blog-sync.yml` continues dispatching the post to the existing `GraphScope/web` blog and also dispatches it to `neug-ai/webpage`.
+2. When the PR is merged into `main`, `.github/workflows/trigger-blog-sync.yml` dispatches the post to `neug-ai/webpage`.
 3. `.github/workflows/sync-neug-blog.yml` checks out the exact merge commit, generates NeuG blog frontmatter, copies managed images, and translates new or changed English content into Simplified Chinese with Qwen.
 4. The workflow creates or updates an `automation/neug-blog-*` pull request and publishes a PR preview.
 
-The `GraphScope/neug-wiki` repository needs both dispatch secrets:
-
-- `GS_WEB_DISPATCH_TOKEN` for the existing `GraphScope/web` destination.
-- `WEBPAGE_DISPATCH_TOKEN` for `neug-ai/webpage`.
+The `GraphScope/neug-wiki` repository needs the `WEBPAGE_DISPATCH_TOKEN` secret for dispatching to `neug-ai/webpage`.
 
 The translation secret and Qwen variables live only in `neug-ai/webpage`; they do not need to be copied to `GraphScope/neug-wiki`.
 
@@ -119,7 +116,7 @@ OPENAI_MODEL=qwen3.7-plus \
 npm run sync:blog
 ```
 
-`blog-sync.json` records the source fingerprint for each managed post. Re-running an unchanged post does not call the translation API or create a content change.
+`blog-sync.json` records the source fingerprint for each managed post. The existing 15 bilingual posts remain in the repository; mapped source posts update them in place, while newly synchronized posts are appended. Re-running an unchanged post does not call the translation API or create a content change.
 
 ## Pull request previews and deployment
 
