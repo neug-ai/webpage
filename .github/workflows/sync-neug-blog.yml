@@ -1,6 +1,6 @@
 name: Sync NeuG Blog Post
 
-# GraphScope/neug-wiki dispatches this workflow after a PR carrying the `blog`
+# neug-ai/wiki dispatches this workflow after a PR carrying the `blog`
 # label is merged. New or changed English posts are translated with Qwen before
 # the synchronization cursor advances.
 
@@ -10,11 +10,11 @@ on:
   workflow_dispatch:
     inputs:
       slug:
-        description: "Directory name under raw/blogs in GraphScope/neug-wiki"
+        description: "Directory name under raw/blogs in neug-ai/wiki"
         required: true
         type: string
       source_ref:
-        description: "GraphScope/neug-wiki ref or commit to sync"
+        description: "neug-ai/wiki ref or commit to sync"
         required: false
         default: "main"
         type: string
@@ -37,8 +37,7 @@ jobs:
   sync:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.event.client_payload.source_repository == 'GraphScope/neug-wiki' ||
-      github.event.client_payload.source_repository == 'graphscope/neug-wiki'
+      github.event.client_payload.source_repository == 'neug-ai/wiki'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout webpage
@@ -46,11 +45,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout neug-wiki source
+      - name: Verify wiki read token
+        shell: bash
+        env:
+          NEUG_WIKI_READ_TOKEN: ${{ secrets.NEUG_WIKI_READ_TOKEN }}
+        run: |
+          if [[ -z "$NEUG_WIKI_READ_TOKEN" ]]; then
+            echo "NEUG_WIKI_READ_TOKEN must grant read-only Contents access to the private neug-ai/wiki repository." >&2
+            exit 1
+          fi
+
+      - name: Checkout wiki source
         uses: actions/checkout@v4
         with:
-          repository: GraphScope/neug-wiki
+          repository: neug-ai/wiki
           ref: ${{ github.event.client_payload.sha || inputs.source_ref || 'main' }}
+          token: ${{ secrets.NEUG_WIKI_READ_TOKEN }}
           fetch-depth: 0
           path: .temp-wiki-repo
 
@@ -158,11 +168,11 @@ jobs:
           set -euo pipefail
 
           PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
-          SOURCE_URL="https://github.com/GraphScope/neug-wiki"
+          SOURCE_URL="https://github.com/neug-ai/wiki"
           if [[ -n "$SOURCE_PR" ]]; then SOURCE_URL="$SOURCE_URL/pull/$SOURCE_PR"; fi
           BODY=$(printf '%s\n' \
             '## Summary' \
-            "- Synchronized \`raw/blogs/$SOURCE_SLUG/blog-en.md\` from GraphScope/neug-wiki" \
+            "- Synchronized \`raw/blogs/$SOURCE_SLUG/blog-en.md\` from neug-ai/wiki" \
             '- Translated the new or changed English post into Simplified Chinese with Qwen' \
             "- Copied managed images into \`public/images/blog/$SITE_SLUG/\`" \
             '' \

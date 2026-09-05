@@ -270,7 +270,7 @@ async function main() {
     fail(`expected neug-wiki ${expectedSourceCommit}, but ${sourceCommit} is checked out`);
   }
 
-  const state = readJson(statePath, { sourceRepository: "GraphScope/neug-wiki", posts: {} });
+  const state = readJson(statePath, { sourceRepository: "neug-ai/wiki", posts: {} });
   const previous = state.posts?.[sourceSlug] || {};
   const siteSlug = previous.siteSlug || slugify(requestedSiteSlug || sourceSlug);
   if (!siteSlug) fail("unable to derive a website slug for the blog post");
@@ -370,7 +370,7 @@ async function main() {
 
   const assets = syncAssets(sourceDirectory, assetTargetDirectory, banner);
   const nextState = {
-    sourceRepository: "GraphScope/neug-wiki",
+    sourceRepository: "neug-ai/wiki",
     posts: {
       ...(state.posts || {}),
       [sourceSlug]: {
