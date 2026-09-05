@@ -78,6 +78,7 @@ web_modules/
 .next
 out
 .temp-source-repo/
+.temp-wiki-repo/
 .neug-sync-plan.json
 
 # Nuxt.js build / generate output

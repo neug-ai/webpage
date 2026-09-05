@@ -1,0 +1,213 @@
+name: Sync NeuG Blog Post
+
+# GraphScope/neug-wiki dispatches this workflow after a PR carrying the `blog`
+# label is merged. New or changed English posts are translated with Qwen before
+# the synchronization cursor advances.
+
+on:
+  repository_dispatch:
+    types: [neug-blog-update]
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Directory name under raw/blogs in GraphScope/neug-wiki"
+        required: true
+        type: string
+      source_ref:
+        description: "GraphScope/neug-wiki ref or commit to sync"
+        required: false
+        default: "main"
+        type: string
+      date:
+        description: "Publication date in YYYY-MM-DD (defaults to today)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-neug-blog-${{ github.event.client_payload.slug || inputs.slug || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.client_payload.source_repository == 'GraphScope/neug-wiki' ||
+      github.event.client_payload.source_repository == 'graphscope/neug-wiki'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout webpage
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout neug-wiki source
+        uses: actions/checkout@v4
+        with:
+          repository: GraphScope/neug-wiki
+          ref: ${{ github.event.client_payload.sha || inputs.source_ref || 'main' }}
+          fetch-depth: 0
+          path: .temp-wiki-repo
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve blog metadata
+        id: source
+        shell: bash
+        env:
+          DISPATCH_SLUG: ${{ github.event.client_payload.slug }}
+          INPUT_SLUG: ${{ inputs.slug }}
+          MERGED_AT: ${{ github.event.client_payload.merged_at }}
+          INPUT_DATE: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+
+          SLUG="${DISPATCH_SLUG:-$INPUT_SLUG}"
+          [[ "$SLUG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
+            echo "Invalid blog slug: $SLUG" >&2
+            exit 1
+          }
+
+          DATE="${MERGED_AT:0:10}"
+          DATE="${DATE:-$INPUT_DATE}"
+          DATE="${DATE:-$(date -u +%Y-%m-%d)}"
+          [[ "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || {
+            echo "Invalid publication date: $DATE" >&2
+            exit 1
+          }
+
+          SOURCE_SHA=$(git -C .temp-wiki-repo rev-parse HEAD)
+          SITE_SLUG=$(printf '%s' "$SLUG" | tr '[:upper:]_' '[:lower:]-' | sed -E 's/[^a-z0-9-]+/-/g; s/-+/-/g; s/^-//; s/-$//')
+          {
+            echo "slug=$SLUG"
+            echo "site_slug=$SITE_SLUG"
+            echo "date=$DATE"
+            echo "sha=$SOURCE_SHA"
+            echo "branch=automation/neug-blog-$SITE_SLUG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Incrementally sync and translate blog post
+        run: npm run sync:blog
+        env:
+          NEUG_WIKI_SOURCE_DIR: .temp-wiki-repo
+          NEUG_WIKI_SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          NEUG_BLOG_SLUG: ${{ steps.source.outputs.slug }}
+          NEUG_BLOG_SITE_SLUG: ${{ steps.source.outputs.site_slug }}
+          NEUG_BLOG_DATE: ${{ steps.source.outputs.date }}
+          OPENAI_API_KEY: ${{ secrets.DASHSCOPE_API_KEY || secrets.QWEN_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1' }}
+          OPENAI_MODEL: ${{ vars.QWEN_MODEL || 'qwen-plus' }}
+
+      - name: Validate synchronized content
+        run: |
+          npm run typecheck
+          npm run validate:content
+
+      - name: Commit synchronized post
+        id: commit
+        shell: bash
+        env:
+          SYNC_BRANCH: ${{ steps.source.outputs.branch }}
+          SOURCE_SLUG: ${{ steps.source.outputs.slug }}
+          SITE_SLUG: ${{ steps.source.outputs.site_slug }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$SYNC_BRANCH"
+          git add \
+            "content/en/blog/$SITE_SLUG.mdx" \
+            "content/zh/blog/$SITE_SLUG.mdx" \
+            blog-sync.json
+          git add -A -- "public/images/blog/$SITE_SLUG" || true
+
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "blog: sync $SOURCE_SLUG from neug-wiki"
+          git push --force-with-lease origin "$SYNC_BRANCH"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update pull request
+        id: pull-request
+        if: steps.commit.outputs.has_changes == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.source.outputs.branch }}
+          SOURCE_SLUG: ${{ steps.source.outputs.slug }}
+          SITE_SLUG: ${{ steps.source.outputs.site_slug }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_PR: ${{ github.event.client_payload.pr_number }}
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          SOURCE_URL="https://github.com/GraphScope/neug-wiki"
+          if [[ -n "$SOURCE_PR" ]]; then SOURCE_URL="$SOURCE_URL/pull/$SOURCE_PR"; fi
+          BODY=$(printf '%s\n' \
+            '## Summary' \
+            "- Synchronized \`raw/blogs/$SOURCE_SLUG/blog-en.md\` from GraphScope/neug-wiki" \
+            '- Translated the new or changed English post into Simplified Chinese with Qwen' \
+            "- Copied managed images into \`public/images/blog/$SITE_SLUG/\`" \
+            '' \
+            "Source: $SOURCE_URL" \
+            "Source commit: \`$SOURCE_SHA\`" \
+            '' \
+            'The PR preview workflow is triggered automatically below.')
+
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr edit "$PR_NUMBER" \
+              --title "blog: sync $SOURCE_SLUG from neug-wiki" \
+              --body "$BODY"
+          else
+            PR_URL=$(gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "blog: sync $SOURCE_SLUG from neug-wiki" \
+              --body "$BODY")
+            PR_NUMBER=${PR_URL##*/}
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger the PR build and preview
+        if: steps.pull-request.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.source.outputs.branch }}
+          PR_NUMBER: ${{ steps.pull-request.outputs.number }}
+        run: gh workflow run ci.yml --ref "$BRANCH" -f "preview_pr_number=$PR_NUMBER"
+
+      - name: Summary
+        if: always()
+        env:
+          SOURCE_SLUG: ${{ steps.source.outputs.slug }}
+          SITE_SLUG: ${{ steps.source.outputs.site_slug }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          HAS_CHANGES: ${{ steps.commit.outputs.has_changes || 'not evaluated' }}
+        run: |
+          {
+            echo "## NeuG blog synchronization"
+            echo
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Source slug | $SOURCE_SLUG |"
+            echo "| Website slug | $SITE_SLUG |"
+            echo "| Source commit | \`$SOURCE_SHA\` |"
+            echo "| Content changed | $HAS_CHANGES |"
+          } >> "$GITHUB_STEP_SUMMARY"
