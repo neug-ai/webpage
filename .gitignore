@@ -77,6 +77,8 @@ web_modules/
 # Next.js build output
 .next
 out
+.temp-source-repo/
+.neug-sync-plan.json
 
 # Nuxt.js build / generate output
 .nuxt

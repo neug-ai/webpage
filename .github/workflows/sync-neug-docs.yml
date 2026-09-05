@@ -1,0 +1,182 @@
+name: Sync NeuG Documentation
+
+# Configure DASHSCOPE_API_KEY (or QWEN_API_KEY) for Simplified Chinese
+# translation. Translation failures stop the run before the sync cursor moves.
+
+on:
+  repository_dispatch:
+    types: [neug-docs-update]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label (leave empty to read it from NeuG)"
+        required: false
+        default: ""
+      source_ref:
+        description: "alibaba/neug ref or commit to sync"
+        required: false
+        default: "main"
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-neug-documentation
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.client_payload.source_repository == 'alibaba/neug'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout webpage
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout NeuG source
+        uses: actions/checkout@v4
+        with:
+          repository: alibaba/neug
+          ref: ${{ github.event.client_payload.sha || inputs.source_ref || 'main' }}
+          fetch-depth: 0
+          path: .temp-source-repo
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve sync metadata
+        id: source
+        shell: bash
+        env:
+          DISPATCH_VERSION: ${{ github.event.client_payload.version }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          SOURCE_SHA=$(git -C .temp-source-repo rev-parse HEAD)
+          VERSION="${DISPATCH_VERSION:-$INPUT_VERSION}"
+          if [[ -z "$VERSION" ]]; then
+            if [[ -f .temp-source-repo/NEUG_VERSION ]]; then
+              VERSION=$(tr -d '[:space:]' < .temp-source-repo/NEUG_VERSION)
+            else
+              VERSION=$(tr -d '[:space:]' < .temp-source-repo/tools/python_bind/VERSION)
+            fi
+          fi
+          [[ "$VERSION" == v* ]] || VERSION="v${VERSION}"
+
+          SAFE_VERSION=${VERSION//[^A-Za-z0-9._-]/-}
+          {
+            echo "sha=$SOURCE_SHA"
+            echo "version=$VERSION"
+            echo "branch=automation/neug-docs-${SAFE_VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Incrementally sync and translate docs
+        run: npm run sync:docs
+        env:
+          NEUG_SOURCE_DIR: .temp-source-repo
+          NEUG_SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          NEUG_VERSION: ${{ steps.source.outputs.version }}
+          NEUG_RELEASED_AT: ${{ github.event.client_payload.released_at }}
+          OPENAI_API_KEY: ${{ secrets.DASHSCOPE_API_KEY || secrets.QWEN_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1' }}
+          OPENAI_MODEL: ${{ vars.QWEN_MODEL || 'qwen-plus' }}
+
+      - name: Validate synchronized content
+        run: |
+          npm run typecheck
+          npm run validate:content
+
+      - name: Commit synchronized content
+        id: commit
+        shell: bash
+        env:
+          SYNC_BRANCH: ${{ steps.source.outputs.branch }}
+          SYNC_VERSION: ${{ steps.source.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$SYNC_BRANCH"
+          git add content/en content/zh public/images last-sync.json version-info.json versions.json
+
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "docs: sync NeuG $SYNC_VERSION documentation"
+          git push --force-with-lease origin "$SYNC_BRANCH"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update pull request
+        id: pull-request
+        if: steps.commit.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.source.outputs.branch }}
+          VERSION: ${{ steps.source.outputs.version }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          BODY=$(printf '%s\n' \
+            '## Summary' \
+            "- Incrementally synchronized English documentation from \`alibaba/neug@$SOURCE_SHA\`" \
+            '- Translated only new or changed sections into Simplified Chinese' \
+            '- Removed source-deleted documentation and obsolete managed assets' \
+            '' \
+            'The regular PR workflow will build the site and publish its preview URL.')
+
+          if [[ -n "$PR_NUMBER" ]]; then
+            gh pr edit "$PR_NUMBER" \
+              --title "docs: sync NeuG ${VERSION} documentation" \
+              --body "$BODY"
+          else
+            PR_URL=$(gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "docs: sync NeuG ${VERSION} documentation" \
+              --body "$BODY")
+            PR_NUMBER=${PR_URL##*/}
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger the PR build and preview
+        if: steps.pull-request.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.source.outputs.branch }}
+          PR_NUMBER: ${{ steps.pull-request.outputs.number }}
+        run: gh workflow run ci.yml --ref "$BRANCH" -f "preview_pr_number=$PR_NUMBER"
+
+      - name: Summary
+        if: always()
+        env:
+          SYNC_VERSION: ${{ steps.source.outputs.version }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          HAS_CHANGES: ${{ steps.commit.outputs.has_changes || 'not evaluated' }}
+        run: |
+          {
+            echo "## NeuG documentation sync"
+            echo
+            echo "| Item | Value |"
+            echo "| --- | --- |"
+            echo "| Version | $SYNC_VERSION |"
+            echo "| Source commit | \`$SOURCE_SHA\` |"
+            echo "| Content changed | $HAS_CHANGES |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,6 +1,13 @@
 name: CI and PR Preview
 
 on:
+  workflow_dispatch:
+    inputs:
+      preview_pr_number:
+        description: "PR number for an automation-created preview"
+        required: false
+        type: string
+        default: ""
   pull_request:
     branches: [main]
     types: [opened, reopened, synchronize, closed]
@@ -21,8 +28,6 @@ on:
       - "tsconfig.json"
       - "versions.json"
       - "version-info.json"
-      - "translation.config.json"
-      - "translation-changelog.json"
   push:
     branches: [main]
     paths:
@@ -42,20 +47,18 @@ on:
       - "tsconfig.json"
       - "versions.json"
       - "version-info.json"
-      - "translation.config.json"
-      - "translation-changelog.json"
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: webpage-${{ github.event.pull_request.number || github.ref }}
+  group: webpage-${{ github.event.pull_request.number || inputs.preview_pr_number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    if: github.event_name == 'push' || github.event.action != 'closed'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,13 +73,17 @@ jobs:
         run: npm run build
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          NEXT_PUBLIC_BASE_PATH: ${{ github.event_name == 'pull_request' && format('/webpage/pr-preview/pr-{0}', github.event.number) || '' }}
+          NEXT_PUBLIC_BASE_PATH: ${{ github.event_name == 'pull_request' && format('/webpage/pr-preview/pr-{0}', github.event.number) || github.event_name == 'workflow_dispatch' && inputs.preview_pr_number != '' && format('/webpage/pr-preview/pr-{0}', inputs.preview_pr_number) || '' }}
 
       - name: Publish PR preview
         id: preview
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        if: >-
+          (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+          (github.event_name == 'workflow_dispatch' && inputs.preview_pr_number != '')
         uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1
         with:
+          action: ${{ github.event_name == 'workflow_dispatch' && 'deploy' || 'auto' }}
+          pr-number: ${{ github.event.number || inputs.preview_pr_number }}
           source-dir: out
           preview-branch: gh-pages
           wait-for-pages-deployment: true
