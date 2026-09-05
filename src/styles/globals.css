@@ -741,8 +741,71 @@ html[data-theme-transition] *::after {
   #neug-product-home .np-blog-pager a:last-child { text-align: left; }
 }
 
-/* Docs navbar controls */
-.neug-docs-navbar { min-width: 0; }
+/* Documentation — use the same visual language as the product and blog pages. */
+.neug-docs-root {
+  --np-bg: #f7f8fa;
+  --np-paper: #fff;
+  --np-ink: #111a24;
+  --np-muted: #687584;
+  --np-faint: #99a4af;
+  --np-line: #dfe4e9;
+  --np-line-strong: #c7d0d8;
+  --np-blue: #2168f5;
+  --nextra-bg: 247, 248, 250;
+  --nextra-navbar-height: 66px;
+  min-height: 100vh;
+  color: var(--np-ink);
+  background: var(--np-bg);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+.dark .neug-docs-root {
+  --np-bg: #0d1116;
+  --np-paper: #131920;
+  --np-ink: #edf3f7;
+  --np-muted: #9aa7b4;
+  --np-faint: #657381;
+  --np-line: #29323b;
+  --np-line-strong: #3a4652;
+  --np-blue: #7098ff;
+  --nextra-bg: 13, 17, 22;
+}
+.neug-docs-root *,
+.neug-docs-root *::before,
+.neug-docs-root *::after { box-sizing: border-box; }
+
+/* Header and controls */
+.neug-docs-root .nextra-navbar { height: var(--nextra-navbar-height); }
+.neug-docs-root .nextra-navbar-blur {
+  border-color: var(--np-line) !important;
+  background: color-mix(in srgb, var(--np-bg) 88%, transparent) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.neug-docs-navbar {
+  width: min(1160px, calc(100% - 48px));
+  min-width: 0;
+  margin-inline: auto;
+  padding-inline: 0 !important;
+  color: var(--np-muted);
+  font-size: 13px;
+}
+.neug-docs-navbar > a { transition: color .18s ease, opacity .18s ease; }
+.neug-docs-navbar > a:hover { color: var(--np-ink); }
+.neug-docs-root .nextra-search input {
+  height: 36px;
+  border: 1px solid var(--np-line);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--np-paper) 82%, transparent);
+  color: var(--np-ink);
+  box-shadow: none;
+  font-family: inherit;
+}
+.neug-docs-root .nextra-search input::placeholder { color: var(--np-faint); }
+.neug-docs-root .nextra-search input:focus {
+  border-color: color-mix(in srgb, var(--np-blue) 65%, var(--np-line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--np-blue) 11%, transparent);
+}
 .neug-docs-github,
 .neug-language-switch {
   height: 34px;
@@ -751,40 +814,194 @@ html[data-theme-transition] *::after {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid rgb(229 231 235);
+  border: 1px solid var(--np-line);
   border-radius: 9px;
-  background: rgb(249 250 251);
-  color: rgb(75 85 99);
+  background: var(--np-paper);
+  color: var(--np-muted);
   font-size: 12px;
   font-weight: 650;
   line-height: 1;
   transition: color .18s ease, background-color .18s ease, border-color .18s ease;
 }
-.dark .neug-docs-github,
-.dark .neug-language-switch {
-  border-color: rgb(55 65 81);
-  background: rgb(31 41 55);
-  color: rgb(209 213 219);
-}
 .neug-docs-github { padding: 0 9px; }
 .neug-docs-github:hover,
-.neug-language-switch:hover { border-color: rgb(156 163 175); color: rgb(17 24 39); }
-.dark .neug-docs-github:hover,
-.dark .neug-language-switch:hover { border-color: rgb(107 114 128); color: rgb(249 250 251); }
+.neug-language-switch:hover { border-color: var(--np-line-strong); color: var(--np-ink); }
 .neug-docs-github > svg,
 .neug-language-switch > svg { width: 16px; height: 16px; flex: none; }
 .neug-docs-star-count { min-width: 25px; font: 650 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
 .neug-language-switch { padding: 0 10px; }
 .neug-docs-theme-switch { flex: none; }
 .neug-docs-navbar :is(a, button):focus-visible,
-.neug-language-switch:focus-visible { outline: 2px solid #2168f5; outline-offset: 2px; }
+.neug-language-switch:focus-visible { outline: 2px solid var(--np-blue); outline-offset: 2px; }
+
+/* Navigation columns */
+.neug-docs-root .nextra-sidebar {
+  border-right: 1px solid var(--np-line);
+  background: color-mix(in srgb, var(--np-paper) 42%, var(--np-bg));
+}
+.neug-docs-root .nextra-sidebar > div:first-child { padding: 18px 14px 24px; }
+.neug-docs-root .nextra-sidebar li > :is(a, button) {
+  min-height: 34px;
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--np-muted);
+  font-size: 13px;
+  font-weight: 540;
+  line-height: 1.45;
+}
+.neug-docs-root .nextra-sidebar li > :is(a, button):hover {
+  background: color-mix(in srgb, var(--np-blue) 7%, transparent);
+  color: var(--np-ink);
+}
+.neug-docs-root .nextra-sidebar li > button { font-weight: 650; }
+.neug-docs-root .nextra-sidebar ul ul { gap: 2px; }
+.neug-docs-root .nextra-sidebar ul ul::before { background: var(--np-line); }
+.neug-docs-root .nextra-sidebar-footer { border-color: var(--np-line); }
+
+.neug-docs-root .nextra-toc {
+  color: var(--np-muted);
+  font-size: 12px;
+}
+.neug-docs-root .nextra-toc > div > p {
+  color: var(--np-faint);
+  font: 700 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.neug-docs-root .nextra-toc a {
+  color: var(--np-muted);
+  font-weight: 560;
+  line-height: 1.45;
+}
+.neug-docs-root .nextra-toc a:hover { color: var(--np-blue); }
+
+/* Reading surface */
+.neug-docs-root article {
+  max-width: 900px;
+  margin-inline: auto;
+  padding: 36px 52px 72px;
+  color: var(--np-ink);
+}
+.neug-docs-root .nextra-breadcrumb {
+  margin-bottom: 20px;
+  color: var(--np-faint);
+  font: 650 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .045em;
+}
+.neug-docs-root article main { font-size: 16px; line-height: 1.78; }
+.neug-docs-root article main h1,
+.neug-docs-root article main h2,
+.neug-docs-root article main h3,
+.neug-docs-root article main h4 {
+  color: var(--np-ink);
+  text-wrap: balance;
+}
+.neug-docs-root article main h1 {
+  margin: 4px 0 30px;
+  font-size: clamp(38px, 5vw, 52px);
+  font-weight: 620;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+.neug-docs-root article main h2 {
+  position: relative;
+  margin-top: 2.25em;
+  padding: 0 0 0 17px;
+  border: 0;
+  font-size: 29px;
+  font-weight: 640;
+  line-height: 1.24;
+  letter-spacing: -.03em;
+}
+.neug-docs-root article main h2::before {
+  content: "";
+  position: absolute;
+  top: .2em;
+  bottom: .18em;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--np-blue);
+}
+.neug-docs-root article main h3 {
+  margin-top: 2em;
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.32;
+  letter-spacing: -.02em;
+}
+.neug-docs-root article main p,
+.neug-docs-root article main :is(ul, ol) { color: var(--np-ink); }
+.neug-docs-root article main strong { font-weight: 680; }
+.neug-docs-root article main a:not(.subheading-anchor) {
+  color: var(--np-blue);
+  text-decoration-color: color-mix(in srgb, var(--np-blue) 45%, transparent);
+  text-underline-offset: 3px;
+}
+.neug-docs-root article main a:not(.subheading-anchor):hover { text-decoration: none; }
+.neug-docs-root article main blockquote {
+  padding: 14px 18px;
+  border: 0;
+  border-left: 3px solid var(--np-blue);
+  border-radius: 0 9px 9px 0;
+  background: color-mix(in srgb, var(--np-blue) 6%, var(--np-paper));
+  color: var(--np-muted);
+  font-style: normal;
+}
+.neug-docs-root article main blockquote p { margin: 0; color: inherit; }
+.neug-docs-root article main :not(pre) > code.nextra-code {
+  padding: .16em .4em;
+  border: 1px solid color-mix(in srgb, var(--np-blue) 14%, var(--np-line));
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--np-blue) 7%, var(--np-paper));
+  color: var(--np-ink);
+  font: 550 .86em/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.neug-docs-root article main div.nextra-code > pre {
+  border: 1px solid var(--np-line);
+  border-radius: 11px;
+  box-shadow: 0 14px 38px color-mix(in srgb, var(--np-ink) 5%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.neug-docs-root article main table {
+  border: 1px solid var(--np-line);
+  border-radius: 10px;
+  background: var(--np-paper);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.neug-docs-root article main :is(th, td) { border-color: var(--np-line); }
+.neug-docs-root article main th {
+  background: color-mix(in srgb, var(--np-blue) 5%, var(--np-paper));
+  color: var(--np-ink);
+}
+.neug-docs-root article main img {
+  margin: 30px auto;
+  border: 1px solid var(--np-line);
+  border-radius: 10px;
+}
+.neug-docs-root article > div:last-child { color: var(--np-faint); }
+
+/* Footer */
+.neug-docs-root > div:last-child {
+  border-top: 1px solid var(--np-line);
+  background: var(--np-paper) !important;
+}
+.neug-docs-root footer {
+  width: min(1160px, calc(100% - 48px));
+  margin-inline: auto;
+  padding-inline: 0 !important;
+  color: var(--np-muted) !important;
+  font-size: 11px;
+}
 
 @media (max-width: 767px) {
+  .neug-docs-root { --nextra-navbar-height: 58px; }
   .neug-docs-navbar {
+    width: min(100% - 32px, 1160px);
     gap: 8px !important;
-    padding-left: max(env(safe-area-inset-left), 16px) !important;
-    padding-right: max(env(safe-area-inset-right), 16px) !important;
   }
+  .neug-docs-navbar img { max-width: 88px; height: 26px !important; }
   .neug-docs-nav-link,
   .neug-docs-version,
   .neug-docs-star-count,
@@ -792,6 +1009,14 @@ html[data-theme-transition] *::after {
   .neug-docs-github,
   .neug-language-switch { width: 34px; padding: 0; }
   .neug-docs-theme-switch { max-width: 42px; }
+  .neug-docs-root article {
+    max-width: none;
+    padding: 30px 20px 64px;
+  }
+  .neug-docs-root article main { font-size: 15px; }
+  .neug-docs-root article main h1 { margin-bottom: 24px; font-size: 36px; }
+  .neug-docs-root article main h2 { padding-left: 14px; font-size: 25px; }
+  .neug-docs-root footer { width: min(100% - 32px, 1160px); }
 }
 
 @media (max-width: 380px) {

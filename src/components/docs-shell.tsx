@@ -70,21 +70,23 @@ export async function DocsShell({
   );
 
   return (
-    <Layout
-      navbar={navbar}
-      footer={<Footer>{labels.footer}</Footer>}
-      docsRepositoryBase="https://github.com/alibaba/neug/blob/main/doc"
-      sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true }}
-      pageMap={pageMap}
-      search={
-        <Search
-          placeholder={locale === "zh" ? "搜索文档和博客…" : "Search docs and blog…"}
-          searchOptions={{ filters: { lang: locale } }}
-        />
-      }
-      nextThemes={{ defaultTheme: "system", storageKey: "neug-theme" }}
-    >
-      {children}
-    </Layout>
+    <div className="neug-docs-root">
+      <Layout
+        navbar={navbar}
+        footer={<Footer>{labels.footer}</Footer>}
+        docsRepositoryBase="https://github.com/alibaba/neug/blob/main/doc"
+        sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true }}
+        pageMap={pageMap}
+        search={
+          <Search
+            placeholder={locale === "zh" ? "搜索文档和博客…" : "Search docs and blog…"}
+            searchOptions={{ filters: { lang: locale } }}
+          />
+        }
+        nextThemes={{ defaultTheme: "system", storageKey: "neug-theme" }}
+      >
+        {children}
+      </Layout>
+    </div>
   );
 }

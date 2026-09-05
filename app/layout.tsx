@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | NeuG",
   },
   other: {
-    "msapplication-TileColor": "#fff",
+    "msapplication-TileColor": "#f7f8fa",
   },
 };
 
@@ -28,6 +28,7 @@ const RootLayout: FC<LayoutProps> = ({ children }) => {
   return (
     <html lang="en" suppressHydrationWarning>
       <Head
+        backgroundColor={{ dark: "#0d1116", light: "#f7f8fa" }}
         color={{
           hue: { dark: 215, light: 215 },
           saturation: { dark: 95, light: 95 },
