@@ -4,7 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/contexts/theme-context";
 
 export function ThemeToggle({ label }: { label?: string }) {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, mounted, toggleTheme } = useTheme();
   const nextTheme = theme === "light" ? "dark" : "light";
 
   return (
@@ -15,7 +15,10 @@ export function ThemeToggle({ label }: { label?: string }) {
       aria-label={label || `Switch to ${nextTheme} mode`}
       title={label || `Switch to ${nextTheme} mode`}
     >
-      {theme === "light" ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
+      <span className="np-theme-icon" data-theme={mounted ? theme : undefined}>
+        <Moon className="np-theme-moon" aria-hidden="true" />
+        <Sun className="np-theme-sun" aria-hidden="true" />
+      </span>
     </button>
   );
 }

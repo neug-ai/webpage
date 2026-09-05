@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { withAssetPrefix } from "../../asset-prefix.mjs";
 
 interface NeuGLogoProps {
   variant?: "horizontal" | "square";
@@ -32,7 +33,7 @@ export function NeuGLogo({
   if (!mounted) {
     return (
       <img
-        src={`/images/${prefix}-light.png`}
+        src={withAssetPrefix(`/images/${prefix}-light.png`)}
         alt="NeuG"
         height={height}
         className={className}
@@ -43,7 +44,7 @@ export function NeuGLogo({
 
   return (
     <img
-      src={`/images/${prefix}-${isDark ? "dark" : "light"}.png`}
+      src={withAssetPrefix(`/images/${prefix}-${isDark ? "dark" : "light"}.png`)}
       alt="NeuG"
       height={height}
       className={className}

@@ -12,8 +12,13 @@ const withNextra = nextra({
   },
 });
 
+const configuredBasePath = (process.env.NEXT_PUBLIC_BASE_PATH || "").replace(/^\/+|\/+$/g, "");
+const previewBasePath = configuredBasePath ? `/${configuredBasePath}` : "";
+
 export default withNextra({
   reactStrictMode: true,
+  basePath: previewBasePath,
+  assetPrefix: previewBasePath,
   output: process.env.NODE_ENV === "production" ? "export" : undefined,
   trailingSlash: true,
   images: {

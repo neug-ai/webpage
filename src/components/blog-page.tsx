@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { importPage } from "nextra/pages";
 import { BlogIndex } from "@/components/blog-index";
@@ -117,7 +118,7 @@ export async function BlogArticle({ locale, slug }: { locale: SiteLocale; slug: 
       <main className="np-blog-main" data-pagefind-body data-pagefind-filter={`lang:${locale}`}>
         <article className="np-blog-article" data-pagefind-filter="type:blog">
           <header>
-            <a href={`${prefix}/blog/`} className="np-blog-back">← {locale === "zh" ? "返回博客" : "Back to blog"}</a>
+            <Link href={`${prefix}/blog/`} className="np-blog-back">← {locale === "zh" ? "返回博客" : "Back to blog"}</Link>
             <div className="np-blog-meta">
               <span data-pagefind-filter={`category:${post.category}`}>{post.category}</span>
               <time dateTime={post.date}>{formatBlogDate(post.date, locale)}</time>
@@ -132,16 +133,16 @@ export async function BlogArticle({ locale, slug }: { locale: SiteLocale; slug: 
           {(previousPost || nextPost) && (
             <nav className="np-blog-pager" aria-label={locale === "zh" ? "文章导航" : "Article navigation"}>
               {previousPost ? (
-                <a href={`${prefix}/blog/${previousPost.slug}/`}>
+                <Link href={`${prefix}/blog/${previousPost.slug}/`}>
                   <span>{locale === "zh" ? "上一篇" : "Previous"}</span>
                   <strong>{previousPost.title}</strong>
-                </a>
+                </Link>
               ) : <span />}
               {nextPost && (
-                <a href={`${prefix}/blog/${nextPost.slug}/`}>
+                <Link href={`${prefix}/blog/${nextPost.slug}/`}>
                   <span>{locale === "zh" ? "下一篇" : "Next"}</span>
                   <strong>{nextPost.title}</strong>
-                </a>
+                </Link>
               )}
             </nav>
           )}

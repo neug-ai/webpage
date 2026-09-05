@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { HomeNavbar } from "@/components/home-navbar";
 import { NeuGLogo } from "@/components/neug-logo";
 import { ThemeProvider } from "@/contexts/theme-context";
@@ -23,7 +24,7 @@ export function SiteShell({
         <footer className="np-footer">
           <div className="np-shell">
             <span className="np-footer-brand">
-              <a href={`${prefix}/`} aria-label="NeuG home"><NeuGLogo height={22} /></a>
+              <Link href={`${prefix}/`} aria-label="NeuG home"><NeuGLogo height={22} /></Link>
               <span>{copy.footer}</span>
             </span>
             <span>
