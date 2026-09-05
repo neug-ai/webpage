@@ -5,9 +5,9 @@ import { blogMetadataSchema } from "../src/lib/blog";
 
 const root = process.cwd();
 const locales = ["en", "zh"] as const;
-const expectedBlogCount = 15;
 const errors: string[] = [];
 const slugsByLocale = new Map<string, Set<string>>();
+const docsByLocale = new Map<string, Set<string>>();
 
 function walk(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -23,9 +23,7 @@ for (const locale of locales) {
   const slugs = new Set(blogFiles.map((file) => file.replace(/\.mdx$/, "")));
   slugsByLocale.set(locale, slugs);
 
-  if (blogFiles.length !== expectedBlogCount) {
-    errors.push(`${locale}: expected ${expectedBlogCount} blog posts, found ${blogFiles.length}`);
-  }
+  if (blogFiles.length === 0) errors.push(`${locale}: no blog posts found`);
 
   for (const file of blogFiles) {
     const fullPath = path.join(blogRoot, file);
@@ -58,12 +56,13 @@ for (const locale of locales) {
     }
   }
 
-  const docsCount = walk(contentRoot).filter(
-    (file) => /\.mdx?$/.test(file) && !file.includes(`${path.sep}blog${path.sep}`)
-  ).length;
-  if (docsCount !== 77) {
-    errors.push(`${locale}: expected 77 documentation pages, found ${docsCount}`);
-  }
+  const docs = new Set(
+    walk(contentRoot)
+      .filter((file) => /\.mdx?$/.test(file) && !file.includes(`${path.sep}blog${path.sep}`))
+      .map((file) => path.relative(contentRoot, file).split(path.sep).join("/")),
+  );
+  docsByLocale.set(locale, docs);
+  if (docs.size === 0) errors.push(`${locale}: no documentation pages found`);
 }
 
 const enSlugs = slugsByLocale.get("en") ?? new Set<string>();
@@ -75,9 +74,18 @@ for (const slug of Array.from(allSlugs)) {
   }
 }
 
+const enDocs = docsByLocale.get("en") ?? new Set<string>();
+const zhDocs = docsByLocale.get("zh") ?? new Set<string>();
+const allDocs = new Set([...Array.from(enDocs), ...Array.from(zhDocs)]);
+for (const document of Array.from(allDocs)) {
+  if (!enDocs.has(document) || !zhDocs.has(document)) {
+    errors.push(`${document}: missing English or Chinese documentation page`);
+  }
+}
+
 if (errors.length) {
   console.error(errors.join("\n"));
   process.exit(1);
 }
 
-console.log("Validated 77 English docs, 77 Chinese docs, and 15 bilingual blog posts.");
+console.log(`Validated ${enDocs.size} bilingual documentation pages and ${enSlugs.size} bilingual blog posts.`);

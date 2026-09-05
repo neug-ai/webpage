@@ -1,0 +1,26 @@
+{
+  "sourceRepository": "GraphScope/neug-wiki",
+  "posts": {
+    "NEUGBI_BLOG": {
+      "siteSlug": "neugbi"
+    },
+    "claudecode": {
+      "siteSlug": "dissecting-claude-code"
+    },
+    "code-graph-wiki": {
+      "siteSlug": "code-graph-wiki"
+    },
+    "codegraph-pr-review": {
+      "siteSlug": "graph-database-driven-pr-review"
+    },
+    "llm-wiki": {
+      "siteSlug": "llm-wiki-code-repositories"
+    },
+    "openclaw-architecture-xray": {
+      "siteSlug": "openclaw-technical-debt-analysis"
+    },
+    "release-v0.1.3-gds": {
+      "siteSlug": "neug-v0-1-3-gds"
+    }
+  }
+}

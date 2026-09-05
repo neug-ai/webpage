@@ -9,7 +9,8 @@
     "serve": "npx serve out",
     "typecheck": "tsc --noEmit",
     "validate:content": "tsx scripts/validate-content.ts",
-    "sync:docs": "node scripts/sync-neug-docs.mjs && node scripts/translate-neug-docs.mjs"
+    "sync:docs": "node scripts/sync-neug-docs.mjs && node scripts/translate-neug-docs.mjs",
+    "sync:blog": "node scripts/sync-neug-blog.mjs"
   },
   "keywords": [
     "neug",
