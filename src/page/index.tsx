@@ -1,6 +1,5 @@
-"use client";
-
 import { ArrowRight, Columns2, FileText, Network, PenLine, Puzzle, Scale, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { HomeNavbar } from "@/components/home-navbar";
 import { NeuGLogo } from "@/components/neug-logo";
 import { AlgorithmDemo, ComparisonDemo, QuickStart, RetrievalDemo } from "@/components/home-product-demos";
@@ -39,9 +38,9 @@ function Homepage({ locale }: { locale: HomeLocale }) {
             <h2>{copy.hero.title[0]}<span>{copy.hero.title[1]}</span>{copy.hero.title[2]}</h2>
             <p>{copy.hero.body}</p>
             <div className="np-actions">
-              <a className="np-action primary" href={start}>{copy.hero.start}<ArrowRight aria-hidden="true" /></a>
-              <a className="np-action np-resource-action" href={docs}><FileText aria-hidden="true" /><span>{copy.hero.docs}</span></a>
-              <a className="np-action np-resource-action" href={blog}><PenLine aria-hidden="true" /><span>{copy.hero.blog}</span></a>
+              <Link className="np-action primary" href={start}>{copy.hero.start}<ArrowRight aria-hidden="true" /></Link>
+              <Link className="np-action np-resource-action" href={docs}><FileText aria-hidden="true" /><span>{copy.hero.docs}</span></Link>
+              <Link className="np-action np-resource-action" href={blog}><PenLine aria-hidden="true" /><span>{copy.hero.blog}</span></Link>
               <a className="np-action np-resource-action" href="https://x.com/graphscope2021" target="_blank" rel="noreferrer"><XLogo /><span>{locale === "zh" ? "关注我们" : "Follow us"}</span></a>
             </div>
             <div className="np-runtimes"><span>Python</span><i /><span>Node.js</span><i /><span>CLI</span></div>
@@ -100,9 +99,9 @@ function Homepage({ locale }: { locale: HomeLocale }) {
           </div>
         </section>
 
-        <section className="np-close"><div className="np-shell"><div><h3>{copy.close[0]}</h3><p>{copy.close[1]}</p></div><div className="np-actions"><a className="np-action primary" href={start}>{copy.hero.start}</a><a className="np-action" href="https://github.com/alibaba/neug">GitHub</a></div></div></section>
+        <section className="np-close"><div className="np-shell"><div><h3>{copy.close[0]}</h3><p>{copy.close[1]}</p></div><div className="np-actions"><Link className="np-action primary" href={start}>{copy.hero.start}</Link><a className="np-action" href="https://github.com/alibaba/neug">GitHub</a></div></div></section>
       </main>
-      <footer className="np-footer"><div className="np-shell"><span className="np-footer-brand"><a href={home} aria-label="NeuG home"><NeuGLogo height={22} /></a><span>{copy.footer}</span></span><span><a href="https://github.com/alibaba/neug" target="_blank" rel="noreferrer">GitHub</a><i>Apache 2.0</i></span></div></footer>
+      <footer className="np-footer"><div className="np-shell"><span className="np-footer-brand"><Link href={home} aria-label="NeuG home"><NeuGLogo height={22} /></Link><span>{copy.footer}</span></span><span><a href="https://github.com/alibaba/neug" target="_blank" rel="noreferrer">GitHub</a><i>Apache 2.0</i></span></div></footer>
     </div>
   );
 }

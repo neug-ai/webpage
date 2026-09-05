@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { HomeLocale } from "@/lib/homepage-copy";
 import { homepageCopy } from "@/lib/homepage-copy";
@@ -183,7 +184,7 @@ export function AlgorithmDemo({ locale, algorithmsHref }: { locale: HomeLocale; 
         </div>
         <div className="np-algorithm-more">
           <strong>{copy.moreTitle}</strong><span>{copy.moreBody}</span>
-          <a href={algorithmsHref}>{copy.moreLink}</a>
+          <Link href={algorithmsHref}>{copy.moreLink}</Link>
         </div>
       </div>
     </div>
@@ -214,7 +215,7 @@ export function ComparisonDemo({ locale, benchmarkHref }: { locale: HomeLocale; 
           </div>
           {mode === "graph" && <div className="np-validation-note">
             <span>—</span><div><strong>{copy.graph.note}</strong>
-              <p>{copy.graph.methodology} <a href={benchmarkHref}>{copy.graph.link}</a></p>
+              <p>{copy.graph.methodology} <Link href={benchmarkHref}>{copy.graph.link}</Link></p>
             </div>
           </div>}
         </div>

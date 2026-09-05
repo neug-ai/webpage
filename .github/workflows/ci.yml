@@ -1,13 +1,61 @@
-name: CI
+name: CI and PR Preview
 
 on:
   pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, closed]
+    paths:
+      - "app/**"
+      - "content/**"
+      - "public/**"
+      - "src/**"
+      - "scripts/**"
+      - "plugins/**"
+      - "mdx-components.ts"
+      - "mdx-components.tsx"
+      - "asset-prefix.mjs"
+      - "next.config.mjs"
+      - "postcss.config.js"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "versions.json"
+      - "version-info.json"
+      - "translation.config.json"
+      - "translation-changelog.json"
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - "app/**"
+      - "content/**"
+      - "public/**"
+      - "src/**"
+      - "scripts/**"
+      - "plugins/**"
+      - "mdx-components.ts"
+      - "mdx-components.tsx"
+      - "asset-prefix.mjs"
+      - "next.config.mjs"
+      - "postcss.config.js"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - "versions.json"
+      - "version-info.json"
+      - "translation.config.json"
+      - "translation-changelog.json"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: webpage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
+    if: github.event_name == 'push' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +66,34 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run validate:content
-      - run: npm run build
+      - name: Build static site
+        run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NEXT_PUBLIC_BASE_PATH: ${{ github.event_name == 'pull_request' && format('/webpage/pr-preview/pr-{0}', github.event.number) || '' }}
+
+      - name: Publish PR preview
+        id: preview
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1
+        with:
+          source-dir: out
+          preview-branch: gh-pages
+          wait-for-pages-deployment: true
+          qr-code: false
+
+      - name: Add preview URL to workflow summary
+        if: steps.preview.outputs.deployment-action == 'deploy'
+        run: |
+          echo "## PR preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.preview.outputs.preview-url }}" >> "$GITHUB_STEP_SUMMARY"
+
+  remove-preview:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1
+        with:
+          action: remove
+          preview-branch: gh-pages
+          qr-code: false

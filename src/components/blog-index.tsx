@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { BlogPost } from "@/lib/blog";
 import { localePrefix, type SiteLocale } from "@/lib/site";
 
@@ -48,7 +49,7 @@ export function BlogIndex({ posts, locale }: { posts: BlogPost[]; locale: SiteLo
                 <span>{labels[post.category]}</span>
                 <time dateTime={post.date}>{formatDate(post.date, locale)}</time>
               </div>
-              <h2><a href={`${prefix}/blog/${post.slug}/`}>{post.title}</a></h2>
+              <h2><Link href={`${prefix}/blog/${post.slug}/`}>{post.title}</Link></h2>
               <p>{post.description}</p>
               <div className="np-blog-tags">
                 {post.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}
