@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import matter from "gray-matter";
+import { normalizeDocumentationLinks } from "./lib/blog-links.mjs";
 
 const root = path.resolve(process.env.NEUG_WEBPAGE_ROOT || path.resolve(import.meta.dirname, ".."));
 const sourceRoot = path.resolve(root, process.env.NEUG_WIKI_SOURCE_DIR || ".temp-wiki-repo");
@@ -18,7 +19,7 @@ const apiKey = process.env.OPENAI_API_KEY || "";
 const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
 const model = process.env.OPENAI_MODEL || "qwen-plus";
 const allowedCategories = new Set(["release", "engineering", "ecosystem", "case-study"]);
-const syncSchemaVersion = "2";
+const syncSchemaVersion = "3";
 
 function fail(message) {
   throw new Error(message);
@@ -340,7 +341,10 @@ async function main() {
   const rawMother = fs.existsSync(motherPath) ? fs.readFileSync(motherPath, "utf8") : "";
   const rawChineseSource = rawMother && isPrimarilyChinese(rawMother) ? rawMother : "";
   const parsedSource = matter(rawSource);
-  const normalizedMarkdown = normalizeImagePaths(parsedSource.content, siteSlug);
+  const normalizedMarkdown = normalizeDocumentationLinks(
+    normalizeImagePaths(parsedSource.content, siteSlug),
+    "en",
+  );
   const englishArticle = extractArticle(normalizedMarkdown, parsedSource.data.title);
   const englishBanner = fs.existsSync(sourceDirectory)
     ? fs.readdirSync(sourceDirectory).map((name) => path.join(sourceDirectory, name)).find((file) => fs.statSync(file).isFile() && /^banner_en\.(?:png|jpe?g|gif|svg|webp|avif)$/i.test(path.basename(file)))
@@ -427,9 +431,12 @@ async function main() {
     : previous.sourceHash !== sha256(rawSource) || previous.chineseSourceFile);
   if (needsChineseUpdate) {
     const parsedChineseSource = rawChineseSource ? matter(rawChineseSource) : null;
-    const chineseMarkdown = rawChineseSource
-      ? normalizeImagePaths(parsedChineseSource.content, siteSlug)
-      : await translateMarkdown(`# ${englishArticle.title}\n\n${englishArticle.body}`);
+    const chineseMarkdown = normalizeDocumentationLinks(
+      rawChineseSource
+        ? normalizeImagePaths(parsedChineseSource.content, siteSlug)
+        : await translateMarkdown(`# ${englishArticle.title}\n\n${englishArticle.body}`),
+      "zh",
+    );
     const chineseArticle = extractArticle(chineseMarkdown, parsedChineseSource?.data.title);
     const chineseBody = withCover(chineseArticle.body, chineseCover, "文章封面");
     writeIfChanged(zhPath, serializePost({
