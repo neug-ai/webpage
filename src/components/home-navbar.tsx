@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Github, Menu, Star, X } from "lucide-react";
 import { GitHubStarCount } from "@/components/github-stars";
+import { LanguageDropdown } from "@/components/language-dropdown";
 import { NeuGLogo } from "@/components/neug-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { HomeLocale } from "@/lib/homepage-copy";
@@ -10,7 +11,6 @@ import { getGitHubStarCount } from "@/lib/github";
 export async function HomeNavbar({ locale }: { locale: HomeLocale }) {
   const copy = homepageCopy[locale];
   const prefix = locale === "zh" ? "/zh" : "";
-  const otherLocaleHref = locale === "en" ? "/zh/" : "/";
   const starCount = await getGitHubStarCount();
 
   return (
@@ -38,15 +38,12 @@ export async function HomeNavbar({ locale }: { locale: HomeLocale }) {
             </span>
           </a>
           <div className="np-nav-actions">
-            <Link
-              className="np-icon-button np-locale"
-              href={otherLocaleHref}
-              aria-label={locale === "en" ? "切换至中文" : "Switch to English"}
-              title={locale === "en" ? "切换至中文" : "Switch to English"}
-            >
-              <span className="np-locale-full">{copy.nav.locale}</span>
-              <span className="np-locale-short" aria-hidden="true">{locale === "en" ? "中" : "EN"}</span>
-            </Link>
+            <LanguageDropdown
+              currentLang={locale}
+              variant="navbar"
+              label={copy.nav.locale}
+              shortLabel={locale === "en" ? "中" : "EN"}
+            />
             <ThemeToggle label={copy.nav.theme} />
             <details className="np-mobile-menu">
               <summary className="np-icon-button" aria-label={locale === "zh" ? "打开导航菜单" : "Open navigation menu"}>

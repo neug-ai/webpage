@@ -18,6 +18,7 @@ const apiKey = process.env.OPENAI_API_KEY || "";
 const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
 const model = process.env.OPENAI_MODEL || "qwen-plus";
 const allowedCategories = new Set(["release", "engineering", "ecosystem", "case-study"]);
+const syncSchemaVersion = "2";
 
 function fail(message) {
   throw new Error(message);
@@ -116,10 +117,72 @@ function excerpt(markdown, fallback) {
 }
 
 function normalizeImagePaths(markdown, siteSlug) {
-  const prefix = `/images/blog/${siteSlug}/`;
-  return markdown
-    .replace(/(\]\()(?:\.\/)?images_en\/([^\s)]+)(?=[)\s])/g, `$1${prefix}$2`)
-    .replace(/(\bsrc=["'])(?:\.\/)?images_en\/([^"']+)(["'])/g, `$1${prefix}$2$3`);
+  const mappings = [
+    { source: "images_en", target: "" },
+    { source: "images_zh", target: "zh/" },
+  ];
+  return mappings.reduce((content, mapping) => {
+    const prefix = `/images/blog/${siteSlug}/${mapping.target}`;
+    return content
+      .replace(new RegExp(`(\\]\\()(?:\\.\\/)?${mapping.source}\\/([^\\s)]+)(?=[)\\s])`, "g"), `$1${prefix}$2`)
+      .replace(new RegExp(`(\\bsrc=["'])(?:\\.\\/)?${mapping.source}\\/([^"']+)(["'])`, "g"), `$1${prefix}$2$3`);
+  }, markdown);
+}
+
+function isPrimarilyChinese(markdown) {
+  const prose = matter(markdown).content
+    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, "")
+    .replace(/`[^`\n]+`/g, "")
+    .replace(/https?:\/\/\S+/g, "");
+  const chineseCharacters = prose.match(/[\u3400-\u9fff]/g)?.length || 0;
+  const latinCharacters = prose.match(/[A-Za-z]/g)?.length || 0;
+  return chineseCharacters >= 50 && chineseCharacters / Math.max(chineseCharacters + latinCharacters, 1) >= 0.2;
+}
+
+function normalizedTags(value) {
+  if (Array.isArray(value)) return value.map(String).map((tag) => tag.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((tag) => tag.trim()).filter(Boolean);
+  return [];
+}
+
+function uniqueTags(...groups) {
+  const seen = new Set();
+  return groups.flat().filter((tag) => {
+    const key = tag.toLocaleLowerCase("en-US");
+    if (!tag || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function inferCategory(sourceSlug, title) {
+  const identity = `${sourceSlug} ${title}`;
+  if (/(?:^|[^a-z0-9])release(?:[^a-z0-9]|$)|\bneug\s+v?\d+\.\d+(?:\.\d+)?\b/i.test(identity)) return "release";
+  return "engineering";
+}
+
+function inferTags(sourceSlug, title, body, category) {
+  const identity = `${sourceSlug} ${title}`;
+  const content = `${title}\n${body}`;
+  const tags = ["NeuG", category];
+  const version = identity.match(/\bv?(\d+\.\d+\.\d+)\b/i)?.[1];
+  if (version) tags.push(`v${version}`);
+
+  const topics = [
+    ["vector search", /\b(?:vector search|HNSW|vector index)/i],
+    ["full-text search", /\b(?:full[- ]text search|FTS|BM25)/i],
+    ["graph traversal", /\bgraph traversal/i],
+    ["Cypher", /\bCypher\b/i],
+    ["graph database", /\bgraph database/i],
+    ["RAG", /\bRAG\b|retrieval-augmented generation/i],
+    ["CodeGraph", /\bCodeGraph\b/i],
+    ["LLM Wiki", /\bLLM Wiki\b/i],
+    ["GDS", /\bGDS\b|graph algorithms?/i],
+  ];
+  for (const [tag, pattern] of topics) {
+    if (pattern.test(content)) tags.push(tag);
+  }
+  return uniqueTags(tags).slice(0, 8);
 }
 
 function withCover(body, cover, alt) {
@@ -235,14 +298,7 @@ function serializePost(metadata, body) {
   return matter.stringify(`${body.trim()}\n`, metadata);
 }
 
-function syncAssets(sourceDirectory, targetDirectory, banner) {
-  const mappings = [];
-  const imagesDirectory = path.join(sourceDirectory, "images_en");
-  for (const file of walkFiles(imagesDirectory)) {
-    mappings.push({ source: file, relative: toPosix(path.relative(imagesDirectory, file)) });
-  }
-  if (banner) mappings.push({ source: banner, relative: path.basename(banner) });
-
+function syncAssets(targetDirectory, mappings) {
   const desired = new Set(mappings.map(({ relative }) => relative));
   let copied = 0;
   let removed = 0;
@@ -280,27 +336,43 @@ async function main() {
   if (!fs.existsSync(sourcePostPath)) fail(`blog-en.md was not found in raw/blogs/${sourceSlug}`);
 
   const rawSource = fs.readFileSync(sourcePostPath, "utf8");
+  const motherPath = path.join(sourceDirectory, "mother.md");
+  const rawMother = fs.existsSync(motherPath) ? fs.readFileSync(motherPath, "utf8") : "";
+  const rawChineseSource = rawMother && isPrimarilyChinese(rawMother) ? rawMother : "";
   const parsedSource = matter(rawSource);
   const normalizedMarkdown = normalizeImagePaths(parsedSource.content, siteSlug);
   const englishArticle = extractArticle(normalizedMarkdown, parsedSource.data.title);
-  const banner = fs.existsSync(sourceDirectory)
+  const englishBanner = fs.existsSync(sourceDirectory)
     ? fs.readdirSync(sourceDirectory).map((name) => path.join(sourceDirectory, name)).find((file) => fs.statSync(file).isFile() && /^banner_en\.(?:png|jpe?g|gif|svg|webp|avif)$/i.test(path.basename(file)))
     : undefined;
-  const assetSources = [
-    ...walkFiles(path.join(sourceDirectory, "images_en")),
-    ...(banner ? [banner] : []),
-  ].sort();
+  const chineseBanner = fs.existsSync(sourceDirectory)
+    ? fs.readdirSync(sourceDirectory).map((name) => path.join(sourceDirectory, name)).find((file) => fs.statSync(file).isFile() && /^banner_zh\.(?:png|jpe?g|gif|svg|webp|avif)$/i.test(path.basename(file)))
+    : undefined;
+  const englishImagesDirectory = path.join(sourceDirectory, "images_en");
+  const chineseImagesDirectory = path.join(sourceDirectory, "images_zh");
+  const assetMappings = [
+    ...walkFiles(englishImagesDirectory).map((file) => ({
+      source: file,
+      relative: toPosix(path.relative(englishImagesDirectory, file)),
+    })),
+    ...walkFiles(chineseImagesDirectory).map((file) => ({
+      source: file,
+      relative: `zh/${toPosix(path.relative(chineseImagesDirectory, file))}`,
+    })),
+    ...(englishBanner ? [{ source: englishBanner, relative: path.basename(englishBanner) }] : []),
+    ...(chineseBanner ? [{ source: chineseBanner, relative: path.basename(chineseBanner) }] : []),
+  ].sort((left, right) => left.relative.localeCompare(right.relative));
   const fingerprint = fingerprintOf([
+    syncSchemaVersion,
     rawSource,
-    ...assetSources.flatMap((file) => [toPosix(path.relative(sourceDirectory, file)), fs.readFileSync(file)]),
+    rawMother,
+    ...assetMappings.flatMap(({ source, relative }) => [relative, fs.readFileSync(source)]),
   ]);
 
   const enPath = path.join(enRoot, `${siteSlug}.mdx`);
   const zhPath = path.join(zhRoot, `${siteSlug}.mdx`);
   const assetTargetDirectory = path.join(publicBlogRoot, siteSlug);
-  const expectedAssets = assetSources.map((file) => banner && file === banner
-    ? path.basename(file)
-    : toPosix(path.relative(path.join(sourceDirectory, "images_en"), file)));
+  const expectedAssets = assetMappings.map(({ relative }) => relative);
   const outputsComplete = fs.existsSync(enPath)
     && fs.existsSync(zhPath)
     && expectedAssets.every((relative) => fs.existsSync(path.join(assetTargetDirectory, relative)));
@@ -312,41 +384,59 @@ async function main() {
   const existingEnglish = fs.existsSync(enPath) ? matter(fs.readFileSync(enPath, "utf8")) : { data: {}, content: "" };
   const existingChinese = fs.existsSync(zhPath) ? matter(fs.readFileSync(zhPath, "utf8")) : { data: {}, content: "" };
   const date = normalizeDate(existingEnglish.data.date || parsedSource.data.date, previous.date || requestedDate);
-  const cover = banner ? `/images/blog/${siteSlug}/${path.basename(banner)}` : "";
-  const category = allowedCategories.has(existingEnglish.data.category)
-    ? existingEnglish.data.category
-    : allowedCategories.has(parsedSource.data.category) ? parsedSource.data.category : "engineering";
+  const englishCover = englishBanner ? `/images/blog/${siteSlug}/${path.basename(englishBanner)}` : "";
+  const chineseCover = chineseBanner ? `/images/blog/${siteSlug}/${path.basename(chineseBanner)}` : englishCover;
+  const inferredCategory = inferCategory(sourceSlug, englishArticle.title);
+  const category = allowedCategories.has(parsedSource.data.category)
+    ? parsedSource.data.category
+    : inferredCategory === "release"
+      ? inferredCategory
+      : allowedCategories.has(existingEnglish.data.category) ? existingEnglish.data.category : inferredCategory;
+  const inferredTags = inferTags(sourceSlug, englishArticle.title, englishArticle.body, category);
+  const requiredInferredTags = inferredTags.filter((tag) => tag === "NeuG" || tag === "release" || /^v\d+\.\d+\.\d+$/i.test(tag));
+  const optionalInferredTags = inferredTags.filter((tag) => !requiredInferredTags.includes(tag));
+  const tags = uniqueTags(
+    requiredInferredTags,
+    normalizedTags(parsedSource.data.tags),
+    normalizedTags(existingEnglish.data.tags),
+    optionalInferredTags,
+  ).slice(0, 8);
   const sharedMetadata = {
     date,
     author: String(existingEnglish.data.author || parsedSource.data.author || "NeuG Team"),
     category,
-    tags: Array.isArray(existingEnglish.data.tags) && existingEnglish.data.tags.length
-      ? existingEnglish.data.tags.map(String)
-      : Array.isArray(parsedSource.data.tags) && parsedSource.data.tags.length ? parsedSource.data.tags.map(String) : ["NeuG"],
-    cover,
+    tags,
     translationKey: siteSlug,
     draft: false,
     aliases: Array.isArray(existingEnglish.data.aliases) ? existingEnglish.data.aliases.map(String) : [],
   };
   if (previous.fingerprint && requestedDate !== date) sharedMetadata.updated = requestedDate;
 
-  const englishBody = withCover(englishArticle.body, cover, "Article cover");
+  const englishBody = withCover(englishArticle.body, englishCover, "Article cover");
   writeIfChanged(enPath, serializePost({
     title: englishArticle.title,
     description: String(parsedSource.data.description || excerpt(englishArticle.body, englishArticle.title)),
     ...sharedMetadata,
+    cover: englishCover,
     locale: "en",
   }, englishBody));
 
-  const needsTranslation = previous.sourceHash !== sha256(rawSource) || !fs.existsSync(zhPath);
-  if (needsTranslation) {
-    const translatedMarkdown = await translateMarkdown(`# ${englishArticle.title}\n\n${englishArticle.body}`);
-    const chineseArticle = extractArticle(translatedMarkdown);
-    const chineseBody = withCover(chineseArticle.body, cover, "文章封面");
+  const chineseSourceHash = rawChineseSource ? sha256(rawChineseSource) : "";
+  const needsChineseUpdate = !fs.existsSync(zhPath) || (rawChineseSource
+    ? previous.chineseSourceFile !== "mother.md" || previous.chineseSourceHash !== chineseSourceHash
+    : previous.sourceHash !== sha256(rawSource) || previous.chineseSourceFile);
+  if (needsChineseUpdate) {
+    const parsedChineseSource = rawChineseSource ? matter(rawChineseSource) : null;
+    const chineseMarkdown = rawChineseSource
+      ? normalizeImagePaths(parsedChineseSource.content, siteSlug)
+      : await translateMarkdown(`# ${englishArticle.title}\n\n${englishArticle.body}`);
+    const chineseArticle = extractArticle(chineseMarkdown, parsedChineseSource?.data.title);
+    const chineseBody = withCover(chineseArticle.body, chineseCover, "文章封面");
     writeIfChanged(zhPath, serializePost({
       title: chineseArticle.title,
-      description: excerpt(chineseArticle.body, chineseArticle.title),
+      description: String(parsedChineseSource?.data.description || excerpt(chineseArticle.body, chineseArticle.title)),
       ...sharedMetadata,
+      cover: chineseCover,
       locale: "zh",
       aliases: Array.isArray(existingChinese.data.aliases) ? existingChinese.data.aliases.map(String) : [],
     }, chineseBody));
@@ -356,19 +446,19 @@ async function main() {
       date,
       category,
       tags: sharedMetadata.tags,
-      cover,
+      cover: chineseCover,
       translationKey: siteSlug,
       draft: false,
       locale: "zh",
       ...(sharedMetadata.updated ? { updated: sharedMetadata.updated } : {}),
     }, withCover(
-      withoutGeneratedCover(existingChinese.content, String(existingChinese.data.cover || cover)),
-      cover,
+      withoutGeneratedCover(existingChinese.content, String(existingChinese.data.cover || chineseCover)),
+      chineseCover,
       "文章封面",
     )));
   }
 
-  const assets = syncAssets(sourceDirectory, assetTargetDirectory, banner);
+  const assets = syncAssets(assetTargetDirectory, assetMappings);
   const nextState = {
     sourceRepository: "neug-ai/wiki",
     posts: {
@@ -377,7 +467,10 @@ async function main() {
         siteSlug,
         commit: sourceCommit,
         sourceHash: sha256(rawSource),
+        chineseSourceFile: rawChineseSource ? "mother.md" : "",
+        chineseSourceHash,
         fingerprint,
+        syncSchemaVersion,
         date,
         syncedAt: new Date().toISOString(),
         assets: assets.mappings.map(({ relative }) => relative).sort(),
@@ -387,7 +480,7 @@ async function main() {
   writeIfChanged(statePath, `${JSON.stringify(nextState, null, 2)}\n`);
 
   console.log(`Synchronized ${sourceSlug} as ${siteSlug}.`);
-  console.log(`Chinese translation: ${needsTranslation ? "updated" : "reused"}.`);
+  console.log(`Chinese content: ${needsChineseUpdate ? rawChineseSource ? "sourced from mother.md" : "translated with Qwen" : "reused"}.`);
   console.log(`Assets: ${assets.copied} updated, ${assets.removed} removed.`);
 }
 

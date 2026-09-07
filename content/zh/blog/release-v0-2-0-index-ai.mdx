@@ -1,0 +1,355 @@
+---
+title: NeuG v0.2.0：向量、全文、图遍历，一条 Cypher 搞定
+description: >-
+  NeuG v0.2.0 正式发布。这个版本的核心主题是：面向你的 Agent 应用的全能数据索引——统一索引框架带来 HNSW 向量搜索和 FTS
+  全文检索，与图遍历组合在同一条 Cypher 中完成。
+date: '2026-09-07'
+author: NeuG Team
+category: release
+tags:
+  - NeuG
+  - release
+  - v0.2.0
+  - vector search
+  - full-text search
+  - graph traversal
+  - Cypher
+  - graph database
+translationKey: release-v0-2-0-index-ai
+draft: false
+aliases: []
+cover: /images/blog/release-v0-2-0-index-ai/banner_zh.png
+locale: zh
+---
+![文章封面](/images/blog/release-v0-2-0-index-ai/banner_zh.png)
+
+NeuG v0.2.0 正式发布。这个版本的核心主题是：**面向你的 Agent 应用的全能数据索引**——统一索引框架带来 HNSW 向量搜索和 FTS 全文检索，与图遍历组合在同一条 Cypher 中完成。
+
+下面展开聊聊为什么做这件事，以及具体做了什么。
+
+---
+
+## AI 场景需要什么样的图数据库？
+
+企业知识库问答、代码助手、智能体记忆——这些 AI 应用场景对底层数据库有三种检索需求：
+
+- **向量搜索**：把文档、实体编码成 embedding，按语义相似度检索最近邻。这是 RAG（检索增强生成）的核心。
+- **全文检索**：按关键词精确匹配，BM25 排序。用户输入搜索框里的文字时，靠的是这个。
+- **图遍历**：找到实体之间的关系路径，做引用推理、影响分析、社区发现。
+
+要同时满足这三种检索需求，现有系统通常有两种解决方案，但各有取舍：
+
+- **一是把多套系统拼起来。** 比如 Cognee，开箱就同时跑三套存储——内嵌图库 Ladybug、独立向量库 LanceDB、再加一份 SQLite。能力是凑齐了，代价却是多份数据要跨引擎同步、多套系统要各自运维，检索结果还得在应用层跨系统 JOIN。
+- **二是靠单一引擎兼顾三种。** 比如 Graphiti，以 Neo4j 作后端，向量、全文、图三种检索都能支持。只是数据规模一大，检索性能就明显下降。
+
+与这些系统的详细对比和测评，我们会另写一篇 benchmark 专门展开。
+
+**v0.2.0 要做的，是把向量搜索和全文检索原生集成进图数据库。** 不用搬数据，不用额外搭系统，一条 Cypher 就能同时覆盖三种检索。
+
+---
+
+## 统一索引框架：一个 CREATE INDEX，向量与全文即插即用
+
+v0.2.0 引入了通用的 `StorageIndex` 框架——所有索引类型共享同一套生命周期（Init → Open → Rebind → BulkBuild + 增量维护），通过 Cypher DDL 统一管理。
+
+这意味着不同索引类型的创建方式高度一致：
+
+```cypher
+-- 向量索引（HNSW）
+CREATE INDEX doc_vec_idx ON Document USING HNSW (embedding)
+WITH (metric = 'cosine', m = 16, ef_construction = 200);
+
+-- 全文索引（FTS）
+CREATE INDEX doc_title_fts ON Document USING FTS (title);
+
+-- 查看已有索引
+CALL SHOW_INDEXES() RETURN *;
+```
+
+框架是可插拔的：HNSW 由 `vector_search` 扩展提供，FTS 由 `fts` 扩展提供，未来新增的索引类型（B-tree、GIN 等）同样以扩展形式接入，不需要改内核。
+
+---
+
+## HNSW 向量搜索：给图数据库装上"语义雷达"
+
+向量搜索是 AI 应用的刚需。v0.2.0 通过 `vector_search` 扩展提供 HNSW 近似最近邻索引。
+
+### 基本用法
+
+先定义带向量属性的节点表，再建索引：
+
+```cypher
+-- 节点表：文档 + 768 维 embedding
+CREATE NODE TABLE Document (
+    id INT64,
+    title STRING,
+    embedding FLOAT[768],
+    PRIMARY KEY (id)
+);
+
+-- 建 HNSW 索引（cosine 距离）
+CREATE INDEX doc_vec_idx ON Document
+USING HNSW (embedding)
+WITH (metric = 'cosine');
+```
+
+索引建好后，普通的 `ORDER BY ... LIMIT K` 查询会被优化器自动改写为 HNSW 索引扫描：
+
+```cypher
+-- 找与查询向量最相似的 10 个文档
+MATCH (d:Document)
+RETURN d.id, d.title
+ORDER BY vector_distance_cosine(d.embedding, $query_vec) ASC
+LIMIT 10;
+```
+
+只需要写标准 Cypher，优化器能自动识别出向量距离函数 + ORDER BY + LIMIT 的组合，自动走索引优化。
+
+### 向量 + 图遍历
+
+找到相似文档后，继续沿着图遍历找引用关系——这是纯向量数据库做不到的：
+
+```cypher
+-- 先做向量搜索，再沿图遍历
+MATCH (d:Document)
+WITH d
+ORDER BY vector_distance_cosine(d.embedding, $query_vec) ASC
+LIMIT 10
+MATCH (d)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title AS cited_doc;
+```
+
+---
+
+## FTS 全文搜索：关键词检索不再靠外部系统
+
+向量搜索擅长语义相似度，但用户搜一个精确术语、一个产品型号、一段引文时，需要的是关键词匹配。v0.2.0 的 `fts` 扩展补上了这块——基于 SQLite FTS5，BM25 排序。
+
+### 基本用法
+
+```cypher
+-- 在 title 属性上建全文索引
+CREATE INDEX doc_title_fts ON Document USING FTS (title);
+
+-- BM25 Top-K 搜索
+MATCH (d:Document)
+RETURN d.id, d.title,
+       bm25(d.title, 'graph database') AS score
+ORDER BY score ASC
+LIMIT 10;
+```
+
+支持丰富的查询语法：
+
+| 搜索类型 | 查询示例 | 含义 |
+|---------|---------|------|
+| 单词 | `'database'` | 匹配包含该词的文档 |
+| 短语 | `'"graph database"'` | 匹配相邻词组 |
+| 前缀 | `'data*'` | 匹配以 data 开头的词 |
+| 布尔 | `'graph OR database'` | 匹配任一 |
+| 排除 | `'graph NOT database'` | 匹配 graph 但不含 database |
+
+### 全文 + 图遍历
+
+和向量搜索一样，FTS 结果可以继续图遍历：
+
+```cypher
+-- 先全文搜索，再找引用关系
+MATCH (d:Document)
+WITH d, bm25(d.title, 'graph database') AS score
+ORDER BY score ASC
+LIMIT 10
+MATCH (d)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title AS cited_doc, score;
+```
+
+---
+
+## 混合搜索：向量 + 全文 + 图遍历，一条 Cypher
+
+把三种能力组合起来——这才是 v0.2.0 真正想做的事。
+
+假设你有一个知识图谱，文档节点既有 embedding 向量，又有标题全文索引，节点之间通过 CITES 边连接。一个典型的检索 query 如下：
+
+```cypher
+-- Step 1: 向量搜索找语义相似的文档
+MATCH (d:Document)
+WITH d
+ORDER BY vector_distance_cosine(d.embedding, $query_vec) ASC
+LIMIT 20
+
+-- Step 2: 全文搜索对候选重排序
+WITH d, bm25(d.title, $keyword) AS text_score
+ORDER BY text_score ASC
+LIMIT 10
+
+-- Step 3: 沿图遍历找引用
+MATCH (d)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title AS cited_doc, text_score;
+```
+
+向量搜索做粗筛（语义相近的 20 篇），全文搜索做重排（按关键词相关度留下 10 篇），图遍历做关系推理（这些文档引用了谁）。三种检索能力在同一条 Cypher 中组合，不需要跨系统 JOIN 结果，不需要应用层拼装。
+
+这就是"面向你的 Agent 应用的全能数据索引"的含义——不只是存图，而是把 AI 需要的三种检索统一到一个引擎里，让它们能自然地组合。
+
+---
+
+## 性能一览：实测数字
+
+前面讲了索引查询的语法，这章给出一组真实性能测试的结果。我们做的是**自对比**：同一份数据、同一条查询，有索引 vs 没索引的性能差距。后续，我们还会出一篇详细的测评文章，对 NeuG 与其他产品做一个横向对比。
+
+**测试环境**：Apple M5 Pro 笔记本（48GB 内存），NeuG v0.2.0（PyPI 发布版本），单进程嵌入式模式。数据是聚类分布的模拟文档 embedding（384 维，归一化），贴近真实 embedding 的形态；查询使用未参与建索引的留出向量，每个测点取 21 次独立查询，按 p50、p95 分位数报告。
+
+### 向量搜索：HNSW vs 暴力扫描
+
+| 数据规模 | 暴力扫描 p50 | 暴力扫描 p95 | HNSW p50 | HNSW p95 | 加速比 p50 · p95 |
+|---------|-----------|-----------|---------|---------|-----------------|
+| 10k | 82.3 ms | 84.0 ms | 3.8 ms | 4.0 ms | ~22× · ~21× |
+| 100k | 780.2 ms | 796.4 ms | 3.9 ms | 4.1 ms | ~202× · ~196× |
+
+查询为 Top-10 cosine 最近邻。无索引要逐行算距离，延时随数据量线性上涨；HNSW 只遍历一小部分节点，延时基本不随规模变化——所以加速比随规模放大，10k 约 22 倍、100k 约 202 倍。
+
+**召回率**：两个规模下 recall@10 均为 1.0——HNSW 的 Top-10 与 float64 精确解、NeuG 暴力扫描结果逐一比对都完全一致，说明向量检索在真实形态数据上无损召回，没拿精度换速度。前提是数据呈**聚类分布**（真实 embedding 本就如此）；换成均匀随机向量，任何 HNSW 的召回都会有所下降——那是数据形态问题，不是索引质量。
+
+**一次性成本**：对 10 万行数据构建 HNSW 索引（m=16, ef_construction=200）约 78.6 秒。这是一次性开销，建完之后每次查询从近一秒降到 4 毫秒以内——对读多写少的知识库场景，这笔账很划算。
+
+### 全文搜索：FTS vs CONTAINS 扫描
+
+| 数据规模 | CONTAINS p50 | CONTAINS p95 | FTS p50 | FTS p95 | 加速比 p50 · p95 |
+|---------|-----------|-----------|--------|--------|-----------------|
+| 10k | 20.9 ms | 21.4 ms | 0.25 ms | 0.50 ms | ~84× · ~43× |
+| 100k | 205.9 ms | 216.7 ms | 2.47 ms | 2.73 ms | ~83× · ~80× |
+
+查询为 Top-10 关键词检索。CONTAINS 要全表逐行做子串匹配，延时随数据量线性上涨；FTS 走倒排索引、命中什么查什么，基本不受规模影响。此外 FTS 索引构建只要 0.01~0.07 秒，几乎没有成本。
+
+---
+
+## 查询诊断：EXPLAIN/PROFILE
+
+混合搜索写好了，怎么知道哪一步是瓶颈？v0.2.0 新增了 `EXPLAIN` 和 `PROFILE` 模式：
+
+```cypher
+-- 查看查询计划（不执行）
+EXPLAIN MATCH (d:Document)
+RETURN d ORDER BY vector_distance_cosine(d.embedding, $q) LIMIT 10;
+
+-- 执行并收集算子级指标
+PROFILE MATCH (d:Document)
+RETURN d ORDER BY vector_distance_cosine(d.embedding, $q) LIMIT 10;
+```
+
+`PROFILE` 会输出 ASCII 格式的算子树，每个算子标注耗时和输出行数，Python/Node.js/Java SDK 均可用。比如下面对一条向量查询做 `PROFILE`，能看到优化器把它改写成了 `IndexScanOpr`——即走了 HNSW 索引扫描，而不是全表暴力计算距离：
+
+```
+┌───────────────────────────────────────┐
+│             IndexScanOpr              │
+├───────────────────────────────────────┤
+│   time: 0.04ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│         ProjectOrderByOprBeta         │
+├───────────────────────────────────────┤
+│   time: 0.01ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+```
+
+写复杂查询时，这是定位性能瓶颈的利器——哪一步慢、哪一步产出行数多，一目了然。
+
+---
+
+## 图管理：Projected Graph Namespaces
+
+AI 应用往往涉及多个领域的知识子图——产品知识、用户行为、组织架构。v0.2.0 的 Projected Graph Namespaces 让你在一个数据库里定义命名空间隔离的图视图，查询时只看到该视图内的节点和边：
+
+```cypher
+-- 定义一个命名空间视图：只含 database 类文档及其引用关系
+CALL project_graph(
+    'db_view',
+    {'Document': "n.category = 'database'"},
+    ['[Document, CITES, Document]']
+);
+
+-- 在该命名空间内查询
+USE NAMESPACE db_view
+MATCH (d:Document)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title;
+
+-- 用完清理
+CALL drop_projected_graph('db_view');
+```
+
+`project_graph` 用节点/边的谓词圈出子图，`USE NAMESPACE` 前缀把后续 `MATCH` 限定在这个视图内。不同命名空间相互隔离，可以各自定义过滤条件，不需要为每个领域复制一份数据或建单独的数据库。命名空间视图随 checkpoint 持久化，重开数据库后仍然可用。
+
+---
+
+## 跨平台：Linux 与 macOS 开箱即用，Windows 走 WSL2
+
+v0.2.0 的预编译包覆盖 Linux 与 macOS（x86_64 与 ARM64）：
+
+```bash
+pip install neug==0.2.0
+```
+
+Windows 用户目前可以通过 **WSL2** 运行 NeuG，原生 Windows 支持已列入路线图（roadmap），会在后续版本跟上。
+
+---
+
+## 顺带一提
+
+v0.2.0 还有几个值得关注的改进：
+
+- **显式事务**（[#938](https://github.com/alibaba/neug/pull/938), [#944](https://github.com/alibaba/neug/pull/944), [#950](https://github.com/alibaba/neug/pull/950), [#951](https://github.com/alibaba/neug/pull/951), [#967](https://github.com/alibaba/neug/pull/967), [#899](https://github.com/alibaba/neug/pull/899)）：`begin_transaction() / commit() / rollback()` 打通 AP 与 TP 两条执行路径，Python / Node.js / Java 三种绑定均可用。
+- **复杂数据类型**（[#507](https://github.com/alibaba/neug/pull/507), [#726](https://github.com/alibaba/neug/pull/726), [#829](https://github.com/alibaba/neug/pull/829), [#871](https://github.com/alibaba/neug/pull/871)）：定长数组 `FLOAT[768]`、变长列表 `LIST` 全链路支持——存储持久化、WAL、Parquet/CSV/JSON 导入。embedding 和 tags 可以直接作为节点属性。
+- **Pattern Match 扩展**（[#260](https://github.com/alibaba/neug/pull/260)）：子图匹配（DAF 精确匹配 + FaSTest 采样匹配），适用于欺诈检测、生物网络分析。
+- **Out-of-tree 扩展**（[#745](https://github.com/alibaba/neug/pull/745)）：第三方可开发自定义扩展，不 fork 主仓。
+- **Checkpoint 重构**（[#678](https://github.com/alibaba/neug/pull/678), [#892](https://github.com/alibaba/neug/pull/892), [#904](https://github.com/alibaba/neug/pull/904)）：增量 checkpoint 只写脏数据，不可变对象 + 原子 CURRENT 切换杜绝部分写入损坏，GC 回收旧 checkpoint。
+- **Native Reader 框架**（`a281c0d`）：替换 Arrow CSV/JSON IO，自主可控的读取框架。
+
+完整 release notes 见 [GitHub Release](https://github.com/alibaba/neug/releases/tag/v0.2.0)。
+
+---
+
+## 上手试试
+
+```bash
+pip install neug==0.2.0
+```
+
+```python
+from neug import Database
+
+db = Database("my_knowledge_graph")
+conn = db.connect()
+
+# 加载扩展（每条语句单独执行）
+conn.execute("INSTALL vector_search")
+conn.execute("LOAD vector_search")
+conn.execute("INSTALL fts")
+conn.execute("LOAD fts")
+
+# 建表 + 建索引
+conn.execute("""
+    CREATE NODE TABLE Document (
+        id INT64, title STRING, embedding FLOAT[768],
+        PRIMARY KEY (id)
+)
+""")
+conn.execute("CREATE INDEX doc_vec ON Document USING HNSW (embedding) WITH (metric = 'cosine')")
+conn.execute("CREATE INDEX doc_fts ON Document USING FTS (title)")
+
+# 导入数据、混合搜索...
+```
+
+如果你在做 RAG、知识图谱、或者任何需要"语义搜索 + 关键词搜索 + 关系推理"组合的应用，欢迎试试 NeuG。一条 Cypher 搞定，不用拼三套系统。
+
+GitHub: https://github.com/alibaba/neug

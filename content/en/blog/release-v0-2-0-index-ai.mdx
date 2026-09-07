@@ -1,0 +1,368 @@
+---
+title: 'NeuG v0.2.0: Vector, Full-Text, and Graph Traversal — One Cypher Does It All'
+description: >-
+  If you've built RAG pipelines or agent memory, you've likely hit the same
+  wall: semantic search needs a vector database, keyword search needs a search
+  engine, and relationship reasoning needs a graph database. Three systems run
+  independe...
+date: '2026-09-07'
+author: NeuG Team
+category: release
+tags:
+  - NeuG
+  - release
+  - v0.2.0
+  - vector search
+  - full-text search
+  - graph traversal
+  - Cypher
+  - graph database
+translationKey: release-v0-2-0-index-ai
+draft: false
+aliases: []
+cover: /images/blog/release-v0-2-0-index-ai/banner_en.png
+locale: en
+---
+![Article cover](/images/blog/release-v0-2-0-index-ai/banner_en.png)
+
+If you've built RAG pipelines or agent memory, you've likely hit the same wall: semantic search needs a vector database, keyword search needs a search engine, and relationship reasoning needs a graph database. Three systems run independently, and data sync, result JOINs, and scaling all land on your application layer.
+
+That's exactly what NeuG v0.2.0 sets out to fix. The theme of this release: **the all-purpose data index for your Agent applications** — a unified index framework brings HNSW vector search and FTS full-text retrieval, and both compose with graph traversal inside a single Cypher query.
+
+Here's why we built it, and what's actually in the box.
+
+---
+
+## What Does an AI Workload Need from a Graph Database?
+
+Enterprise knowledge-base Q&A, code assistants, agent memory — these AI scenarios place three retrieval demands on the underlying database:
+
+- **Vector search**: encode documents and entities as embeddings, then retrieve nearest neighbours by semantic similarity. This is the core of RAG (retrieval-augmented generation).
+- **Full-text search**: exact keyword matching, ranked by BM25. This is what powers the search box a user types into.
+- **Graph traversal**: find relationship paths between entities, for citation reasoning, impact analysis, and community detection.
+
+Meeting all three at once usually comes down to one of two existing approaches, each with its own trade-off:
+
+- **Stitching several systems together.** Cognee, for example, ships with three stores out of the box — an embedded graph store (Ladybug), a standalone vector store (LanceDB), and a SQLite database. The capability is assembled, but at a cost: multiple copies of data synced across engines, several systems to operate, and retrieval results joined in the application layer.
+- **Squeezing all three out of a single engine.** Graphiti, for example, uses Neo4j as its backend and supports vector, full-text, and graph retrieval. The catch is that retrieval performance degrades noticeably as data scales up.
+
+We'll cover the detailed comparison and evaluation against these systems in a separate benchmark post.
+
+**What v0.2.0 does is integrate vector search and full-text retrieval natively into the graph database.** No data shuffling, no extra systems — one Cypher query covers all three retrieval modes.
+
+---
+
+## A Unified Index Framework: One CREATE INDEX for Vector and Full-Text
+
+v0.2.0 introduces a general-purpose `StorageIndex` framework — every index type shares the same lifecycle (Init → Open → Rebind → BulkBuild, plus incremental maintenance) and is managed through Cypher DDL.
+
+This means creating different index types looks almost identical:
+
+```cypher
+-- Vector index (HNSW)
+CREATE INDEX doc_vec_idx ON Document USING HNSW (embedding)
+WITH (metric = 'cosine', m = 16, ef_construction = 200);
+
+-- Full-text index (FTS)
+CREATE INDEX doc_title_fts ON Document USING FTS (title);
+
+-- List existing indexes
+CALL SHOW_INDEXES() RETURN *;
+```
+
+The framework is pluggable: HNSW is provided by the `vector_search` extension, FTS by the `fts` extension, and future index types (B-tree, GIN, and so on) plug in the same way as extensions — no kernel changes required.
+
+---
+
+## HNSW Vector Search: A "Semantic Radar" for the Graph Database
+
+Vector search is table stakes for AI applications. v0.2.0 delivers an HNSW approximate-nearest-neighbour index through the `vector_search` extension.
+
+### Basic usage
+
+Define a node table with a vector property, then build the index:
+
+```cypher
+-- Node table: documents + a 768-dim embedding
+CREATE NODE TABLE Document (
+    id INT64,
+    title STRING,
+    embedding FLOAT[768],
+    PRIMARY KEY (id)
+);
+
+-- Build an HNSW index (cosine distance)
+CREATE INDEX doc_vec_idx ON Document
+USING HNSW (embedding)
+WITH (metric = 'cosine');
+```
+
+Once the index exists, an ordinary `ORDER BY ... LIMIT K` query is rewritten by the optimizer into an HNSW index scan:
+
+```cypher
+-- Find the 10 documents most similar to the query vector
+MATCH (d:Document)
+RETURN d.id, d.title
+ORDER BY vector_distance_cosine(d.embedding, $query_vec) ASC
+LIMIT 10;
+```
+
+You just write standard Cypher; the optimizer recognises the combination of a vector distance function + ORDER BY + LIMIT and automatically uses the index.
+
+### Vector + graph traversal
+
+After finding similar documents, keep going and traverse the graph to follow citations — something a pure vector database can't do:
+
+```cypher
+-- Vector search first, then traverse the graph
+MATCH (d:Document)
+WITH d
+ORDER BY vector_distance_cosine(d.embedding, $query_vec) ASC
+LIMIT 10
+MATCH (d)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title AS cited_doc;
+```
+
+---
+
+## FTS Full-Text Search: Keyword Retrieval Without an External System
+
+Vector search handles semantic similarity well, but when a user searches for an exact term, a product model number, or a quoted phrase, what they need is keyword matching. The `fts` extension in v0.2.0 fills this gap — built on SQLite FTS5, ranked by BM25.
+
+### Basic usage
+
+```cypher
+-- Build a full-text index on the title property
+CREATE INDEX doc_title_fts ON Document USING FTS (title);
+
+-- BM25 Top-K search
+MATCH (d:Document)
+RETURN d.id, d.title,
+       bm25(d.title, 'graph database') AS score
+ORDER BY score ASC
+LIMIT 10;
+```
+
+It supports a rich query syntax:
+
+| Search type | Example | Meaning |
+|---------|---------|------|
+| Term | `'database'` | Matches documents containing the term |
+| Phrase | `'"graph database"'` | Matches adjacent terms |
+| Prefix | `'data*'` | Matches words starting with `data` |
+| Boolean | `'graph OR database'` | Matches either |
+| Exclusion | `'graph NOT database'` | Matches `graph` but not `database` |
+
+### Full-text + graph traversal
+
+Just like vector search, FTS results can continue into a graph traversal:
+
+```cypher
+-- Full-text search first, then find citations
+MATCH (d:Document)
+WITH d, bm25(d.title, 'graph database') AS score
+ORDER BY score ASC
+LIMIT 10
+MATCH (d)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title AS cited_doc, score;
+```
+
+---
+
+## Hybrid Search: Vector + Full-Text + Graph Traversal, One Cypher
+
+Combining all three capabilities — that's what v0.2.0 is really about.
+
+Suppose you have a knowledge graph where document nodes carry both an embedding vector and a full-text index on their title, and nodes are connected by `CITES` edges. A typical retrieval query looks like this:
+
+```cypher
+-- Step 1: vector search finds semantically similar documents
+MATCH (d:Document)
+WITH d
+ORDER BY vector_distance_cosine(d.embedding, $query_vec) ASC
+LIMIT 20
+
+-- Step 2: full-text search reranks the candidates
+WITH d, bm25(d.title, $keyword) AS text_score
+ORDER BY text_score ASC
+LIMIT 10
+
+-- Step 3: traverse the graph to find citations
+MATCH (d)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title AS cited_doc, text_score;
+```
+
+Vector search does the coarse filtering (the 20 semantically closest documents), full-text search reranks them (keeping the 10 most keyword-relevant), and graph traversal does the relationship reasoning (who do these documents cite). All three retrieval capabilities compose within a single Cypher query — no cross-system result JOINs, no application-layer assembly.
+
+This is the meaning of "the all-purpose data index for your Agent applications" — not just storing a graph, but unifying the three kinds of retrieval AI needs into one engine, so they compose naturally.
+
+---
+
+## Performance at a Glance: Measured Numbers
+
+The previous sections covered index query syntax; this one gives a set of real benchmark results. Ours is a **self-comparison**: same dataset, same query, with an index vs. without. A follow-up post will benchmark NeuG head-to-head against other products.
+
+**Test environment**: Apple M5 Pro laptop (48 GB RAM), NeuG v0.2.0 (the PyPI release), single-process embedded mode. The data is clustered synthetic document embeddings (384-dim, normalized), close to the shape of real embeddings; queries use held-out vectors that took no part in index building, and each data point is measured over 21 independent queries, reported at the p50 and p95 percentiles.
+
+### Vector search: HNSW vs. brute-force scan
+
+| Data scale | Brute-force p50 | Brute-force p95 | HNSW p50 | HNSW p95 | Speedup p50 · p95 |
+|---------|-----------|-----------|---------|---------|-----------------|
+| 10k | 82.3 ms | 84.0 ms | 3.8 ms | 4.0 ms | ~22× · ~21× |
+| 100k | 780.2 ms | 796.4 ms | 3.9 ms | 4.1 ms | ~202× · ~196× |
+
+Queries are Top-10 cosine nearest neighbours. Without an index you compute distances row by row, so latency climbs linearly with data size; HNSW visits only a small fraction of nodes, so latency stays essentially flat regardless of scale — which is why the speedup grows with size, about 22× at 10k and about 202× at 100k.
+
+**Recall**: recall@10 is 1.0 at both scales — the HNSW Top-10 matches the float64 exact solution and the NeuG brute-force result item for item, which means vector retrieval loses no recall on realistic-shape data; it doesn't trade accuracy for speed. The caveat is that the data is **clustered** (which is exactly how real embeddings look); switch to uniformly random vectors and any HNSW will see recall drop — that's a data-shape issue, not an index-quality one.
+
+**One-time cost**: building the HNSW index (m=16, ef_construction=200) over 100k rows takes about 78.6 seconds. It's a one-off expense; once built, each query drops from nearly a second to under 4 ms — for read-heavy knowledge-base workloads, the trade-off pays for itself.
+
+### Full-text search: FTS vs. CONTAINS scan
+
+| Data scale | CONTAINS p50 | CONTAINS p95 | FTS p50 | FTS p95 | Speedup p50 · p95 |
+|---------|-----------|-----------|--------|--------|-----------------|
+| 10k | 20.9 ms | 21.4 ms | 0.25 ms | 0.50 ms | ~84× · ~43× |
+| 100k | 205.9 ms | 216.7 ms | 2.47 ms | 2.73 ms | ~83× · ~80× |
+
+Queries are Top-10 keyword retrieval. CONTAINS does a substring match on every row, so latency climbs linearly with data size; FTS uses an inverted index and looks up only what's matched, so it's largely scale-independent. On top of that, building the FTS index takes only 0.01–0.07 seconds — effectively free.
+
+---
+
+## Query Diagnostics: EXPLAIN / PROFILE
+
+You've written a hybrid query — how do you know which step is the bottleneck? v0.2.0 adds `EXPLAIN` and `PROFILE` modes:
+
+```cypher
+-- Show the query plan without running it
+EXPLAIN MATCH (d:Document)
+RETURN d ORDER BY vector_distance_cosine(d.embedding, $q) LIMIT 10;
+
+-- Run it and collect operator-level metrics
+PROFILE MATCH (d:Document)
+RETURN d ORDER BY vector_distance_cosine(d.embedding, $q) LIMIT 10;
+```
+
+`PROFILE` prints an ASCII operator tree, annotating each operator with its time and output row count, available across the Python/Node.js/Java SDKs. For example, running `PROFILE` on a vector query shows the optimizer rewrote it into an `IndexScanOpr` — that is, it used the HNSW index scan rather than a brute-force full-table distance computation:
+
+```
+┌───────────────────────────────────────┐
+│             IndexScanOpr              │
+├───────────────────────────────────────┤
+│   time: 0.04ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│         ProjectOrderByOprBeta         │
+├───────────────────────────────────────┤
+│   time: 0.01ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     3 tuples   │
+└───────────────────────────────────────┘
+```
+
+When writing complex queries, this is the tool for locating performance bottlenecks — which step is slow and which step emits many rows, all at a glance.
+
+---
+
+## Graph Management: Projected Graph Namespaces
+
+AI applications often span knowledge subgraphs across multiple domains — product knowledge, user behaviour, org structure. Projected Graph Namespaces in v0.2.0 let you define namespace-isolated graph views within a single database, so a query sees only the nodes and edges inside that view:
+
+```cypher
+-- Define a namespace view: only database-category documents and their citations
+CALL project_graph(
+    'db_view',
+    {'Document': "n.category = 'database'"},
+    ['[Document, CITES, Document]']
+);
+
+-- Query within that namespace
+USE NAMESPACE db_view
+MATCH (d:Document)-[:CITES]->(ref:Document)
+RETURN d.title, ref.title;
+
+-- Clean up when done
+CALL drop_projected_graph('db_view');
+```
+
+`project_graph` carves out a subgraph with node/edge predicates, and the `USE NAMESPACE` prefix restricts subsequent `MATCH` statements to that view. Different namespaces are isolated from one another, each with its own filter conditions — no copying the data per domain and no separate database per domain. Namespace views persist with checkpoints, so they're still there after you reopen the database.
+
+---
+
+## Cross-platform: Linux and macOS Out of the Box, Windows via WSL2
+
+The v0.2.0 prebuilt packages cover Linux and macOS (x86_64 and ARM64):
+
+```bash
+pip install neug==0.2.0
+```
+
+Windows users can currently run NeuG through **WSL2**; native Windows support is on the roadmap and will arrive in a future release.
+
+---
+
+## Also Worth Noting
+
+v0.2.0 includes several other improvements worth a mention:
+
+- **Explicit transactions** ([#938](https://github.com/alibaba/neug/pull/938), [#944](https://github.com/alibaba/neug/pull/944), [#950](https://github.com/alibaba/neug/pull/950), [#951](https://github.com/alibaba/neug/pull/951), [#967](https://github.com/alibaba/neug/pull/967), [#899](https://github.com/alibaba/neug/pull/899)): `begin_transaction() / commit() / rollback()` now works across both the AP and TP execution paths, available in the Python / Node.js / Java bindings.
+- **Complex data types** ([#507](https://github.com/alibaba/neug/pull/507), [#726](https://github.com/alibaba/neug/pull/726), [#829](https://github.com/alibaba/neug/pull/829), [#871](https://github.com/alibaba/neug/pull/871)): fixed-length arrays (`FLOAT[768]`) and variable-length lists (`LIST`) are supported end to end — storage persistence, WAL, and Parquet/CSV/JSON import. Embeddings and tags can be node properties directly.
+- **Pattern Match extension** ([#260](https://github.com/alibaba/neug/pull/260)): subgraph matching (exact matching with DAF + sampled matching with FaSTest), useful for fraud detection and biological network analysis.
+- **Out-of-tree extensions** ([#745](https://github.com/alibaba/neug/pull/745)): third parties can build custom extensions without forking the main repo.
+- **Checkpoint rework** ([#678](https://github.com/alibaba/neug/pull/678), [#892](https://github.com/alibaba/neug/pull/892), [#904](https://github.com/alibaba/neug/pull/904)): incremental checkpoints write only dirty data; immutable objects plus an atomic CURRENT switch eliminate partial-write corruption, and GC reclaims old checkpoints.
+- **Native Reader framework** (`a281c0d`): replaces Arrow CSV/JSON IO with a self-contained reading framework.
+
+The full release notes are on [GitHub Release](https://github.com/alibaba/neug/releases/tag/v0.2.0).
+
+---
+
+## Give It a Try
+
+```bash
+pip install neug==0.2.0
+```
+
+```python
+from neug import Database
+
+db = Database("my_knowledge_graph")
+conn = db.connect()
+
+# Load extensions (run each statement separately)
+conn.execute("INSTALL vector_search")
+conn.execute("LOAD vector_search")
+conn.execute("INSTALL fts")
+conn.execute("LOAD fts")
+
+# Create the table + indexes
+conn.execute("""
+    CREATE NODE TABLE Document (
+        id INT64, title STRING, embedding FLOAT[768],
+        PRIMARY KEY (id)
+)
+""")
+conn.execute("CREATE INDEX doc_vec ON Document USING HNSW (embedding) WITH (metric = 'cosine')")
+conn.execute("CREATE INDEX doc_fts ON Document USING FTS (title)")
+
+# Import data, run hybrid search...
+```
+
+If you're building RAG, knowledge graphs, or any application that needs semantic search + keyword search + relationship reasoning together, give NeuG a try. One Cypher does it all — no stitching three systems together.
+
+---
+
+**About NeuG / CodeGraph**
+
+NeuG is an embedded graph database built for AI scenarios, unifying vector, full-text, and graph retrieval in a single engine. It's open source — you're welcome to try it and contribute:
+
+- GitHub: https://github.com/alibaba/neug
+- Release notes: https://github.com/alibaba/neug/releases/tag/v0.2.0
+
+Follow our blog for more from the NeuG team.

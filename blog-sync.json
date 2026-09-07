@@ -33,6 +33,21 @@
     },
     "release-v0.1.3-gds": {
       "siteSlug": "neug-v0-1-3-gds"
+    },
+    "release-v0.2.0-index-ai": {
+      "siteSlug": "release-v0-2-0-index-ai",
+      "commit": "e37966e7fe91e036fa59f15e31481c6e73188098",
+      "sourceHash": "883a06d81850eb65b4e42729a2eb13d00c735638b57aab27b7118a0d50465f5f",
+      "chineseSourceFile": "mother.md",
+      "chineseSourceHash": "7e4732c7725cbeab9568b5a125ff8c9873267381471f266790bee1aeb0155c5d",
+      "fingerprint": "bf148c7d8a344f98b3c37b84294630edf696ad9e5f6ce9b05e68e7dec4f39f41",
+      "syncSchemaVersion": "2",
+      "date": "2026-09-07",
+      "syncedAt": "2026-09-07T07:22:25.011Z",
+      "assets": [
+        "banner_en.png",
+        "banner_zh.png"
+      ]
     }
   }
 }
