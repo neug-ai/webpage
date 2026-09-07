@@ -8,7 +8,7 @@
     "build": "npm run validate:content && node --require ./scripts/polyfill-localstorage.js node_modules/.bin/next build && node scripts/prepare-static-export.mjs && pagefind --site out --output-subdir _pagefind",
     "serve": "npx serve out",
     "typecheck": "tsc --noEmit",
-    "validate:content": "tsx scripts/validate-content.ts",
+    "validate:content": "node --test scripts/blog-links.test.mjs && tsx scripts/validate-content.ts",
     "sync:docs": "node scripts/sync-neug-docs.mjs && node scripts/translate-neug-docs.mjs",
     "sync:blog": "node scripts/sync-neug-blog.mjs"
   },
