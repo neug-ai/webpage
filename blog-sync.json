@@ -8,7 +8,19 @@
       "siteSlug": "dissecting-claude-code"
     },
     "code-graph-wiki": {
-      "siteSlug": "code-graph-wiki"
+      "siteSlug": "code-graph-wiki",
+      "commit": "fcb635b06ff20175c0a4ba95adbf3a222be91909",
+      "sourceHash": "53468f54b25c9e82e23b72b45a0e58b58bf52fb48b8b5bbcc6f4e42698c105f4",
+      "fingerprint": "84a93a6d7215fe3e7e7851571e6adf091e3e69058adf7b77d4607614e406c7c3",
+      "date": "2026-08-03",
+      "syncedAt": "2026-09-05T15:17:45.341Z",
+      "assets": [
+        "banner_en.png",
+        "clustering_comparison.png",
+        "delta_comparison.png",
+        "pagerank_vs_llm.png",
+        "reproducibility.png"
+      ]
     },
     "codegraph-pr-review": {
       "siteSlug": "graph-database-driven-pr-review"

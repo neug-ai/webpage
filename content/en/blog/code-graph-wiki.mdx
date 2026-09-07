@@ -1,22 +1,28 @@
 ---
-title: "Is Your LLM Knowledge Base Getting Messier with Every Update? Use NeuG to Define Concept Boundaries and Pinpoint What Needs Updating"
-description: "Use NeuG, Leiden community detection, PageRank, and Cypher to build a coherent code wiki and update only the concepts affected by code changes."
-date: "2026-08-03"
-author: "NeuG Team"
-category: "ecosystem"
+title: >-
+  Is Your LLM Knowledge Base Getting Messier with Every Update? Use NeuG to
+  Define Concept Boundaries and Pinpoint What Needs Updating
+description: >-
+  An LLM-generated code wiki can look impressive on the first run. It turns
+  scattered code into readable sections and produces useful explanations in very
+  little time.
+date: '2026-08-03'
+author: NeuG Team
+category: ecosystem
 tags:
-  - "NeuG"
-  - "Code Graph"
-  - "LLM Wiki"
-  - "Leiden"
-  - "PageRank"
-cover: "/images/blog/code-graph-wiki/banner_en.png"
-locale: "en"
-translationKey: "code-graph-wiki"
+  - NeuG
+  - Code Graph
+  - LLM Wiki
+  - Leiden
+  - PageRank
+cover: /images/blog/code-graph-wiki/banner_en.png
+translationKey: code-graph-wiki
 draft: false
 aliases:
-  - "/blog/2026/08/03/code-graph-wiki.html"
+  - /blog/2026/08/03/code-graph-wiki.html
+locale: en
 ---
+![Article cover](/images/blog/code-graph-wiki/banner_en.png)
 
 An LLM-generated code wiki can look impressive on the first run. It turns scattered code into readable sections and produces useful explanations in very little time.
 
@@ -64,7 +70,7 @@ RETURN node.name, community
 
 Take a typical community from NeuG's codebase: **type-and-value-system**. It contains 187 files spanning 6 path prefixes. The figure below compares the two approaches on 6 representative elements: the graph approach uses Leiden clustering to correctly group types, values, casts, and comparisons into one "type system" section; the LLM approach follows directory structure and splits them into `common-types` and `built-in-functions` — severing the semantic connection.
 
-![Type-and-value-system clustering comparison](/images/blog/code-graph-wiki/clustering_comparison.png)
+![type-and-value-system clustering comparison](/images/blog/code-graph-wiki/clustering_comparison.png)
 
 **Second, PageRank to pick core files per concept group.** Once communities are defined, which files should the LLM read to write the wiki? It usually resorts to heuristics — like picking files with short names. The graph approach uses PageRank to rank files by global citation count and directly surfaces the most important ones:
 
@@ -138,6 +144,6 @@ If you have seen concept groups drift or struggled to decide which sections to u
 NeuG is an open-source graph database. v0.1.3 added the GDS graph algorithm extension (9 algorithms including Leiden, PageRank, BFS, SSSP, etc.) and COPY TEMP for ad-hoc analysis without polluting the production graph.
 
 - GitHub: https://github.com/alibaba/neug
-- GDS extension docs: [/docs/extensions/load_gds/](/docs/extensions/load_gds/)
-- Companion tutorial (step-by-step reproduction of this post's wiki build & update): [/docs/tutorials/code-graph-wiki-pipeline/](/docs/tutorials/code-graph-wiki-pipeline/)
+- GDS extension docs: https://github.com/alibaba/neug/blob/main/doc/source/extensions/load_gds.md
+- Companion tutorial (step-by-step reproduction of this post's wiki build & update): https://github.com/alibaba/neug/blob/main/doc/source/tutorials/code-graph-wiki-pipeline.md
 - Stars, issues, and PRs welcome
