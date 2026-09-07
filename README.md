@@ -76,17 +76,22 @@ The canonical English source for an automatically published post is:
 
 ```text
 raw/blogs/<slug>/blog-en.md
+raw/blogs/<slug>/mother.md          optional Chinese website source
 raw/blogs/<slug>/banner_en.*       optional
+raw/blogs/<slug>/banner_zh.*       optional
 raw/blogs/<slug>/images_en/        optional
+raw/blogs/<slug>/images_zh/        optional
 ```
 
-The first level-one heading in `blog-en.md` becomes the post title. Relative references such as `images_en/diagram.png` are rewritten to the website image path.
+The first level-one heading in each source becomes the post title. When `mother.md` contains a substantial amount of Chinese text, it is used directly for the Simplified Chinese website post; otherwise Qwen translates `blog-en.md`. Relative references under `images_en/` and `images_zh/` are rewritten to website image paths.
+
+Source frontmatter can provide `category` and `tags`. When it does not, the synchronizer infers a controlled set of tags from the slug, title, and article content. Release slugs or NeuG version titles are automatically categorized as `release` and tagged with `release` and the detected version.
 
 Automatic flow:
 
 1. A pull request in `neug-ai/wiki` changes exactly one `raw/blogs/<slug>/` directory and is given the `blog` label.
 2. When the PR is merged into `main`, `.github/workflows/trigger-blog-sync.yml` dispatches the post to `neug-ai/webpage`.
-3. `.github/workflows/sync-neug-blog.yml` checks out the exact merge commit, generates NeuG blog frontmatter, copies managed images, and translates new or changed English content into Simplified Chinese with Qwen.
+3. `.github/workflows/sync-neug-blog.yml` checks out the exact merge commit, generates NeuG blog frontmatter and tags, copies managed images, and either reuses a Chinese `mother.md` or translates new or changed English content with Qwen.
 4. The workflow creates or updates an `automation/neug-blog-*` pull request and publishes a PR preview.
 
 To synchronize a post manually, run the **Sync NeuG Blog Post** workflow in this repository and provide the source directory name as `slug`. For a local run:

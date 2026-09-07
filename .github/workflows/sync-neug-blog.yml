@@ -1,8 +1,8 @@
 name: Sync NeuG Blog Post
 
 # neug-ai/wiki dispatches this workflow after a PR carrying the `blog`
-# label is merged. New or changed English posts are translated with Qwen before
-# the synchronization cursor advances.
+# label is merged. A Chinese mother.md is reused when available; otherwise new
+# or changed English posts are translated with Qwen.
 
 on:
   repository_dispatch:
@@ -108,7 +108,7 @@ jobs:
             echo "branch=automation/neug-blog-$SITE_SLUG"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Incrementally sync and translate blog post
+      - name: Incrementally sync bilingual blog post
         run: npm run sync:blog
         env:
           NEUG_WIKI_SOURCE_DIR: .temp-wiki-repo
@@ -173,7 +173,8 @@ jobs:
           BODY=$(printf '%s\n' \
             '## Summary' \
             "- Synchronized \`raw/blogs/$SOURCE_SLUG/blog-en.md\` from neug-ai/wiki" \
-            '- Translated the new or changed English post into Simplified Chinese with Qwen' \
+            '- Reused a Chinese `mother.md` when available; otherwise translated the English post with Qwen' \
+            '- Inferred category and tags from source metadata and article content' \
             "- Copied managed images into \`public/images/blog/$SITE_SLUG/\`" \
             '' \
             "Source: $SOURCE_URL" \
