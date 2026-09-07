@@ -56,16 +56,6 @@ Documentation is synchronized incrementally from `alibaba/neug/doc/source`:
 4. New and changed English sections are translated into Simplified Chinese with Qwen.
 5. The workflow creates or updates an `automation/neug-docs-*` pull request and publishes a PR preview.
 
-Required configuration:
-
-| Repository | Setting | Purpose |
-| --- | --- | --- |
-| `alibaba/neug` | Secret `WEBPAGE_DISPATCH_TOKEN` | Fine-grained token that can dispatch events to `neug-ai/webpage` |
-| `neug-ai/webpage` | Secret `DASHSCOPE_API_KEY` (or `QWEN_API_KEY`) | Qwen translation credential |
-| `neug-ai/webpage` | Variable `QWEN_BASE_URL` | DashScope OpenAI-compatible API base URL |
-| `neug-ai/webpage` | Variable `QWEN_MODEL` | Translation model, currently `qwen3.7-plus` |
-| `neug-ai/webpage` | Actions setting **Allow GitHub Actions to create and approve pull requests** | Lets synchronization workflows open their generated PRs |
-
 For a controlled rerun, use the **Sync NeuG Documentation** workflow in GitHub Actions and provide an exact source ref when needed. To run the same synchronization locally, clone `alibaba/neug`, then provide its directory and commit:
 
 ```bash
@@ -98,13 +88,6 @@ Automatic flow:
 2. When the PR is merged into `main`, `.github/workflows/trigger-blog-sync.yml` dispatches the post to `neug-ai/webpage`.
 3. `.github/workflows/sync-neug-blog.yml` checks out the exact merge commit, generates NeuG blog frontmatter, copies managed images, and translates new or changed English content into Simplified Chinese with Qwen.
 4. The workflow creates or updates an `automation/neug-blog-*` pull request and publishes a PR preview.
-
-The private repositories need two narrowly scoped credentials:
-
-- `neug-ai/wiki` needs `WEBPAGE_DISPATCH_TOKEN`, with access to dispatch events to `neug-ai/webpage`.
-- `neug-ai/webpage` needs `NEUG_WIKI_READ_TOKEN`, with read-only Contents access to `neug-ai/wiki`, so it can check out the exact source commit and its images.
-
-The translation secret and Qwen variables live only in `neug-ai/webpage`; they do not need to be copied to `neug-ai/wiki`.
 
 To synchronize a post manually, run the **Sync NeuG Blog Post** workflow in this repository and provide the source directory name as `slug`. For a local run:
 
