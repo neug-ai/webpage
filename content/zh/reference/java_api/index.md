@@ -13,12 +13,13 @@ Java 驱动程序专为应用程序集成和服务端使用而设计：
 
 ## 部署模型
 
-当前的 Java SDK 仅支持 **通过 HTTP 的远程访问**，即 [**服务模式**](../../getting_started/getting_started.md#service-mode)。
+当前的 Java SDK 仅支持**通过 HTTP 进行远程访问**，即
+入门指南中描述的[**服务模式**](../../getting_started/getting_started.md)。
 
-- **支持**：使用 `GraphDatabase.driver("http://host:port")` 连接到正在运行的 NeuG 服务器
-- **不支持**：从 Java 嵌入式/进程内数据库访问
+- **支持**：连接到运行中的 NeuG 服务器，使用 `GraphDatabase.driver("http://host:port")`
+- **不支持**：从 Java 进行嵌入式/进程内数据库访问
 
-如果你需要嵌入式访问，请使用 C++ 或 Python API。Java SDK 应被视为已运行的 NeuG 服务的客户端。
+如果您需要嵌入式访问，请使用 C++ 或 Python API。Java SDK 应被视为已运行的 NeuG 服务的客户端。
 
 ## 使用方法
 
@@ -34,12 +35,9 @@ Java 驱动程序专为应用程序集成和服务端使用而设计：
 
 ## 核心接口
 
-- **[Driver](driver)** — 管理连接并创建会话
-- **[Config](config)** — 自定义连接行为和超时设置
-- **[Session](session)** — 针对 NeuG 服务器执行语句
-- **[Transaction](transaction)** — 将多个语句组合为一个显式事务
-- **[ResultSet](result_set)** — 从查询结果中读取行及类型化值
-- **[ResultSetMetaData](result_set_metadata)** — 检查结果集列名、是否可为空以及原生 NeuG 类型
+- **[Driver](driver.md)** - 配置连接并创建会话
+- **[Session](session.md)** - 执行语句并管理显式事务
+- **[ResultSet](result_set.md)** - 读取行、类型化值和结果元数据
 
 ## 快速开始
 
@@ -79,6 +77,7 @@ public class Example {
 from neug import Database
 
 db = Database("/path/to/graph", mode="rw")
+
 # 阻塞式运行，直至进程被终止（Ctrl+C 或 SIGTERM）
 db.serve(port=10000, host="0.0.0.0", blocking=True, thread_num=0)
 ```
@@ -111,8 +110,10 @@ except KeyboardInterrupt:
 
 ```bash
 cmake -S . -B build -DBUILD_EXECUTABLES=ON -DBUILD_HTTP_SERVER=ON
+
 # macOS
 cmake --build build --target rt_server -j$(sysctl -n hw.ncpu)
+
 # Linux
 cmake --build build --target rt_server -j$(nproc)
 ```
@@ -174,7 +175,7 @@ Java 驱动程序依赖于以下库：
 
 ## API 文档
 
-生成的 Javadoc 可以在本地构建。参见下面的[在本地构建 Javadoc](#build-javadoc-locally)。
+按照以下说明可在本地构建生成的 Javadoc。
 
 ## 在本地构建 Javadoc
 

@@ -1,12 +1,12 @@
-# 命名空间（Namespace）
+# 命名空间
 
-**命名空间（Namespace）** 是对图中某一部分所定义的、具名称且可复用的逻辑视图。它在**不复制或物化底层图数据**的前提下，将查询与图分析限定于选定的节点类型、关系类型及属性条件之上。
+**命名空间**是图的一部分的命名、可重用的逻辑视图。它将查询和图分析限制在选定的节点类型、关系类型和属性条件上，**而无需复制或物化底层图数据**。
 
-命名空间可直接用于 Cypher 查询中，以定义逻辑图视图；同时，它也被 **GDS 扩展（Graph Data Science Extension）** 用作图算法的输入图视图，从而支持算法仅在原始图的指定子集上运行。
+命名空间可以直接在 Cypher 查询中使用，以定义逻辑图视图。它们也被 **GDS 扩展**用作图算法的输入图视图，允许算法在原始图的选定子集上运行。
 
-NeuG 提供了一组投影图（Projected Graph）API，包括 `project_graph`、`show_projected_graphs`、`projected_graph_info` 和 `drop_projected_graph`，用于创建和管理命名空间。
+NeuG 提供了一组图投影 API，包括 `project_graph`, `show_projected_graphs`, `projected_graph_info`、`drop_projected_graph`，用于创建和管理命名空间。
 
-考虑一个包含两个节点表 `Entity` 和 `Product`，以及两个关系表 `rel_ee` 和 `rel_ep` 的图：
+考虑一个包含两个节点表的图，`Entity` 和 `Product`，以及两个关系表，`rel_ee` 和 `rel_ep`:
 
 ```cypher
 CREATE NODE TABLE Entity(
@@ -47,9 +47,9 @@ CREATE REL TABLE rel_ep(
 );
 ```
 
-在此示例中，`Entity` 和 `Product` 均包含一个 `domain` 属性，该属性用于标识节点所属的逻辑域或分组。
+在此示例中，`Entity` 和 `Product` 都包含一个 `domain` 属性。该属性标识节点所属的逻辑域或组。 
 
-> **注意：** `domain` 仅为本文档中使用的示例属性，并非命名空间所要求的特殊或保留属性；用户在使用命名空间前**无需**在自己的 Schema 中预先添加 `domain` 属性。可根据应用的数据模型，任意选用已有的属性来定义过滤条件。
+> **注意：**`domain` 只是本文档中使用的一个示例属性。它**不是**命名空间所需的特殊或保留属性，用户在使用命名空间之前无需向其架构中添加 `domain` 属性。可以根据应用的数据模型使用任何现有属性来定义过滤条件。
 
 例如：
 
@@ -62,23 +62,23 @@ Product X  domain = "user1"
 Product Y  domain = "user2"
 ```
 
-因此，多个域可共享同一套物理节点表与关系表，同时通过命名空间对外暴露图的不同逻辑子集。
+因此，多个域可以共享相同的物理节点和关系表，同时通过命名空间公开图的不同逻辑子集。
 
-例如，针对 `user1` 的命名空间可仅包含以下内容：
+例如，用于 `user1` 的命名空间可以仅包含：
 
-- `domain = "user1"` 的 `Entity` 节点；
-- `domain = "user1"` 的 `Product` 节点；
-- 源节点与目标节点均被纳入该命名空间的 `rel_ee` 关系；
-- 源节点为 `Entity`、目标节点为 `Product`，且二者均被纳入该命名空间的 `rel_ep` 关系。
+- `Entity` 节点，其中 `domain = "user1"`;
+- `Product` 节点，其中 `domain = "user1"`;
+- `rel_ee` 关系，其源节点和目标节点包含在命名空间中；
+- `rel_ep` 关系，其源 `Entity` 和目标 `Product` 包含在命名空间中。
 
-底层的 `Entity`、`Product`、`rel_ee` 和 `rel_ep` 表保持不变，且不会被复制。
+底层的 `Entity`, `Product`, `rel_ee` 和 `rel_ep` 表保持不变且不会被复制。
 
-一个命名空间包含：
+命名空间包含：
 
-- 一个或多个节点类型，可按节点属性进行可选过滤；
-- 一个或多个关系三元组（形式为 `[源类型, 关系类型, 目标类型]`），可按关系属性进行可选过滤。
+- 一种或多种节点类型，可选择按节点属性进行过滤；
+- 一种或多种形式为 `[source type, relationship type, destination type]` 的关系三元组，可选择按关系属性进行过滤。
 
-每个关系三元组的两个端点类型都必须包含在该命名空间中。
+每个关系三元组的两个端点类型都必须包含在命名空间中。
 
 ## 创建命名空间（Namespace）
 

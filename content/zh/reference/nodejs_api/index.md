@@ -1,17 +1,17 @@
-# NodeJS API 参考
+# Node.js API 参考
 
-NeuG NodeJS API 提供了高性能的原生 JavaScript 接口，用于与 NeuG 图数据库进行交互。该接口基于 N-API 构建，可实现与 Node.js 应用的无缝集成。
+NeuG Node.js API 提供了一个高性能的原生 JavaScript 接口，用于与 NeuG 图数据库进行交互。该 API 基于 N-API 构建，能够与 Node.js 应用程序实现无缝集成。
 
 ## 概述
 
-NodeJS API 提供了一种简单而强大的方式，用于：
+Node.js API 提供了一种简单而强大的方式，可用于：
 
 - **连接数据库**：打开本地或内存中的 NeuG 数据库
 - **执行查询**：运行 Cypher 查询并自动解析结果
 - **管理事务**：处理 ACID 事务以确保数据一致性
 - **处理结果**：使用熟悉的 JavaScript 模式处理图数据
 
-> **注意：** Node.js 绑定目前仅支持[**嵌入模式**](../../overview/introduction)。服务模式（HTTP 服务器）不可用——它需要 C++ HTTP 服务器组件，而该组件未通过 N-API 绑定暴露。如果您需要服务模式，请使用 [Python 绑定](../python_api) 或 [C++ API](../cpp_api)。
+> **注意：** Node.js 绑定目前仅支持[**嵌入模式**](../../overview/introduction)。服务模式（HTTP 服务器）不可用——它需要 C++ HTTP 服务器组件，而该组件未通过 N-API 绑定公开。如果您需要服务模式，请使用 [Python 绑定](../python_api) 或 [C++ API](../cpp_api)。
 
 ## 核心类
 

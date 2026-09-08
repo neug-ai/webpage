@@ -1,8 +1,8 @@
 # 快速入门
 
-本指南将引导您创建第一个图数据库、查询关系、添加 NeuG v0.2 引入的索引，并探索嵌入式和服务两种模式。示例采用 **Python** 编写。
+本指南将引导您创建第一个图数据库、查询关系、添加 NeuG v0.2 中引入的索引，并探索嵌入式和服务两种模式。示例采用 **Python** 编写。
 
-> **使用其他语言？** 请参阅 [Node.js API 参考](../../reference/nodejs_api/index) 或 [C++ API 参考](../../reference/cpp_api/index)，获取对应语言的等效示例。
+> **使用其他语言？** 请参阅 [Node.js API 参考](../../reference/nodejs_api/index)、[Java API 参考](../../reference/java_api/index) 或 [C++ API 参考](../../reference/cpp_api/index)，获取这些语言的等效示例。
 
 ## 前提条件
 
@@ -228,6 +228,7 @@ for record in result:
 NeuG v0.2 引入了存储索引、HNSW 向量搜索以及 BM25 全文搜索功能。这些能力在 NeuG v0.1.x 中不可用。以下示例将语义索引和关键词索引添加到上文图查询所使用的相同 `Person` 节点上。
 
 ```python
+
 # 加载索引扩展
 conn.execute("LOAD vector_search;")
 conn.execute("LOAD fts;")

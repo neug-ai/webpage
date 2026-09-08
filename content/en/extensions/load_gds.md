@@ -77,7 +77,7 @@ properties via `node.<property>` in the `RETURN` clause.
 
 > **Note:** Most algorithms (except Label Propagation, Leiden, and Louvain) require
 > a **homogeneous graph** subgraph — exactly one node label and one edge triplet where
-> the source and destination labels match the node label.
+> the source and destination labels match the node label. 
 
 ---
 

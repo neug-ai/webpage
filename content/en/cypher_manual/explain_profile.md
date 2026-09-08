@@ -223,9 +223,9 @@ What to observe in this profile:
 
 3. **IntersectOprMultip: The multi-path correlation bottleneck**: `IntersectOprMultip` (correlates multiple independent relationship paths to find matches) represents aligning three independent paths (23.41ms, 24% of total time):
    - Forum → Member (forumHasMember)
-   - Forum → Post (forumContainerOf)
+   - Forum → Post (forumContainerOf)  
    - Member → Post (personLikesPost)
-
+   
    The high cost reflects the computational overhead of finding all valid (forum, member, post) tuples where the member joined the forum AND likes a post inside that forum. The row count stays constant at 21,636, indicating no data explosion, just expensive correlation work.
 
 4. **GroupByOpr: Moderate overhead for counting distinct values**: GroupByOpr reduces 21,636 rows to 16,254 groups in 9.58ms. The reduction suggests that many (forum, member) pairs like multiple posts within the same forum.
@@ -415,7 +415,7 @@ What to observe in this profile:
    - `EdgeExpandEOpr` (expands edges to gather edge+node pairs): 2.56ms (person to their work relationships)
    - `GetVFromEdgesOpr` (extracts target nodes from edge results): 2.02ms (extracting target organisation nodes)
    - `EdgeExpandVOpr`: 1.38ms (organisation to locations)
-
+   
    The total overhead for multi-hop traversal is ~6ms, modest considering three relationship lookups are performed.
 
 3. **Row counts stay manageable throughout**: The working set grows to 1,953 rows (person-organization pairs) and stays at that cardinality through to aggregation. This small cardinality is the key to fast execution—no intermediate explosion of rows.
@@ -522,7 +522,7 @@ What to observe in this profile:
 3. **WHERE filter is highly selective or unnecessary**: `SelectOpr` (filters rows based on WHERE conditions) processes the `p1.id <> p3.id` condition in 13.89ms. The output remains at 92,285 rows, suggesting either:
    - The dataset contains no or very few self-loop FOF paths (where p1 == p3)
    - The social network structure makes such loops rare
-
+   
 This demonstrates an important principle: not all WHERE conditions produce significant filtering. Understanding your data distribution is crucial for optimization.
 
 4. **Projection overhead on massive row set**: ProjectOpr takes 8.34ms to extract and format the six output columns (p1/p2/p3 names) from 92,285 rows. This moderate per-row cost scales linearly with the row count.
