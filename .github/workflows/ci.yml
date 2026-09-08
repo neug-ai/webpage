@@ -75,6 +75,21 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           NEXT_PUBLIC_BASE_PATH: ${{ github.event_name == 'pull_request' && format('/webpage/pr-preview/pr-{0}', github.event.number) || github.event_name == 'workflow_dispatch' && inputs.preview_pr_number != '' && format('/webpage/pr-preview/pr-{0}', inputs.preview_pr_number) || '' }}
 
+      - name: Ensure Pages serves Next.js assets
+        if: >-
+          (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+          (github.event_name == 'workflow_dispatch' && inputs.preview_pr_number != '')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/contents/.nojekyll?ref=gh-pages" >/dev/null 2>&1; then
+            exit 0
+          fi
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/.nojekyll" \
+            --raw-field message="chore(pages): disable Jekyll" \
+            --raw-field content="" \
+            --raw-field branch="gh-pages"
+
       - name: Publish PR preview
         id: preview
         if: >-
