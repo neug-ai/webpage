@@ -5,14 +5,14 @@ import { useMDXComponents as getMDXComponents } from "../../mdx-components";
 import { localePrefix, type SiteLocale } from "@/lib/site";
 
 const defaultPath = ["overview", "introduction"];
-const invalidNames = [
-  "Doxyfile",
-  "Makefile",
-  "CMakeLists",
+const invalidPageNames = new Set([
+  "doxyfile",
+  "makefile",
+  "cmakelists",
   "requirements",
   "setup",
   "conf",
-];
+]);
 const Wrapper = getMDXComponents().wrapper;
 
 export async function getDocsStaticParams(locale: SiteLocale) {
@@ -30,9 +30,7 @@ export async function getDocsStaticParams(locale: SiteLocale) {
 
       return (
         !joined.match(/\.(png|jpg|jpeg|gif|svg|ico|webp)$/i) &&
-        !invalidNames.some((name) =>
-          lastSegment.toLowerCase().includes(name.toLowerCase())
-        )
+        !invalidPageNames.has(lastSegment.toLowerCase())
       );
     });
 
