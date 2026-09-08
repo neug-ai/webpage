@@ -99,7 +99,7 @@ function extractMetaKeys(content) {
 function protectMarkdown(content) {
   const protectedValues = [];
   const token = (value) => {
-    const placeholder = `NEUGPROTECTEDPLACEHOLDER${String(protectedValues.length).padStart(4, "0")}END`;
+    const placeholder = `ZXQJ${String(protectedValues.length).padStart(4, "0")}KPVN`;
     protectedValues.push({ placeholder, value });
     return placeholder;
   };
@@ -194,8 +194,8 @@ async function translateDocument(newEnglish, oldEnglish, existingChinese, relati
     let restored;
     let lastError;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const translated = await requestTranslation(protectedSection.content, "markdown");
       try {
-        const translated = await requestTranslation(protectedSection.content, "markdown");
         restored = protectedSection.restore(translated);
         break;
       } catch (error) {
@@ -233,10 +233,15 @@ async function main() {
   }
 
   let translatedFiles = 0;
-  for (const relativePath of [...candidates].sort()) {
+  const sortedCandidates = [...candidates].sort();
+  let candidateIndex = 0;
+  for (const relativePath of sortedCandidates) {
+    candidateIndex += 1;
     if (!plan.files.includes(relativePath)) continue;
     const englishPath = path.join(enRoot, relativePath);
     if (!fs.existsSync(englishPath)) continue;
+
+    console.log(`Translating ${candidateIndex}/${sortedCandidates.length}: ${relativePath}`);
 
     const change = changeByPath.get(relativePath) || { status: "M", path: relativePath, oldPath: relativePath };
     const existingRelativePath = change.status === "R" ? change.oldPath : relativePath;

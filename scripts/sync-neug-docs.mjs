@@ -106,10 +106,53 @@ function rewriteImagePaths(markdown, relativePath) {
     .replace(/(\bsrc=["'])((?:\.\.?\/)+(?:images|figures)\/[^"']+)(["'])/g, (_, prefix, url, suffix) => `${prefix}${rewrite(url)}${suffix}`);
 }
 
-function sourceChanges(previousCommit, sourceCommit, currentFiles) {
+function normalizeSourceDocument(relativePath) {
+  let content = fs.readFileSync(path.join(sourceDocs, relativePath), "utf8");
+  if (relativePath === "_meta.ts") content = addHiddenBlogEntry(content);
+  if (documentExtensions.has(path.posix.extname(relativePath))) {
+    content = rewriteImagePaths(content, relativePath);
+  }
+  return content;
+}
+
+function changesFromWorkingTree(currentFiles, state) {
+  const currentFileSet = new Set(currentFiles);
+  const changes = [];
+
+  for (const relativePath of currentFiles) {
+    if (isDocument(relativePath)) {
+      const target = path.join(enRoot, relativePath);
+      if (!fs.existsSync(target)) {
+        changes.push({ status: "A", path: relativePath, oldPath: null });
+      } else if (fs.readFileSync(target, "utf8") !== normalizeSourceDocument(relativePath)) {
+        changes.push({ status: "M", path: relativePath, oldPath: relativePath });
+      }
+      continue;
+    }
+
+    if (isAsset(relativePath)) {
+      const source = fs.readFileSync(path.join(sourceDocs, relativePath));
+      const target = path.join(publicImages, assetTarget(relativePath));
+      if (!fs.existsSync(target) || !source.equals(fs.readFileSync(target))) {
+        changes.push({ status: fs.existsSync(target) ? "M" : "A", path: relativePath, oldPath: null });
+      }
+    }
+  }
+
+  for (const relativePath of state.files || []) {
+    if (!currentFileSet.has(relativePath) && isDocument(relativePath)) {
+      changes.push({ status: "D", path: relativePath, oldPath: relativePath });
+    }
+  }
+
+  return changes;
+}
+
+function sourceChanges(previousCommit, sourceCommit, currentFiles, state) {
   const relevant = (relativePath) => isDocument(relativePath) || isAsset(relativePath);
-  const fallback = currentFiles.filter(relevant).map((relativePath) => ({ status: "A", path: relativePath, oldPath: null }));
-  if (!previousCommit || !gitObjectExists(`${previousCommit}^{commit}`)) return fallback;
+  if (!previousCommit || !gitObjectExists(`${previousCommit}^{commit}`)) {
+    return changesFromWorkingTree(currentFiles.filter(relevant), state);
+  }
 
   const output = git(["diff", "--name-status", "-M", previousCommit, sourceCommit, "--", "doc/source"], true);
   if (!output) return [];
@@ -149,7 +192,7 @@ const sourceDocuments = sourceFiles.filter(isDocument);
 const sourceDocumentSet = new Set(sourceDocuments);
 const sourceAssets = sourceFiles.filter(isAsset);
 const managedAssets = sourceAssets.map(assetTarget).sort();
-const allChanges = sourceChanges(state.commit, sourceCommit, sourceFiles);
+const allChanges = sourceChanges(state.commit, sourceCommit, sourceFiles, state);
 const changes = allChanges.filter((change) => isDocument(change.path) || isDocument(change.oldPath || ""));
 const assetChanges = allChanges.filter((change) => isAsset(change.path) || isAsset(change.oldPath || ""));
 const changedPaths = new Set(changes.filter((change) => change.status !== "D").map((change) => change.path));
@@ -184,9 +227,7 @@ for (const change of changes) {
   const target = path.join(enRoot, relativePath);
   const previousPath = change.status === "R" && change.oldPath ? path.join(enRoot, change.oldPath) : target;
   const previousContent = fs.existsSync(previousPath) ? fs.readFileSync(previousPath, "utf8") : "";
-  let content = fs.readFileSync(source, "utf8");
-  if (relativePath === "_meta.ts") content = addHiddenBlogEntry(content);
-  if (documentExtensions.has(path.posix.extname(relativePath))) content = rewriteImagePaths(content, relativePath);
+  const content = normalizeSourceDocument(relativePath);
   if (previousContent && previousContent !== content) previousEnglish[relativePath] = previousContent;
   if (writeIfChanged(target, content)) {
     copiedDocuments += 1;
