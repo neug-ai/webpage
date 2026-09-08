@@ -26,6 +26,7 @@ brew install cmake git python3 openssl@3
 #### 在 CentOS7 上
 
 ```bash
+
 # 由于 CentOS 7 的主镜像已不再可用，更新 yum 仓库以使用 vault.centos.org
 sed -i "s/mirror.centos.org/vault.centos.org/g" /etc/yum.repos.d/*.repo && \
     sed -i "s/^#.*baseurl=http/baseurl=http/g" /etc/yum.repos.d/*.repo && \
@@ -181,6 +182,7 @@ GLOG_v=10 lldb -- python3 -m pytest -sv tests/test_db_query.py
 > 可通过 `python3 -m venv .venv && source .venv/bin/activate` 或 `conda create -n neug python=3.13 && conda activate neug` 进行设置。
 
 ```bash
+
 # 仅进行格式检查（速度快，建议在 commit 前执行）
 make format-check
 
@@ -193,28 +195,31 @@ make full-check
 
 更多选项请参见 `./scripts/pre_commit_check.sh --help`。
 
-### 使用 NodeJS 构建 NeuG
+### 使用 Node.js 构建 NeuG
 
-我们还提供了 NodeJS 客户端。这两种客户端共享位于 `<repo>/build/` 的同一根构建树。如果您已经使用 Python 构建过 NeuG，则可以直接复用 `libneug.{dylib,so}` 库。
+我们还提供了一个 Node.js 客户端。两个客户端共享位于 `<repo>/build/`。
+如果您已经使用 Python 构建过 NeuG，则库 `libneug.{dylib,so}` 可以共享。
 
-> **注意**：NodeJS 绑定仅支持 **AP 模式**。直接从 Node.js 进程暴露原始 HTTP 端口来运行 TP 模式是一种危险做法——这会绕过生产服务器在正规反向代理或网关后本应具备的典型安全层（如身份验证、TLS 终结、限流等）。因此，我们特意从 NodeJS 绑定中移除了 `serve()` / `Session` API。
-如果您确实需要 TP 模式，请使用 **C++** 或 **Python** 绑定部署专用的 NeuG 服务器，然后在 Node.js 中通过标准 HTTP 客户端与其连接。
+> **注意**：Node.js 绑定仅支持 **AP 模式**。直接从 Node.js 进程暴露原始 HTTP 端口以运行 TP 模式被视为一种危险做法——它绕过了生产服务器在合适的反向代理或网关后应具备的典型安全层（身份验证、TLS 终止、限流等）。因此，`serve()` / `Session` API 已被有意从 Node.js 绑定中移除。
+如果您确实需要 TP 模式，请使用 **C++** 或 **Python** 绑定部署专用的 NeuG 服务器，然后通过标准 HTTP 客户端从 Node.js 进行连接。
 
 #### 用于开发目的
 
-从仓库根目录执行：
+从仓库根目录：
 ```bash
 make node-dev
 ```
 
-或从 `tools/nodejs_bind/` 目录执行：
+或从 `tools/nodejs_bind/`:
 ```bash
 cd tools/nodejs_bind && make dev
 ```
 
-`make dev` 命令会自动完成全部操作：安装 npm 依赖（若已安装则跳过）、配置 CMake（CMake 内部会复用缓存，仅当配置变更时重新生成）、构建项目，并部署产物。该命令可安全地重复执行。
+`make dev` 处理所有操作：安装 npm 依赖（如果已安装则跳过），
+配置 cmake（如果未更改，cmake 会在内部重用缓存）、构建并暂存
+产物。可安全重复运行。
 
-随后，Node.js 即可自动加载这些模块：
+然后 Node.js 可以自动加载这些模块：
 ```bash
 cd tools/nodejs_bind
 const { Database } = require('neug');

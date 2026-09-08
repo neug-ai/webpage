@@ -71,8 +71,8 @@
 
 ### 字符串类型
 
-目前我们只支持 VARCHAR 类型用于字符串。您可以使用 `VARCHAR(max_length)` 语法指定最大字符长度。`max_length` 的默认值为 256，最大限制为 65536。
-您也可以使用 STRING 直接指定字符类型；STRING 等同于 VARCHAR(256)，即默认最大长度为 256 个字符的 varchar 类型。
+我们目前仅支持 VARCHAR 类型的字符串。您可以使用 `VARCHAR(max_length)` 语法。其有效范围为 `max_length` 1 到 65535，默认值为 256。
+此外，您可以直接使用 STRING 来指定字符类型；STRING 等同于 VARCHAR(256)，即默认最大长度为 256 个字符的 varchar 类型。
 
 #### VARCHAR
 - **描述**：使用 UTF-8 编码的可变长度字符串

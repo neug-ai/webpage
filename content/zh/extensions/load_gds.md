@@ -71,9 +71,14 @@ CALL <algorithm_name>('<projected_graph>', {<options>})
 RETURN <columns>;
 ```
 
-每个算法均返回一个 `node` 列（匹配的节点）以及一个或多个结果列。`node` 列的类型为 `NODE`，因此您可在 `RETURN` 子句中通过 `node.<property>` 访问节点属性。
+每个算法都会返回一个 `node` 列（匹配的节点）以及一个或多个
+结果列。该 `node` 列的类型为 `NODE`，因此您可以通过 `node.<property>` 在 `RETURN` 子句。
 
-> **注意：** 大多数算法（标签传播算法 Label Propagation、Leiden 算法和 Louvain 算法除外）要求输入一个**同构图**子图——即仅包含一种节点标签，且边三元组也仅有一种，其源节点标签与目标节点标签均需与该节点标签一致。
+> **注意：** 大多数算法（标签传播、Leiden 和 Louvain 除外）需要
+> **同质图**子图——即恰好一个节点标签和一个边三元组，其中
+> 源标签和目标标签与节点标签匹配。 
+
+---
 
 ### PageRank
 

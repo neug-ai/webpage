@@ -75,40 +75,11 @@ conn.execute("CREATE (p:Person {name: 'Bob'})")    # 事务 2
 
 仅回滚事务的终止方式取决于所使用的模式；详见下方两个小节。
 
-#### 嵌入式 AP 模式中的显式事务
+#### 嵌入式 AP 模式下的显式事务
 
-在嵌入式模式下，一个显式事务由其所属的 `Connection` 对象拥有。
+在嵌入式模式下，显式事务由其 `Connection`.
 
-<Tabs items={['C++', 'Node.js', 'Python']}>
-
-<Tab>
-
-```cpp
-auto status = conn->BeginTransaction(neug::TransactionMode::kReadWrite);
-if (!status.ok()) {
-  // 处理事务开始失败的错误。
-}
-
-auto created = conn->Query("CREATE (:Person {name: 'Alice'})", "insert");
-auto visible = conn->Query("MATCH (p:Person) RETURN p.name", "read");
-
-status = conn->Commit();  // 将所有成功的写操作作为一个整体提交。
-```
-
-</Tab>
-
-<Tab>
-
-```javascript
-conn.beginTransaction();
-
-const created = conn.execute("CREATE (:Person {name: 'Alice'})", 'insert');
-const visible = conn.execute('MATCH (p:Person) RETURN p.name', 'read');
-
-conn.commit(); // 将所有成功的写操作作为一个整体提交。
-```
-
-</Tab>
+<Tabs items={['Python', 'Node.js', 'C++']}>
 
 <Tab>
 
@@ -121,22 +92,59 @@ conn.commit()
 
 </Tab>
 
+<Tab>
+
+```javascript
+conn.beginTransaction();
+
+const created = conn.execute("CREATE (:Person {name: 'Alice'})", 'insert');
+const visible = conn.execute('MATCH (p:Person) RETURN p.name', 'read');
+
+conn.commit(); // Publishes all successful writes as one commit.
+```
+
+</Tab>
+
+<Tab>
+
+```cpp
+auto status = conn->BeginTransaction(neug::TransactionMode::kReadWrite);
+if (!status.ok()) {
+  // Handle the begin error.
+}
+
+auto created = conn->Query("CREATE (:Person {name: 'Alice'})", "insert");
+auto visible = conn->Query("MATCH (p:Person) RETURN p.name", "read");
+
+status = conn->Commit();  // Publishes all successful writes as one commit.
+```
+
+</Tab>
+
 </Tabs>
 
-当客户端未指定事务模式时，读写（READ_WRITE）是默认模式；每个客户端还提供其 `begin` 调用的只读（READ_ONLY）变体。具体函数签名请参阅
+当客户端未指定模式时，默认为读写模式；每个客户端
+还公开其 begin 调用的只读变体。有关确切的签名，请参阅
 [Python](../reference/python_api/connection.md)、
 [Node.js](../reference/nodejs_api/connection.md) 和
-[C++](../reference/cpp_api/connection.md) 的连接 API 参考文档。
+[C++](../reference/cpp_api/connection.md) 连接参考。
 
-**并发性**：一个读写事务在其整个生命周期内独占 AP 访问权限：所有其他 AP 操作均需等待该事务提交、回滚或其关联连接关闭后才能执行。嵌入式 READ_WRITE 模式还限制同一时刻仅允许存在一个公开的 `Connection`。
+**并发。** 读写事务在其
+整个生命周期内持有排他性的 AP 准入：所有其他 AP 操作都会等待，直到它提交、回滚或
+其连接关闭。嵌入式 READ_WRITE 模式还只允许一个公共
+`Connection` 同时执行。
 
-**生命周期**：事务无超时机制。它将持续保持打开状态，直至应用程序主动终止；在其打开期间，其他任何 AP 工作均无法进行——因此请务必及时结束事务。
+**生命周期。** 没有超时限制。事务保持打开状态，直到
+应用程序结束它，并且在它打开期间，没有其他 AP 工作继续执行——因此请及时
+结束它。
 
-**终止仅可回滚的事务**：应显式调用回滚（rollback），或直接关闭连接。在完成上述任一操作之前，该连接仍将报告存在一个活跃事务。
+**结束仅回滚事务。** 将其回滚，或关闭连接。
+在此之前，连接仍会报告存在活动事务。
 
 #### TP 服务模式下的显式事务
 
-在服务模式下，一个显式事务由其所属的 `Session` 拥有，且一个 `Session` 在任意时刻最多只能拥有一个事务。
+在服务模式下，显式事务由其 `Session` 拥有，且一个
+`Session` 在同一时间最多拥有一个事务。
 
 <Tabs items={['Python', 'Java']}>
 
@@ -176,19 +184,43 @@ try (Driver driver = GraphDatabase.driver("http://localhost:10000");
 
 </Tabs>
 
-有关服务模式下事务控制的详细信息，请参阅
-[Python Session 参考文档](../reference/python_api/session.md) 和
-[Java 事务 API 文档](../reference/java_api/transaction.md)。
+有关服务模式的事务控制，请参阅
+[Python 会话参考](../reference/python_api/session.md) 和
+[Java 会话和事务 API](../reference/java_api/session.md)。
 
-**会话的使用。** Python 将在活跃 `Session` 上发出的查询自动路由至其关联的事务中。而在 Java 中，所有事务性语句必须通过 `Transaction.run(...)` 执行；直接调用 `Session.run(...)` 将被拒绝，直至当前事务结束。两种客户端均限制每个 `Session` 最多持有一个显式事务；关闭 `Session` 时，若其中存在未结束的事务，则会尝试将其回滚。切勿通过单个 `Session` 并发发出请求——应为每个客户端工作线程分配独立的 `Session`。模式查询（Schema lookups）始终返回服务端已提交的全局模式，而绝不会返回事务私有的模式。
+**使用会话。** Python 将活跃 `Session` 上的查询路由到
+其事务中。在 Java 中，通过
+`Transaction.run(...)` 执行每个事务语句；直接 `Session.run(...)` 调用会被拒绝，直到该
+事务结束。两个客户端都允许每个
+`Session` 最多一个显式事务，关闭会话会尝试将其回滚。切勿通过一个
+`Session` 发出并发
+请求 — 每个客户端工作线程使用一个 `Session`。架构
+查找始终显示服务已提交的架构，从不显示事务私有的
+架构。
 
-**并发性。** 读写事务持有 TP 更新租约（update lease）。在其持有期间，其他读写事务无法启动，普通插入与更新操作需等待其完成；而读操作仍可并发执行。一次成功的提交将追加并发布一条 WAL 提交记录。
+**并发。** 读写事务持有 TP 更新租约。当它
+持有租约时，其他读写事务无法开始，普通的插入和
+更新会等待其完成；读取保持并发。成功的提交会追加
+并发布一个 WAL 提交。
 
-**生命周期。** 当事务的绝对生存期到期或服务关闭时，服务端会自动回滚并清除该事务。过期状态采用惰性报告机制：下一次事务请求将返回 `410 Gone` 状态码，随后 `Session` 清除其本地句柄。在服务关闭或网络故障后，本地状态可能已过时，此时应关闭 `Session`。普通语句执行失败会使事务进入仅回滚（rollback-only）状态。
+**生命周期。** 当事务的绝对
+生命周期到期或在关闭期间，服务会回滚并移除事务。到期是延迟报告的：下一个
+事务请求返回 `410 Gone`，并且 `Session` 随后清除其本地
+句柄。关闭或网络故障后，本地状态可能已过时；请关闭
+会话。普通的语句失败会使事务变为仅可回滚状态。
 
-**结束仅回滚事务。** 调用 `rollback()`（Java 中为 `Transaction.rollback()`）。若 Python 中的事务已过期，该调用在收到 `410 Gone` 响应时将抛出 `RuntimeError`，但仍会清除本地句柄。在 Java 中，若某条语句被 `Transaction.run(...)` 拒绝，则事务即进入仅回滚状态，此后仅允许调用 `rollback()`。若 Java 在提交或回滚过程中遭遇网络故障，则最终结果未知；驱动程序不会重试，且拥有该事务的 `Session` 必须被关闭并替换。
+**结束仅可回滚的事务。** 调用 `rollback()`（或 Java
+`Transaction.rollback()`）。如果 Python 事务已到期，该
+调用会在 `RuntimeError` 上引发 `410 Gone`，但会清除本地句柄。在 Java 中，被
+`Transaction.run(...)` 拒绝的
+语句会使事务变为仅可回滚状态，
+因此只允许 `rollback()`。如果 Java 在提交或
+回滚时网络失败，最终结果未知；驱动程序不会重试，并且
+所属会话必须被关闭和替换。
 
-**被遗弃的事务。** 一个从未被显式结束的读写事务将持续持有更新租约，从而阻塞普通 TP 写入操作，直至服务端主动释放该租约。因此，务必确保在成功路径和失败路径上均显式结束事务。
+**被放弃的事务。** 从未完成的读写事务会保留
+更新租约，并延迟普通的 TP 写入，直到服务释放它。
+务必在成功和失败路径上都结束事务。
 
 ## 部署模式概览
 
@@ -281,6 +313,7 @@ session1.execute("MATCH (p:Person) RETURN count(p)", access_mode="read")
 session2.execute("CREATE (p:Person {name: 'Bob'})", access_mode="insert")
 
 # 此更新与插入及其他更新串行执行。
+
 # 更新运行期间，读取仍在一致快照上继续执行。
 session1.execute("MATCH (p:Person) SET p.updated = true", access_mode="update")
 ```

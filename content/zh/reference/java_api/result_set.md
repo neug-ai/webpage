@@ -48,11 +48,37 @@ boolean wasNull = rs.wasNull();
 
 ## 元数据
 
-每个结果集都会公开列名和列类型的元数据：
+每个结果集都会公开列名和类型的元数据：
 
 ```java
 ResultSetMetaData metaData = rs.getMetaData();
 ```
+
+与面向 JDBC 的 API 不同，NeuG 返回原生驱动 `Types` 而不是 SQL
+类型代码。常见的元数据方法包括：
+
+- `getColumnCount(int)`
+- `getColumnName(int)`
+- `getColumnType(int)`
+- `getColumnTypeName(int)`
+- `isNullable(int)`
+- `isSigned(int)`
+
+例如：
+
+```java
+ResultSetMetaData metaData = rs.getMetaData();
+String columnName = metaData.getColumnName(0);
+Types columnType = metaData.getColumnType(0);
+String typeName = metaData.getColumnTypeName(0);
+
+if (columnType == Types.INT64) {
+    long value = rs.getLong(0);
+}
+```
+
+原生 `Types` 保留 NeuG 特有的类型信息并避免有损的 JDBC
+映射。
 
 ## PROFILE 和 EXPLAIN
 
@@ -62,7 +88,7 @@ Java 驱动程序还通过以下方式公开 PROFILE 或 EXPLAIN 元数据：
 
 ### getProfileMetrics
 
-返回详细的 PROFILE 或 EXPLAIN 指标，以 `Map<String, Object>` 形式表示：
+返回详细的 PROFILE 或 EXPLAIN 指标，形式为 `Map<String, Object>`:
 
 ```java
 {
@@ -72,7 +98,7 @@ Java 驱动程序还通过以下方式公开 PROFILE 或 EXPLAIN 元数据：
 }
 ```
 
-`operators` 中每个算子条目具有如下结构：
+其中的每个算子条目 `operators` 具有如下结构：
 
 ```java
 {
@@ -85,4 +111,4 @@ Java 驱动程序还通过以下方式公开 PROFILE 或 EXPLAIN 元数据：
 }
 ```
 
-另请参阅：[ResultSetMetaData](result_set_metadata)、[Session](session)
+另请参阅：[Session](session.md)

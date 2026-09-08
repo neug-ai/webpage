@@ -47,7 +47,7 @@ CREATE REL TABLE rel_ep(
 );
 ```
 
-In this example, both `Entity` and `Product` contain a `domain` property. The property identifies the logical domain or group to which a node belongs.
+In this example, both `Entity` and `Product` contain a `domain` property. The property identifies the logical domain or group to which a node belongs. 
 
 > **Note:** `domain` is only an example property used in this document. It is **not** a special or reserved property required by Namespace, and users do not need to add a `domain` property to their schema before using Namespace. Any existing property can be used to define filtering conditions according to the application's data model.
 
