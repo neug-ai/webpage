@@ -13,9 +13,9 @@ C++ API 为以下功能提供了强大的能力：
 ## 核心类
 
 - **[NeugDB](neug_db)** - 数据库操作的主要入口点
-- **[Connection](connection)** - 针对数据库执行 Cypher 查询
-- **[QueryResult](query_result)** - 具有迭代器访问权限的查询结果容器
-- **[NeugDBService](service)** - 用于高吞吐量场景的 HTTP 服务
+- **[Connection](connection)** - 对数据库执行 Cypher 查询
+- **[NeugDBService](service)** - 适用于高吞吐量场景的 HTTP 服务
+- **[QueryResult](query_result)** - 支持迭代器访问的查询结果容器
 
 ## 快速开始
 

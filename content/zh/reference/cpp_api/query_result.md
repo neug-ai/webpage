@@ -33,29 +33,74 @@ protobuf `QueryResponse` 的轻量级封装。
 
 ### 类型化值访问器
 
-所有 getter 方法均从**当前游标行**读取数据。每个方法均有两种重载：按列索引或按列名。
+所有 getter 均从**当前游标行**读取。每个方法都有两个重载：
+按列索引或按列名。使用 `IsNull(...)` 在读取可空
+单元格之前。根据列的基础结果类型选择 getter；这些
+方法不会解析或强制转换任意源类型。getter 会抛出
+`neug::exception::RuntimeError` 当游标或列选择器无效时，
+或当源列类型未列在该 getter 的列表中时。
 
 #### `IsNull(size_t column_index)` / `IsNull(const std::string& column_name)`
 
 检查当前行的单元格是否为 NULL。
 
-#### `GetInt32(...)` —— 接受 `int32`、`bool`
+#### `GetInt32(...)`
 
-#### `GetUInt32(...)` —— 接受 `uint32`、`bool`
+将当前单元格作为有符号32位整数返回。仅当
+源列类型为 `int32` 或 `bool`；任何其他源类型都会导致
+`neug::exception::RuntimeError`。一个 `int32`值将原样返回，而
+`true` 被转换为 `1` 和 `false` 到 `0`.
 
-#### `GetInt64(...)` — 接受 `int64`、`int32`、`uint32`、`bool`、`date`、`timestamp`（date/timestamp 返回原始的 int64 纪元值）
+#### `GetUInt32(...)`
 
-#### `GetUInt64(...)` —— 接受 `uint64`、`uint32`、`bool`
+将当前单元格作为无符号 32 位整数返回。仅当源列类型为 `uint32` 或 `bool`；任何其他源类型都会引发
+`neug::exception::RuntimeError`。`uint32` 值将原样返回，
+而 `true` 会被转换为 `1`，而 `false` 转换为 `0`.
 
-#### `GetFloat(...)` — 接受 `float`、`int32`、`uint32`、`bool`
+#### `GetInt64(...)`
 
-#### `GetDouble(...)` — 接受 `double`、`float`、`int32`、`uint32`、`int64`、`uint64`、`bool`
+将当前单元格作为有符号64位整数返回。仅当
+源列类型为 `int64`, `int32`, `uint32`, `bool`, `date`，或
+`timestamp`；任何其他源类型都会导致 `neug::exception::RuntimeError`。
+一个 `int64` 值原样返回，较小的整数会被扩展，布尔值
+变为 `1` 或 `0`，并且 `date` / `timestamp` 值作为 NeuG 存储的原始纪元
+值返回。
 
-#### `GetString(...)` — 接受**任意类型**（回退为字符串表示形式）
+#### `GetUInt64(...)`
 
-#### `GetBool(...)` — 仅接受 `bool` 类型
+将当前单元格作为无符号64位整数返回。仅当源列类型为 `uint64`, `uint32`，或 `bool`；任何其他源
+类型都会导致 `neug::exception::RuntimeError`。`uint64` 值原样
+返回，`uint32` 值会被扩展，而布尔值变为 `1` 或 `0`.
 
-> 时间类型列（`date`、`timestamp`、`interval`）不会作为专用的类型化对象暴露。请使用 `GetString(...)` 获取其标准字符串形式（例如 `"1970-01-01"`），并使用 `GetInt64(...)` 读取 `date` / `timestamp` 列的原始纪元值。
+#### `GetFloat(...)`
+
+将当前单元格作为单精度浮点值返回。仅当源列类型为 `float`, `int32`, `uint32`，或
+`bool`；任何其他源类型都会导致 `neug::exception::RuntimeError`。一个
+`float` 值原样返回，整数值转换为 `float`，
+布尔值变为 `1.0f` 或 `0.0f`.
+
+#### `GetDouble(...)`
+
+将当前单元格作为双精度浮点值返回。仅当源列类型为 `double`, `float`, `int32`, `uint32`,
+`int64`, `uint64`，或 `bool`；任何其他源类型都会导致
+`neug::exception::RuntimeError`。一个 `double` 值将原样返回，其他
+数值将转换为 `double`，而布尔值将变为 `1.0` 或 `0.0`。
+大型 64 位整数在转换过程中可能会丢失精度。
+
+#### `GetString(...)`
+
+将当前单元格作为字符串返回。这是唯一一种可以针对所有源列类型调用的类型化获取器。字符串值直接返回；
+其他值使用 NeuG 的人类可读字符串表示形式。
+
+#### `GetBool(...)`
+
+将当前单元格作为布尔值返回。仅当源列类型为 `bool`；任何其他源类型都会导致
+`neug::exception::RuntimeError`。布尔值将原样返回。
+
+> 时间列（`date`, `timestamp`, `interval`）不会作为
+> 专用的类型化对象公开。请使用 `GetString(...)` 获取其规范字符串形式
+>（例如 `"1970-01-01"`），并使用 `GetInt64(...)` 读取
+> `date` / `timestamp` 列的原始纪元值。
 
 ### 元数据
 
