@@ -393,13 +393,6 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/docs/reference/java_api/config</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/config" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/config" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/docs/reference/java_api/driver</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/driver" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/driver" />
@@ -421,23 +414,9 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/docs/reference/java_api/result_set_metadata</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/result_set_metadata" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/result_set_metadata" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/docs/reference/java_api/session</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/session" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/session" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/docs/reference/java_api/transaction</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/transaction" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/transaction" />
 <changefreq>monthly</changefreq>
 <priority>0.7</priority>
 </url>
@@ -1060,13 +1039,6 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/zh/docs/reference/java_api/config</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/config" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/config" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/zh/docs/reference/java_api/driver</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/driver" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/driver" />
@@ -1088,23 +1060,9 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/zh/docs/reference/java_api/result_set_metadata</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/result_set_metadata" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/result_set_metadata" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/zh/docs/reference/java_api/session</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/session" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/session" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/zh/docs/reference/java_api/transaction</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/reference/java_api/transaction" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/reference/java_api/transaction" />
 <changefreq>monthly</changefreq>
 <priority>0.7</priority>
 </url>
