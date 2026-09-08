@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const root = path.resolve(import.meta.dirname, "..");
 const sourceRoot = path.resolve(root, process.env.NEUG_SOURCE_DIR || ".temp-source-repo");
@@ -96,48 +97,58 @@ function extractMetaKeys(content) {
     .sort();
 }
 
-function protectMarkdown(content) {
-  const protectedValues = [];
-  const token = (value) => {
-    const placeholder = `ZXQJ${String(protectedValues.length).padStart(4, "0")}KPVN`;
-    protectedValues.push({ placeholder, value });
-    return placeholder;
-  };
+export function splitProtectedMarkdown(content) {
+  const protectedPattern = /```[\s\S]*?```|~~~[\s\S]*?~~~|^\s*(?:import|export)\s.+$|<\/?[A-Za-z][^>]*>|`[^`\n]+`|https?:\/\/[^\s)>'"]+/gm;
+  const parts = [];
+  let cursor = 0;
 
-  let protectedContent = content
-    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, token)
-    .replace(/^\s*(?:import|export)\s.+$/gm, token)
-    .replace(/<\/?[A-Za-z][^>]*>/g, token)
-    .replace(/`[^`\n]+`/g, token)
-    .replace(/https?:\/\/[^\s)>'"]+/g, token);
+  for (const match of content.matchAll(protectedPattern)) {
+    if (match.index > cursor) {
+      parts.push({ protected: false, value: content.slice(cursor, match.index) });
+    }
+    parts.push({ protected: true, value: match[0] });
+    cursor = match.index + match[0].length;
+  }
 
-  return {
-    content: protectedContent,
-    restore(translated) {
-      for (const item of protectedValues) {
-        const occurrences = translated.split(item.placeholder).length - 1;
-        if (occurrences !== 1) fail(`Translation changed protected content (${item.placeholder})`);
-        translated = translated.replace(item.placeholder, item.value);
-      }
-      return translated;
-    },
-  };
+  if (cursor < content.length) {
+    parts.push({ protected: false, value: content.slice(cursor) });
+  }
+  return parts;
+}
+
+export function createMarkdownTranslationPlan(content) {
+  let fragmentIndex = 0;
+  const fragments = {};
+  const parts = splitProtectedMarkdown(content).map((part) => {
+    if (part.protected || !/[A-Za-z]/.test(part.value)) return part;
+    const key = `t${fragmentIndex}`;
+    fragmentIndex += 1;
+    fragments[key] = part.value;
+    return { ...part, key };
+  });
+  return { parts, fragments };
+}
+
+export function restoreMarkdownTranslation(plan, translated) {
+  return plan.parts
+    .map((part) => part.key ? translated[part.key] : part.value)
+    .join("");
 }
 
 function stripCodeFence(content) {
-  return content.trim().replace(/^```(?:markdown|md|mdx|typescript|ts)?\s*/i, "").replace(/\s*```$/, "").trim();
+  return content.trim().replace(/^```(?:markdown|md|mdx|typescript|ts|json)?\s*/i, "").replace(/\s*```$/, "").trim();
 }
 
-async function requestTranslation(content, kind) {
+async function requestTranslation(content, kind, maxAttempts = 3) {
   if (!apiKey) fail("QWEN_API_KEY is required when English documentation has translatable changes");
 
   const system = kind === "meta"
     ? "Translate the string values in this TypeScript metadata object from English to Simplified Chinese. Keep every key, object shape, punctuation mark, and non-string expression unchanged. Return only valid TypeScript."
-    : "Translate this NeuG technical documentation from English to Simplified Chinese. Preserve Markdown/MDX structure and every protected placeholder exactly. Keep product names, API names, identifiers, command names, URLs, and code unchanged. Return only the translated content.";
+    : "Translate every string value in this JSON object from English to Simplified Chinese. Keep every key and the JSON object shape unchanged. Preserve Markdown punctuation in each value. Return only valid JSON.";
   const endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
 
   let lastError;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -160,18 +171,49 @@ async function requestTranslation(content, kind) {
       return stripCodeFence(translated);
     } catch (error) {
       lastError = error;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
+      if (attempt < maxAttempts) await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
     }
   }
-  fail(`translation failed after 3 attempts: ${lastError?.message || lastError}`);
+  fail(`translation failed after ${maxAttempts} attempts: ${lastError?.message || lastError}`);
 }
 
 async function translateMeta(content, relativePath) {
-  const translated = await requestTranslation(content, "meta");
-  if (!arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) {
-    fail(`${relativePath}: translated metadata changed its keys`);
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const translated = await requestTranslation(content, "meta", 1);
+    if (arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) {
+      return `${translated.trim()}\n`;
+    }
   }
-  return `${translated.trim()}\n`;
+  fail(`${relativePath}: translated metadata changed its keys after 3 attempts`);
+}
+
+async function translateMarkdownSection(section, relativePath) {
+  const plan = createMarkdownTranslationPlan(section);
+  const expectedKeys = Object.keys(plan.fragments).sort();
+  if (expectedKeys.length === 0) return section;
+
+  let lastError;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await requestTranslation(JSON.stringify(plan.fragments), "fragments", 1);
+      const translated = JSON.parse(response);
+      const translatedKeys = Object.keys(translated).sort();
+      if (!arraysEqual(expectedKeys, translatedKeys)) {
+        throw new Error("translation changed fragment keys");
+      }
+      if (!expectedKeys.every((key) => typeof translated[key] === "string")) {
+        throw new Error("translation returned a non-string fragment");
+      }
+
+      return restoreMarkdownTranslation(plan, translated);
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
+    }
+  }
+
+  fail(`${relativePath}: fragment translation failed after 3 attempts: ${lastError?.message || lastError}`);
 }
 
 async function translateDocument(newEnglish, oldEnglish, existingChinese, relativePath) {
@@ -190,22 +232,7 @@ async function translateDocument(newEnglish, oldEnglish, existingChinese, relati
       translatedSections.push(cachedTranslations.get(section));
       continue;
     }
-    const protectedSection = protectMarkdown(section);
-    let restored;
-    let lastError;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      const translated = await requestTranslation(protectedSection.content, "markdown");
-      try {
-        restored = protectedSection.restore(translated);
-        break;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    if (restored === undefined) {
-      fail(`${relativePath}: translation did not preserve protected content after 3 attempts: ${lastError?.message || lastError}`);
-    }
-    translatedSections.push(restored);
+    translatedSections.push(await translateMarkdownSection(section, relativePath));
   }
 
   if (translatedSections.length !== newSections.length) fail(`${relativePath}: section count changed during translation`);
@@ -294,7 +321,9 @@ async function main() {
   console.log(stateChanged ? `Sync state advanced to ${plan.sourceCommit.slice(0, 8)}.` : "No source changes detected.");
 }
 
-main().catch((error) => {
-  console.error(`Error: ${error.message}`);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  });
+}
