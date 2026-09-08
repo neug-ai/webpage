@@ -21,7 +21,10 @@ function rewriteRoutes(nodes: any[], locale: SiteLocale): any[] {
       if (typeof next.route === "string") {
         const contentPrefix = `/${locale}`;
         const route = next.route.replace(new RegExp(`^${contentPrefix}`), "");
-        next.route = `${prefix}/docs${route === "/" ? "" : route}/`;
+        // Nextra compares these routes with `useFSRoute()`, which removes the
+        // trailing slash. Keep the page map canonical here and let Next.js add
+        // the trailing slash to rendered links.
+        next.route = `${prefix}/docs${route === "/" ? "" : route}`;
       }
       if (Array.isArray(next.children)) {
         next.children = rewriteRoutes(next.children, locale);
