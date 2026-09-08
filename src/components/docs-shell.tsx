@@ -75,7 +75,7 @@ export async function DocsShell({
         navbar={navbar}
         footer={<Footer>{labels.footer}</Footer>}
         docsRepositoryBase="https://github.com/alibaba/neug/blob/main/doc"
-        sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: true }}
+        sidebar={{ defaultMenuCollapseLevel: 1, autoCollapse: false }}
         pageMap={pageMap}
         search={
           <Search
