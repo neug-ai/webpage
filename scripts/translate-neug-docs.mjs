@@ -99,7 +99,7 @@ function extractMetaKeys(content) {
 function protectMarkdown(content) {
   const protectedValues = [];
   const token = (value) => {
-    const placeholder = `@@NEUG_PROTECTED_${String(protectedValues.length).padStart(4, "0")}@@`;
+    const placeholder = `NEUGPROTECTEDPLACEHOLDER${String(protectedValues.length).padStart(4, "0")}END`;
     protectedValues.push({ placeholder, value });
     return placeholder;
   };
@@ -191,8 +191,21 @@ async function translateDocument(newEnglish, oldEnglish, existingChinese, relati
       continue;
     }
     const protectedSection = protectMarkdown(section);
-    const translated = await requestTranslation(protectedSection.content, "markdown");
-    translatedSections.push(protectedSection.restore(translated));
+    let restored;
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const translated = await requestTranslation(protectedSection.content, "markdown");
+        restored = protectedSection.restore(translated);
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (restored === undefined) {
+      fail(`${relativePath}: translation did not preserve protected content after 3 attempts: ${lastError?.message || lastError}`);
+    }
+    translatedSections.push(restored);
   }
 
   if (translatedSections.length !== newSections.length) fail(`${relativePath}: section count changed during translation`);
