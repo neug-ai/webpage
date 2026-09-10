@@ -11,5 +11,4 @@ export default {
   user_clients: "User Clients",
   reference: "API Reference",
   development: "Development Guide",
-  blog: { display: "hidden" },
 };

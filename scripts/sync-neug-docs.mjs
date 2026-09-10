@@ -89,11 +89,6 @@ function assetTarget(relativePath) {
   return [...parts.slice(0, marker), ...parts.slice(marker + 1)].join("/");
 }
 
-function addHiddenBlogEntry(meta) {
-  if (/^\s*blog\s*:/m.test(meta)) return meta;
-  return meta.replace(/\n?};\s*$/, '\n  blog: { display: "hidden" },\n};\n');
-}
-
 function rewriteImagePaths(markdown, relativePath) {
   const documentDirectory = path.posix.dirname(relativePath);
   const rewrite = (url) => {
@@ -108,7 +103,6 @@ function rewriteImagePaths(markdown, relativePath) {
 
 function normalizeSourceDocument(relativePath) {
   let content = fs.readFileSync(path.join(sourceDocs, relativePath), "utf8");
-  if (relativePath === "_meta.ts") content = addHiddenBlogEntry(content);
   if (documentExtensions.has(path.posix.extname(relativePath))) {
     content = rewriteImagePaths(content, relativePath);
   }

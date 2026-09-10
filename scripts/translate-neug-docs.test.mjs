@@ -42,12 +42,12 @@ try (Session session = driver.session()) {
 test("Nextra metadata control values are restored after translation", () => {
   const source = `export default {
   docs: { type: "doc", display: "normal" },
-  blog: { display: "hidden" },
+  archived: { display: "hidden" },
   landing: { theme: { layout: "full" } },
 };`;
   const translated = `export default {
   docs: { type: "文档", display: "正常" },
-  blog: { display: "隐藏" },
+  archived: { display: "隐藏" },
   landing: { theme: { layout: "完整" } },
 };`;
 
