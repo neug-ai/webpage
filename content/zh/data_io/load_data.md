@@ -137,31 +137,7 @@ RETURN name, CAST(age, 'DOUBLE') AS double_age;
 
 ### WHERE 过滤
 
-仅返回谓词计算结果为 `true` 的行。与
-`NULL` 的比较会产生未知结果；请使用 `IS NULL` 或 `IS NOT NULL` 来测试
-缺失值。布尔表达式会保留该未知结果，除非另一个
-操作数能确定答案： `NULL AND false` 为 `false`，而
-`NULL OR true` 为 `true`。
-
-谓词可以包含算术运算、类型转换和参数。例如：
-
-```cypher
-LOAD FROM "person.jsonl"
-WHERE CAST(age, 'DOUBLE') + 1 > 30
-RETURN name;
-```
-
-每个文件读取器都会接收完整的谓词。当其
-后端支持该表达式时，它可以在 IO 期间进行过滤；否则，它会使用 NeuG 的查询表达式
-在解码数据上评估谓词，然后再返回请求的
-列。当谓词使用从
-`RETURN`。参数使用每次查询执行时提供的值。
-
-此选择由读取器决定：更改文件格式不需要
-更改查询或丢弃不支持的过滤器。解码数据过滤
-可能比原生下推读取更多的行。
-
-使用 `WHERE` 子句。可以使用 `AND`, `OR`，和 `NOT`:
+使用 `WHERE` 子句过滤行。可以使用 `AND`、`OR` 和 `NOT` 组合多个条件：
 
 ```cypher
 LOAD FROM "person.csv" (delim=',')

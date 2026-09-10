@@ -7,8 +7,9 @@ export default {
   cypher_manual: "Cypher Manual",
   storage_index: "Storage Indexes",
   extensions: "Extensions",
-  transaction: "Transaction & Checkpoint",
+  transaction: "Transaction",
   user_clients: "User Clients",
   reference: "API Reference",
   development: "Development Guide",
+  blog: { display: "hidden" },
 };

@@ -11,7 +11,7 @@ Node.js API 提供了一种简单而强大的方式，可用于：
 - **管理事务**：处理 ACID 事务以确保数据一致性
 - **处理结果**：使用熟悉的 JavaScript 模式处理图数据
 
-> **注意：** Node.js 绑定目前仅支持[**嵌入式模式**](../../overview/introduction)。服务模式（HTTP 服务器）不可用——它需要 C++ HTTP 服务器组件，而该组件未通过 N-API 绑定公开。如果您需要服务模式，请使用 [Python 绑定](../python_api) 或 [C++ API](../cpp_api)。
+> **注意：** Node.js 绑定目前仅支持[**嵌入模式**](../../overview/introduction)。服务模式（HTTP 服务器）不可用——它需要 C++ HTTP 服务器组件，而该组件未通过 N-API 绑定公开。如果您需要服务模式，请使用 [Python 绑定](../python_api) 或 [C++ API](../cpp_api)。
 
 ## 核心类
 

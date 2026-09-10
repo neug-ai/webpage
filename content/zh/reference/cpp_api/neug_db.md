@@ -57,7 +57,7 @@ Open(
 
 从持久化存储中打开数据库。
 
-从指定的数据目录初始化并打开 NeuG 数据库。该方法加载图模式、顶点和边数据，并初始化查询处理器与查询规划器。
+从指定的数据目录初始化并打开 NeuG 数据库。该方法加载图模式（graph schema）、顶点/边数据，并初始化查询处理器与查询规划器。
 
 **数据目录结构：** 持久化状态由 `checkpoint/CURRENT` 文件原子性地选定，以不可变的检查点对象（checkpoint objects）、清单文件（manifests）、WAL 时期（WAL epochs）以及每个打开操作对应的运行时工作区（runtime workspaces）形式存储：
 

@@ -1,8 +1,8 @@
 {
   "sourceRepository": "alibaba/neug",
-  "commit": "f0abb8f148cb15f8b2f27f5915a95d768f652508",
+  "commit": "0b341e7b40456870b877fb7e4cd4fe18e09ae8d1",
   "version": "v0.2.0",
-  "timestamp": "2026-09-10T06:53:37.479Z",
+  "timestamp": "2026-09-08T07:53:11.937Z",
   "files": [
     "_meta.ts",
     "cypher_manual/_meta.ts",
@@ -13,7 +13,6 @@
     "cypher_manual/expression/_meta.ts",
     "cypher_manual/expression/agg_func.md",
     "cypher_manual/expression/arithmetic_op.md",
-    "cypher_manual/expression/case_expr.md",
     "cypher_manual/expression/cast_func.md",
     "cypher_manual/expression/comparison_op.md",
     "cypher_manual/expression/graph_func.md",
@@ -22,7 +21,6 @@
     "cypher_manual/expression/list_op.md",
     "cypher_manual/expression/logical_op.md",
     "cypher_manual/expression/null_op.md",
-    "cypher_manual/expression/string_func.md",
     "cypher_manual/expression/temporal_func.md",
     "cypher_manual/index.md",
     "cypher_manual/namespace.md",
@@ -86,8 +84,6 @@
     "storage_index/index.md",
     "transaction/_meta.ts",
     "transaction/checkpoint.md",
-    "transaction/explicit_transactions.mdx",
-    "transaction/how_it_works.md",
     "transaction/transaction.mdx",
     "tutorials/_meta.ts",
     "tutorials/benchmark-neug-dual-mode.md",
@@ -103,19 +99,7 @@
     "modern_schema.png"
   ],
   "changedFiles": [
-    "_meta.ts",
-    "cypher_manual/data_types.md",
-    "cypher_manual/expression/_meta.ts",
-    "cypher_manual/expression/case_expr.md",
-    "cypher_manual/expression/index.md",
-    "cypher_manual/expression/string_func.md",
-    "cypher_manual/query_clauses/order_clause.md",
-    "data_io/load_data.md",
-    "extensions/load_parquet.md",
-    "transaction/_meta.ts",
-    "transaction/checkpoint.md",
-    "transaction/explicit_transactions.mdx",
-    "transaction/how_it_works.md",
-    "transaction/transaction.mdx"
+    "reference/cpp_api/index.md",
+    "reference/cpp_api/query_result.md"
   ]
 }
