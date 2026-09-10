@@ -86,7 +86,7 @@ Session 类的一个实例。
 def close()
 ```
 
-关闭会话。将尽最大努力回滚当前活跃的显式事务。
+关闭会话，并尽力回滚当前活动的显式事务。
 
 <a id="neug.session.Session.has_active_transaction"></a>
 
@@ -97,9 +97,9 @@ def close()
 def has_active_transaction() -> bool
 ```
 
-此会话是否具有一个活跃的显式事务。
+此会话是否具有活动的显式事务。
 
-当发生失败的事务且该事务处于仅回滚（rollback-only）状态时，该属性仍为 `True`。
+当失败的事务处于仅可回滚（rollback-only）状态时，该属性仍为 `True`。
 在执行下一条查询或开启新事务之前，需调用 `rollback()` 来丢弃该事务。
 
 <a id="neug.session.Session.begin_transaction"></a>
@@ -120,7 +120,7 @@ def begin_transaction(read_only: bool = False)
   - **ConnectionError**
     如果会话已关闭，或无法连接到服务。
   - **RuntimeError**
-    如果会话当前已存在活跃事务，或服务拒绝了事务开始请求。
+    如果会话当前已存在活动事务，或服务拒绝了事务开始请求。
 
 ### commit
 
@@ -128,9 +128,9 @@ def begin_transaction(read_only: bool = False)
 def commit()
 ```
 
-提交当前活跃的显式事务。
+提交当前活动的显式事务。
 
-仅回滚事务必须执行回滚操作，而不能提交。
+仅可回滚的事务必须执行回滚操作，而不能提交。
 
 <a id="neug.session.Session.rollback"></a>
 

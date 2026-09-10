@@ -57,9 +57,9 @@ Open(
 
 从持久化存储中打开数据库。
 
-从指定的数据目录初始化并打开 NeuG 数据库。该方法加载图模式（graph schema）、顶点/边数据，并初始化查询处理器与查询规划器。
+从指定的数据目录初始化并打开 NeuG 数据库。该方法加载图模式、顶点和边数据，并初始化查询处理器与查询规划器。
 
-**数据目录结构：** 持久化状态由 `checkpoint/CURRENT` 文件原子性地选定，以不可变的检查点对象（checkpoint objects）、清单文件（manifests）、WAL 时期（WAL epochs）以及每个打开操作对应的运行时工作区（runtime workspaces）形式存储：
+**数据目录结构：** 持久化状态由 `checkpoint/CURRENT` 文件原子性地选定，以不可变的检查点对象（checkpoint objects）、清单文件（manifests）、WAL 纪元（WAL epochs）以及每个打开操作对应的运行时工作区（runtime workspaces）形式存储：
 
 ```text
 data_dir/
@@ -71,7 +71,7 @@ data_dir/
 └── runtime/open-<epoch>/
 ```
 
-`CURRENT` 文件以原子方式选定在打开数据库时所使用的清单（manifest）。每个清单记录了其所关联的不可变对象 ID 及其对应 WAL 时期的 `base_ts`（用于限定 WAL 重放范围）。不可达的暂存对象（staging objects）或清单不会被选中。旧版 `checkpoint-N` 目录格式不受支持，且在未修改的情况下将被拒绝。
+`CURRENT` 文件以原子方式选定在打开数据库时所使用的清单（manifest）。每个清单记录了其所关联的不可变对象 ID 及其对应 WAL 纪元的 `base_ts`（用于限定 WAL 重放范围）。不可达的暂存对象（staging objects）或清单不会被选中。旧版 `checkpoint-N` 目录格式不受支持，且在未修改的情况下将被拒绝。
 
 **使用示例：**
 ```cpp

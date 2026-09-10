@@ -63,7 +63,7 @@ def close()
 def has_active_transaction() -> bool
 ```
 
-此连接是否具有一个活跃的显式事务。
+此连接是否具有活动的显式事务。
 
 当事务失败且仅能回滚时，该属性仍为 `True`。调用 `rollback()` 可将连接恢复为自动提交模式。
 
@@ -81,7 +81,7 @@ def begin_transaction(read_only: bool = False)
   - `read_only`（bool）：若为 `True`，则固定一个只读视图并拒绝写入操作。默认情况下，将启动一个具有私有写时复制（COW）视图的读写事务。
 
 - **异常：**
-  - **RuntimeError**：如果连接已关闭，或当前已存在活跃事务。
+  - **RuntimeError**：如果连接已关闭，或当前已存在活动事务。
 
 ### commit
 

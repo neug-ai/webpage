@@ -57,7 +57,7 @@ conn.execute("load gds")
 
 ## 步骤 2：导入文件级图
 
-`COPY TEMP` 会自动从 CSV 文件推断模式（schema）——无需编写 `CREATE TABLE` DDL 语句。第一列将作为节点的主键；对于边，前两列分别表示源节点和目标节点，并通过 `from` / `to` 指定端点标签。
+`COPY TEMP` 会自动从 CSV 文件推断模式——无需编写 `CREATE TABLE` DDL 语句。第一列将作为节点的主键；对于边，前两列分别表示源节点和目标节点，并通过 `from` / `to` 指定端点标签。
 
 ```python
 

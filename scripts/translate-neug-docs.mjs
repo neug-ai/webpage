@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { databaseTerminologyGuide, validateDatabaseTerminology } from "./lib/database-terminology.mjs";
+
+export { validateDatabaseTerminology } from "./lib/database-terminology.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const sourceRoot = path.resolve(root, process.env.NEUG_SOURCE_DIR || ".temp-source-repo");
@@ -14,7 +17,6 @@ const documentExtensions = new Set([".md", ".mdx"]);
 const apiKey = process.env.OPENAI_API_KEY || "";
 const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
 const model = process.env.OPENAI_MODEL || "qwen-plus";
-
 function fail(message) {
   throw new Error(message);
 }
@@ -62,11 +64,6 @@ function assetTarget(relativePath) {
   return [...parts.slice(0, marker), ...parts.slice(marker + 1)].join("/");
 }
 
-function addHiddenBlogEntry(meta) {
-  if (/^\s*blog\s*:/m.test(meta)) return meta;
-  return meta.replace(/\n?};\s*$/, '\n  blog: { display: "hidden" },\n};\n');
-}
-
 function rewriteImagePaths(markdown, relativePath) {
   const documentDirectory = path.posix.dirname(relativePath);
   const rewrite = (url) => {
@@ -79,7 +76,6 @@ function rewriteImagePaths(markdown, relativePath) {
 }
 
 function normalizeSource(content, relativePath) {
-  if (relativePath === "_meta.ts") return addHiddenBlogEntry(content);
   if (documentExtensions.has(path.posix.extname(relativePath))) return rewriteImagePaths(content, relativePath);
   return content;
 }
@@ -95,6 +91,23 @@ function extractMetaKeys(content) {
   return [...content.matchAll(/^\s*(?:(["'])(.*?)\1|([A-Za-z_$][\w$]*))\s*:/gm)]
     .map((match) => match[2] || match[3])
     .sort();
+}
+
+const metaControlValuePattern = /((?:["']?(?:display|type|layout)["']?)\s*:\s*)(["'])([^"']*)(\2)/g;
+
+export function restoreMetaControlValues(source, translated) {
+  const sourceValues = [...source.matchAll(metaControlValuePattern)].map((match) => match[3]);
+  let index = 0;
+  const restored = translated.replace(metaControlValuePattern, (match, prefix, quote, _value, closingQuote) => {
+    const sourceValue = sourceValues[index];
+    index += 1;
+    return sourceValue === undefined ? match : `${prefix}${quote}${sourceValue}${closingQuote}`;
+  });
+
+  if (index !== sourceValues.length) {
+    fail("translated metadata changed its Nextra control fields");
+  }
+  return restored;
 }
 
 export function splitProtectedMarkdown(content) {
@@ -142,9 +155,11 @@ function stripCodeFence(content) {
 async function requestTranslation(content, kind, maxAttempts = 3) {
   if (!apiKey) fail("QWEN_API_KEY is required when English documentation has translatable changes");
 
-  const system = kind === "meta"
+  const system = `${kind === "meta"
     ? "Translate the string values in this TypeScript metadata object from English to Simplified Chinese. Keep every key, object shape, punctuation mark, and non-string expression unchanged. Return only valid TypeScript."
-    : "Translate every string value in this JSON object from English to Simplified Chinese. Keep every key and the JSON object shape unchanged. Preserve Markdown punctuation in each value. Return only valid JSON.";
+    : "Translate every string value in this JSON object from English to Simplified Chinese. Keep every key and the JSON object shape unchanged. Preserve Markdown punctuation in each value. Return only valid JSON."}
+
+${databaseTerminologyGuide}`;
   const endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
 
   let lastError;
@@ -179,7 +194,8 @@ async function requestTranslation(content, kind, maxAttempts = 3) {
 
 async function translateMeta(content, relativePath) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const translated = await requestTranslation(content, "meta", 1);
+    const translated = restoreMetaControlValues(content, await requestTranslation(content, "meta", 1));
+    validateDatabaseTerminology(content, translated);
     if (arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) {
       return `${translated.trim()}\n`;
     }
@@ -204,6 +220,9 @@ async function translateMarkdownSection(section, relativePath) {
       }
       if (!expectedKeys.every((key) => typeof translated[key] === "string")) {
         throw new Error("translation returned a non-string fragment");
+      }
+      for (const key of expectedKeys) {
+        validateDatabaseTerminology(plan.fragments[key], translated[key]);
       }
 
       return restoreMarkdownTranslation(plan, translated);

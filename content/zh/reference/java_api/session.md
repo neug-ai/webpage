@@ -134,19 +134,19 @@ try (Session session = driver.session();
 ### 提交、回滚和状态
 
 调用 `commit()` 以使所有更改永久生效。调用 `rollback()` 当
-应用程序工作失败时。关闭活动或仅回滚的事务会自动
+应用程序工作失败时。关闭活动或仅可回滚的事务会自动
 将其回滚，因此 try-with-resources 提供了安全的后备方案。
 
 | 状态 | `run(...)` | `commit()` | `rollback()` | `isOpen()` |
 |---|---|---|---|---|
 | 活动 | 允许 | 允许 | 允许 | `true` |
-| 仅回滚 | 拒绝 | 拒绝 | 允许 | `true` |
-| HTTP 409 后仅回滚 | 拒绝 | 拒绝 | 允许 | `true` |
+| 仅可回滚 | 拒绝 | 拒绝 | 允许 | `true` |
+| HTTP 409 后仅可回滚 | 拒绝 | 拒绝 | 允许 | `true` |
 | HTTP 410 后关闭 | 拒绝 | 拒绝 | 拒绝 | `false` |
 | 提交/回滚后关闭 | 拒绝 | 拒绝 | 拒绝 | `false` |
 | 提交或回滚结果未知 | 拒绝 | 拒绝 | 拒绝 | `false` |
 
-语句失败会使事务变为仅回滚状态。在
+语句失败会使事务变为仅可回滚状态。在
 重用会话之前将其回滚。如果提交或回滚返回 HTTP 409，则操作可能
 仍在运行，可以重试回滚。HTTP 410 确认
 事务已过期或不再存在。
@@ -161,7 +161,7 @@ try (Session session = driver.session();
 - `ResultSet run(String statement)` 在此事务中执行一条语句。
 - `ResultSet run(String statement, Map<String, Object> parameters)` 执行参数化语句。
 - `void commit()` 提交活动事务。
-- `void rollback()` 回滚活动或仅回滚的事务。
+- `void rollback()` 回滚活动或仅可回滚的事务。
 - `boolean isOpen()` 报告事务是否仍可回滚。
 - `void close()` 在事务仍处于打开状态时自动回滚。
 

@@ -1,6 +1,6 @@
 # Java API 参考
 
-NeuG Java API 为连接到 NeuG 服务器、执行 Cypher 查询和消费类型化查询结果提供了原生的 Java 驱动程序。
+NeuG Java API 为连接到 NeuG 服务器、执行 Cypher 查询和读取类型化查询结果提供了原生的 Java 驱动程序。
 
 ## 概述
 

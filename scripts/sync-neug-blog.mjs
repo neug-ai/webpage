@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import matter from "gray-matter";
 import { normalizeDocumentationLinks } from "./lib/blog-links.mjs";
+import { databaseTerminologyGuide, validateDatabaseTerminology } from "./lib/database-terminology.mjs";
 
 const root = path.resolve(process.env.NEUG_WEBPAGE_ROOT || path.resolve(import.meta.dirname, ".."));
 const sourceRoot = path.resolve(root, process.env.NEUG_WIKI_SOURCE_DIR || ".temp-wiki-repo");
@@ -264,7 +265,9 @@ async function requestTranslation(content) {
           messages: [
             {
               role: "system",
-              content: "Translate this NeuG technical blog post from English to Simplified Chinese. Preserve all Markdown/MDX structure and every protected placeholder exactly. Keep product names, API names, identifiers, URLs, code, and commands unchanged. Return only the translated Markdown.",
+              content: `Translate this NeuG technical blog post from English to Simplified Chinese. Preserve all Markdown/MDX structure and every protected placeholder exactly. Keep product names, API names, identifiers, URLs, code, and commands unchanged. Return only the translated Markdown.
+
+${databaseTerminologyGuide}`,
             },
             { role: "user", content },
           ],
@@ -277,7 +280,9 @@ async function requestTranslation(content) {
       const data = await response.json();
       const translated = data?.choices?.[0]?.message?.content;
       if (!translated) fail("translation API returned an empty response");
-      return stripOuterFence(translated);
+      const cleaned = stripOuterFence(translated);
+      validateDatabaseTerminology(content, cleaned);
+      return cleaned;
     } catch (error) {
       lastError = error;
       if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
