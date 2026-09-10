@@ -72,6 +72,22 @@ test("database terminology rejects common mistranslations", () => {
     () => validateDatabaseTerminology("Embedded mode", "嵌入模式"),
     /embedded mode.*嵌入式模式/i,
   );
+  assert.throws(
+    () => validateDatabaseTerminology("Serialized update path", "串行化更新路径"),
+    /serialized.*串行更新路径/i,
+  );
+  assert.throws(
+    () => validateDatabaseTerminology("WAL epochs", "WAL 时期"),
+    /WAL epoch.*WAL 纪元/i,
+  );
+  assert.throws(
+    () => validateDatabaseTerminology("Active transaction", "活跃事务"),
+    /active transaction.*活动事务/i,
+  );
+  assert.throws(
+    () => validateDatabaseTerminology("Rollback-only transaction", "仅回滚事务"),
+    /rollback-only.*仅可回滚/i,
+  );
   assert.doesNotThrow(() => validateDatabaseTerminology("System architecture", "系统架构"));
   assert.doesNotThrow(() => validateDatabaseTerminology("Data serialization", "数据序列化"));
 });

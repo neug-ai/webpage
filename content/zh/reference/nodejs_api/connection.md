@@ -49,7 +49,7 @@ get isOpen() -> boolean
 get hasActiveTransaction() -> boolean
 ```
 
-此连接是否具有一个活跃的或仅回滚的显式事务。
+此连接是否具有活动或仅可回滚的显式事务。
 
 <a id="neug.connection.Connection.beginTransaction"></a>
 
@@ -79,7 +79,7 @@ commit()
 rollback()
 ```
 
-回滚当前活跃的事务或仅回滚状态的事务，并返回到自动提交模式。
+回滚当前活动或仅可回滚的事务，并返回到自动提交模式。
 
 <a id="neug.connection.Connection.close"></a>
 

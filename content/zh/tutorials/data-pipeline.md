@@ -72,7 +72,7 @@ result = conn.execute('''
 
 ## 步骤 3：导入节点 — 一行代码，无需 DDL
 
-> **注意：** `COPY FROM` 仅在[嵌入模式](../data_io/index.md#embedded-mode-only)下受支持，服务模式下不可用。
+> **注意：** `COPY FROM` 仅在[嵌入式模式](../data_io/index.md#embedded-mode-only)下受支持，服务模式下不可用。
 
 传统上，将数据导入图数据库需要首先使用 `CREATE NODE TABLE` 语句定义模式（列名、类型、主键）。在 NeuG v0.1.3 中，您可以跳过所有这些步骤：
 

@@ -7,7 +7,7 @@ protobuf `QueryResponse` 的轻量级封装。
 `QueryResult` 存储完整的查询响应，并提供以下实用方法：
 - 从序列化的 protobuf 字节进行构造（`From()`），
 - 获取行数（`length()`），
-- 访问响应模式（`result_schema()`），
+- 访问结果模式（`result_schema()`），
 - 序列化/反序列化（`Serialize()` / `From()`），
 - 调试输出（`ToString()`），
 - 通过 `hasNext()` / `next()` 进行基于游标的行遍历，
@@ -17,7 +17,7 @@ protobuf `QueryResponse` 的轻量级封装。
 
 #### `hasNext() const`
 
-检查是否还有更多行可供消费。
+检查是否还有更多行可供读取。
 
 #### `next()`
 
@@ -29,7 +29,7 @@ protobuf `QueryResponse` 的轻量级封装。
 
 #### `CurrentRowIndex() const`
 
-返回当前光标位置（从 0 开始的行索引）。
+返回当前游标位置（从 0 开始的行索引）。
 
 ### 类型化值访问器
 
