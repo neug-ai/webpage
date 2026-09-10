@@ -5,6 +5,7 @@ import {
   createMarkdownTranslationPlan,
   restoreMetaControlValues,
   restoreMarkdownTranslation,
+  validateDatabaseTerminology,
 } from "./translate-neug-docs.mjs";
 
 test("protected Markdown is excluded from translation and restored byte-for-byte", () => {
@@ -52,4 +53,25 @@ test("Nextra metadata control values are restored after translation", () => {
 };`;
 
   assert.equal(restoreMetaControlValues(source, translated), source);
+});
+
+test("database terminology rejects common mistranslations", () => {
+  assert.throws(
+    () => validateDatabaseTerminology("Schema modifications", "架构修改"),
+    /schema.*模式.*架构/i,
+  );
+  assert.throws(
+    () => validateDatabaseTerminology("Serializable isolation", "可序列化隔离"),
+    /serializable.*可串行化.*可序列化/i,
+  );
+  assert.throws(
+    () => validateDatabaseTerminology("Referential integrity", "引用完整性"),
+    /referential integrity.*参照完整性/i,
+  );
+  assert.throws(
+    () => validateDatabaseTerminology("Embedded mode", "嵌入模式"),
+    /embedded mode.*嵌入式模式/i,
+  );
+  assert.doesNotThrow(() => validateDatabaseTerminology("System architecture", "系统架构"));
+  assert.doesNotThrow(() => validateDatabaseTerminology("Data serialization", "数据序列化"));
 });

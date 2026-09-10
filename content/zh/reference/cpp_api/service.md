@@ -4,7 +4,7 @@
 
 面向高吞吐量场景的 NeuG 图数据库 HTTP 服务。
 
-`NeugDBService` 为 NeuG 图数据库提供了一层 HTTP 接口，支持通过 HTTP 远程执行查询。它管理一个基于 BRPC 的 HTTP 服务器的生命周期，该服务器通过 RESTful 端点处理 Cypher 查询、服务状态请求以及模式（schema）查询。
+`NeugDBService` 为 NeuG 图数据库提供了一层 HTTP 接口，支持通过 HTTP 远程执行查询。它管理一个基于 BRPC 的 HTTP 服务器的生命周期，该服务器通过 RESTful 端点处理 Cypher 查询、服务状态请求以及图模式查询。
 此组件是 Python 中 `Database.serve()` 功能的 C++ 实现，专为高吞吐量事务处理（TP）场景设计，适用于多个客户端需并发访问数据库的情形。
 
 **使用示例：**
@@ -35,7 +35,7 @@ int main() {
 
 **HTTP 端点：**
 - `POST /cypher` — 执行 Cypher 查询
-- `GET /schema` — 获取图模式（schema）
+- `GET /schema` — 获取图模式
 - `GET /status` — 检查服务状态
 
 **线程安全性：** 所有公有方法均为线程安全。服务内部使用 `TpExecutionSlotPool` 高效处理并发请求。
@@ -239,7 +239,7 @@ auto write_result = lease->ExecuteTransactionalRequest(insert_query);
 - `"read"` 或 `"r"`：只读查询（仅含 `MATCH`，不含任何修改操作）
 - `"insert"` 或 `"i"`：仅插入操作（如 `CREATE`）
 - `"update"` 或 `"u"`：更新/删除操作（如 `SET`、`DELETE`、`MERGE`）
-- `"schema"` 或 `"s"`：模式（`Schema`）修改操作（如 `CREATE/DROP` 标签）
+- `"schema"` 或 `"s"`：模式修改操作（如 `CREATE/DROP` 标签）
 
 **使用示例：**
 ```cpp
@@ -271,7 +271,7 @@ auto param_result = lease->ExecuteTransactionalRequest(query);
 
 用于并发查询执行的数据库执行槽（execution slot）池。
 
-`TpExecutionSlotPool` 拥有并调度一组固定数量的 `ExecutionSlot` 实例，专用于 TP（事务处理）类查询。每个对齐的条目均以内联方式存储其对应的执行槽，维持其内存分配器（allocator）的存活，并拥有其专属的 WAL（预写式日志）写入器（WAL writer）。
+`TpExecutionSlotPool` 拥有并调度一组固定数量的 `ExecutionSlot` 实例，专用于 TP（事务处理）类查询。每个对齐的条目均以内联方式存储其对应的执行槽，维持其内存分配器（allocator）的存活，并拥有其专属的 WAL（预写日志）写入器（WAL writer）。
 `TpExecutionSlotPool` 由 `NeugDBService` 内部使用。在绝大多数使用场景中，应通过 `NeugDBService::AcquireExecutionSlot()` 获取执行槽，而非直接访问该池。
 
 **核心特性：**

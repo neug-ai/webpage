@@ -9,7 +9,7 @@ COPY FROM 命令允许从外部数据源批量加载数据，并在图存储中�
 
 ### 加载节点数据
 
-从 CSV 文件加载 person 节点数据。CSV 中的每行映射为一个节点，列对应 person schema 中定义的节点属性。
+从 CSV 文件加载 `Person` 节点数据。CSV 中的每行映射为一个节点，各列对应 `Person` 节点表模式中定义的属性。
 
 **person.csv:**
 ```

@@ -27,7 +27,7 @@ conn->Close();
 - `"read"` 或 `"r"`：只读查询（MATCH、RETURN）
 - `"insert"` 或 `"i"`：仅插入操作（CREATE）
 - `"update"` 或 `"u"`：更新/删除操作（SET、DELETE、MERGE）
-- `"schema"` 或 `"s"`：模式（`Schema`）修改操作（CREATE/DROP 标签）
+- `"schema"` 或 `"s"`：模式修改操作（CREATE/DROP 标签）
 
 **线程安全性：** 该类**不是线程安全的**。请勿在同一个连接上并发调用 `Query()`、`GetSchema()` 或 `Close()`。每个线程应使用独立的连接。
 
@@ -81,7 +81,7 @@ if (result.has_value()) {
 - `"read"` 或 `"r"`：仅读取操作
 - `"insert"` 或 `"i"`：仅插入操作（CREATE）
 - `"update"` 或 `"u"`：更新/删除操作
-- `"schema"` 或 `"s"`：`Schema` 修改操作
+- `"schema"` 或 `"s"`：模式修改操作
 - 空字符串：根据查询文本自动推断访问模式
   - `parameters`：参数化查询所用的具名参数。键为参数名（不含 `$` 符号），值为对应参数值。
 
@@ -155,9 +155,9 @@ bool HasActiveTransaction() const noexcept
 
 #### `GetSchema() const`
 
-以 `YAML` 字符串形式获取数据库的 Schema。
+以 `YAML` 字符串形式获取数据库模式。
 
-返回完整的图谱 Schema 定义（`YAML` 格式），包括所有顶点类型、边类型及其属性。
+返回完整的图模式定义（`YAML` 格式），包括所有顶点类型、边类型及其属性。
 
 **使用示例：**
 ```cpp
@@ -168,7 +168,7 @@ std::cout << "Schema:\n" << schema_yaml << std::endl;
 - **抛出异常：**
   - `std::runtime_error`：若连接已关闭
 
-- **返回值：** `std::string` 类型，为 YAML 格式的 Schema 定义
+- **返回值：** `std::string` 类型，为 YAML 格式的模式定义
 
 - **自版本：** v0.1.0
 

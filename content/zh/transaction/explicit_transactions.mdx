@@ -27,7 +27,7 @@ import { Tabs } from 'nextra/components'
 
 ### 嵌入式 AP 模式
 
-在嵌入式模式下，显式事务由其 `Connection`.
+在嵌入式模式下，显式事务由对应的 `Connection` 管理。
 
 <Tabs items={['Python', 'Node.js', 'C++']}>
 
@@ -81,7 +81,7 @@ status = conn->Commit();  // Publishes all successful writes as one commit.
 
 ### 服务 TP 模式
 
-在服务模式下，显式事务由其 `Session`，并且一个
+在服务模式下，显式事务由对应的 `Session` 管理，并且一个
 `Session` 同一时间最多拥有一个事务。
 
 <Tabs items={['Python', 'Java']}>
@@ -181,9 +181,9 @@ try (Driver driver = GraphDatabase.driver("http://localhost:10000");
 - **使用会话。** Python 会将活跃 `Session`
   路由到其事务中。在 Java 中，将每个事务语句通过
   `Transaction.run(...)`；直接 `Session.run(...)` 调用会被拒绝，直到
-  该事务结束。两个客户端都允许每个 `Session` 最多一个显式事务，并且关闭会话会尝试将其回滚。切勿通过一个 `Session` 发出并发请求；每个客户端工作线程使用一个 `Session`。架构
-  查找始终显示服务的已提交架构，而不是
-  事务私有架构。
+  该事务结束。两个客户端都允许每个 `Session` 最多一个显式事务，并且关闭会话会尝试将其回滚。切勿通过一个 `Session` 发出并发请求；每个客户端工作线程使用一个 `Session`。模式
+  查询始终显示服务端已提交的模式，而不是
+  事务私有模式。
 - **并发。** 读写事务持有 TP 更新租约。当它
   持有租约时，其他读写事务无法开始，普通的插入和
   更新会等待其完成；读取保持并发。成功的提交

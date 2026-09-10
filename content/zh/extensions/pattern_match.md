@@ -176,10 +176,10 @@ NeuG 不支持对整个 `Vertex`/`Edge` 对象进行排序（例如 `ORDER BY a`
 
 ## 端到端示例
 
-一个完整且可直接运行的流程：创建图模式（schema）、插入一个小图、加载扩展模块，然后执行模式匹配。所有语句均可直接在命令行界面（CLI）中运行，或通过 `conn.execute(...)` 调用：
+一个完整且可直接运行的流程：创建图模式、插入一个小图、加载扩展模块，然后执行模式匹配。所有语句均可直接在命令行界面（CLI）中运行，或通过 `conn.execute(...)` 调用：
 
 ```cypher
--- 1. 模式定义（Schema）
+-- 1. 图模式
 CREATE NODE TABLE Person(id INT32 PRIMARY KEY, name STRING, age INT32);
 CREATE REL TABLE person_knows_person(FROM Person TO Person, weight DOUBLE);
 

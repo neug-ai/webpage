@@ -4,7 +4,7 @@
 
 ## 数据类型汇总表
 
-下表展示了 NeuG 支持的所有数据类型及其与 Neo4j 的差异。`System Default Value`（系统默认值）列表示在用户未在 Schema 中显式定义默认值，且原始数据中未提供相应数据字段（或提供为 `Null` 值）时，系统在数据导入过程中自动分配的值。此机制可避免产生 `Null` 值，确保数据一致性，并为后续查询和计算提供稳定的默认值。
+下表展示了 NeuG 支持的所有数据类型及其与 Neo4j 的差异。`System Default Value`（系统默认值）列表示在用户未在模式中显式定义默认值，且原始数据中未提供相应数据字段（或提供为 `Null` 值）时，系统在数据导入过程中自动分配的值。此机制可避免产生 `Null` 值，确保数据一致性，并为后续查询和计算提供稳定的默认值。
 
 | 类别 | 类型 | 系统默认值 | NeuG 示例 | Neo4j 示例 |
 |----------|------|---------------------|--------------|---------------|
@@ -21,7 +21,7 @@
 | 时间类型 | DATETIME | `1970-01-01 00:00:00` | `RETURN timestamp('2022-06-06 12:00:00')` | `RETURN datetime('2022-06-06T12:00:00')` |
 | 时间类型 | INTERVAL | `0 year 0 month 0 day`（零时间间隔） | `RETURN interval('1 year 2 month 3 day')` | `RETURN duration('P1Y2M3D')` |
 | 复合类型 | LIST | `[]`（空列表） | `RETURN [1, 2, 3]` | `RETURN [1, 2, 3]` |
-| 复合类型 | ARRAY | 固定大小的子元素默认值，例如 `INT32[3]` 的默认值为 `[0, 0, 0]` | Schema 中的 `readings INT32[3]` | 不支持作为独立的固定大小类型 |
+| 复合类型 | ARRAY | 固定大小的子元素默认值，例如 `INT32[3]` 的默认值为 `[0, 0, 0]` | 模式中的 `readings INT32[3]` | 不支持作为独立的固定大小类型 |
 | 模式类型 | NODE | `{}`（空节点） | `{_ID: 0, _LABEL: Person, id: 1, name: marko, age: 29}` | `(:Person {name: 'Alice', age: 30})` |
 | 模式类型 | REL | `{}`（空边） | `{_ID: 2, _LABEL: KNOWS, _SRC_LABEL: Person, _DST_LABEL: Person, _SRC_ID: 0, _DST_ID: 2, weight: 1.0}` | `[:KNOWS {weight: 1.0}]` |
 | 模式类型 | REPEATED PATH | `[]`（空路径） | `{_ID: 0, _LABEL: Person}, {_ID: 4294967298, _LABEL: CREATED, _SRC_LABEL: Person, _DST_LABEL: Person, _SRC_ID: 0, _DST_ID: 2}, {_ID: 2, _LABEL: Person}, {_ID: 4297064449, _LABEL: CREATED, _SRC_LABEL: Person, _DST_LABEL: Software, _SRC_ID: 2, _DST_ID: 72057594037927937}, {_ID: 72057594037927937, _LABEL: Software}` | `(:Person {name: "Kiefer", id: 4, age: 1992})-[:FOLLOWS]->(:Person {name: "Jack", id: 3, age: 1979})-[:FOLLOWS]->(:Person {name: "Kevin", id: 5, age: 1997})` |
