@@ -11,5 +11,5 @@ export default {
   user_clients: "用户客户端",
   reference: "API 参考",
   development: "开发指南",
-  blog: { display: "隐藏" },
+  blog: { display: "hidden" },
 };

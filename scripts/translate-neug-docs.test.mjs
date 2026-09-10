@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createMarkdownTranslationPlan,
+  restoreMetaControlValues,
   restoreMarkdownTranslation,
 } from "./translate-neug-docs.mjs";
 
@@ -36,4 +37,19 @@ try (Session session = driver.session()) {
   assert.match(restored, /https:\/\/neug\.io\/docs\/reference\/java_api\/session/);
   assert.match(restored, /```java[\s\S]*session\.run\("RETURN 1"\);[\s\S]*```/);
   assert.match(restored, /<Callout type="info">[\s\S]*<\/Callout>/);
+});
+
+test("Nextra metadata control values are restored after translation", () => {
+  const source = `export default {
+  docs: { type: "doc", display: "normal" },
+  blog: { display: "hidden" },
+  landing: { theme: { layout: "full" } },
+};`;
+  const translated = `export default {
+  docs: { type: "文档", display: "正常" },
+  blog: { display: "隐藏" },
+  landing: { theme: { layout: "完整" } },
+};`;
+
+  assert.equal(restoreMetaControlValues(source, translated), source);
 });

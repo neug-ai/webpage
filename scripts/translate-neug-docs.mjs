@@ -97,6 +97,23 @@ function extractMetaKeys(content) {
     .sort();
 }
 
+const metaControlValuePattern = /((?:["']?(?:display|type|layout)["']?)\s*:\s*)(["'])([^"']*)(\2)/g;
+
+export function restoreMetaControlValues(source, translated) {
+  const sourceValues = [...source.matchAll(metaControlValuePattern)].map((match) => match[3]);
+  let index = 0;
+  const restored = translated.replace(metaControlValuePattern, (match, prefix, quote, _value, closingQuote) => {
+    const sourceValue = sourceValues[index];
+    index += 1;
+    return sourceValue === undefined ? match : `${prefix}${quote}${sourceValue}${closingQuote}`;
+  });
+
+  if (index !== sourceValues.length) {
+    fail("translated metadata changed its Nextra control fields");
+  }
+  return restored;
+}
+
 export function splitProtectedMarkdown(content) {
   const protectedPattern = /```[\s\S]*?```|~~~[\s\S]*?~~~|^\s*(?:import|export)\s.+$|<\/?[A-Za-z][^>]*>|`[^`\n]+`|https?:\/\/[^\s)>'"]+/gm;
   const parts = [];
@@ -179,7 +196,10 @@ async function requestTranslation(content, kind, maxAttempts = 3) {
 
 async function translateMeta(content, relativePath) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const translated = await requestTranslation(content, "meta", 1);
+    const translated = restoreMetaControlValues(
+      content,
+      await requestTranslation(content, "meta", 1),
+    );
     if (arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) {
       return `${translated.trim()}\n`;
     }
