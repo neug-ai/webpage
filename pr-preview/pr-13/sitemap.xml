@@ -71,13 +71,6 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/docs/cypher_manual/expression/case_expr</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/case_expr" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/case_expr" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/docs/cypher_manual/expression/cast_func</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/cast_func" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/cast_func" />
@@ -130,13 +123,6 @@
 <loc>https://neug.io/docs/cypher_manual/expression/null_op</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/null_op" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/null_op" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/docs/cypher_manual/expression/string_func</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/string_func" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/string_func" />
 <changefreq>monthly</changefreq>
 <priority>0.7</priority>
 </url>
@@ -512,20 +498,6 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/docs/transaction/explicit_transactions</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/transaction/explicit_transactions" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/transaction/explicit_transactions" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/docs/transaction/how_it_works</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/transaction/how_it_works" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/transaction/how_it_works" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/docs/transaction/transaction</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/transaction/transaction" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/transaction/transaction" />
@@ -745,13 +717,6 @@
 <priority>0.7</priority>
 </url>
 <url>
-<loc>https://neug.io/zh/docs/cypher_manual/expression/case_expr</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/case_expr" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/case_expr" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
 <loc>https://neug.io/zh/docs/cypher_manual/expression/cast_func</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/cast_func" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/cast_func" />
@@ -804,13 +769,6 @@
 <loc>https://neug.io/zh/docs/cypher_manual/expression/null_op</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/null_op" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/null_op" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/zh/docs/cypher_manual/expression/string_func</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/cypher_manual/expression/string_func" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/cypher_manual/expression/string_func" />
 <changefreq>monthly</changefreq>
 <priority>0.7</priority>
 </url>
@@ -1182,20 +1140,6 @@
 <loc>https://neug.io/zh/docs/transaction/checkpoint</loc>
 <xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/transaction/checkpoint" />
 <xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/transaction/checkpoint" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/zh/docs/transaction/explicit_transactions</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/transaction/explicit_transactions" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/transaction/explicit_transactions" />
-<changefreq>monthly</changefreq>
-<priority>0.7</priority>
-</url>
-<url>
-<loc>https://neug.io/zh/docs/transaction/how_it_works</loc>
-<xhtml:link rel="alternate" hreflang="en" href="https://neug.io/docs/transaction/how_it_works" />
-<xhtml:link rel="alternate" hreflang="zh" href="https://neug.io/zh/docs/transaction/how_it_works" />
 <changefreq>monthly</changefreq>
 <priority>0.7</priority>
 </url>
