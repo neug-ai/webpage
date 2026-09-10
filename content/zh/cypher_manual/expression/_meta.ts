@@ -5,6 +5,7 @@ export default {
   null_op: "空值运算符",
   list_op: "列表运算符",
   list_func: "列表函数",
+  string_func: "字符串函数",
   cast_func: "类型转换函数",
   agg_func: "聚合函数",
   graph_func: "图函数",

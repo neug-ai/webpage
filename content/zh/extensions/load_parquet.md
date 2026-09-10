@@ -79,7 +79,12 @@ LOAD FROM "person.parquet"
 RETURN fName AS name, age AS years;
 ```
 
-> **注意：** `LOAD FROM` 支持的所有关系操作 — 包括类型转换、WHERE 过滤、聚合、排序和限制 — 在 Parquet 文件上同样适用。完整的操作列表请参见 [LOAD FROM 参考文档](../data_io/load_data)。
+> **注意：** 受 `LOAD FROM` 支持的所有关系运算——包括类型转换、WHERE 过滤、聚合、排序和限制——在处理 Parquet 文件时的工作方式相同。有关完整的运算列表，请参阅 [LOAD FROM 参考](../data_io/load_data)。
+
+当 `WHERE` 表达式在解码后需要过滤时，读取器仍会
+裁剪列：它会读取请求的输出列以及过滤器引用的所有列，包括嵌套表达式内部的引用。仅用于过滤的列
+会在过滤后从结果中移除。这适用于批量读取和全量
+读取。在这种回退路径中，谓词不会裁剪 Parquet 行组。
 
 ## 导出到 Parquet
 

@@ -92,10 +92,37 @@
 - **查询示例**：`RETURN timestamp('2022-06-06 12:00:00') AS datetime_value;`
 
 #### INTERVAL
-- **描述**：INTERVAL 类型表示持续时间或时间间隔，由以下字段组成：`year`、`month`、`day`、`hour`、`minute`、`second`、`millisecond` 和 `microsecond`。INTERVAL 类型支持两种主要格式来指定值：
-    - 基于日期的组成部分（year、month、day）：使用自然语言格式指定。示例：`1 year 2 month 3 day`。
-    - 基于时间的组成部分（hour、minute、second、millisecond、microsecond）：使用自然语言格式指定。示例：`12 hour 12 minute 2 second` - 表示 12 小时 12 分钟 2 秒。
-- **查询示例**：`RETURN interval('1 year 2 month 3 day 12 hour 12 minute 2 second') AS interval_value;`
+- **描述**：INTERVAL 类型表示持续时间或时间间隔，由以下字段组成： `year`, `month`, `day`, `hour`, `minute`, `second`, `millisecond`，以及 `microsecond`。INTERVAL 类型支持两种指定值的主要格式：
+    - 基于日期的组件（年、月、日）：使用自然语言格式指定。示例： `1 year 2 month 3 day`。
+    - 基于时间的组件（小时、分钟、秒、毫秒、微秒）：使用自然语言格式指定。示例： `12 hour 12 minute 2 second` - 表示 12 小时 12 分钟 2 秒。
+- **查询示例**： `RETURN interval('1 year 2 month 3 day 12 hour 12 minute 2 second') AS interval_value;`
+
+NeuG 在比较 `INTERVAL` 值时采用固定基数归一化：
+
+- 1 年 = 12 个月
+- 1 个月 = 30 天
+- 1 天 = 24 小时
+- 1 小时 = 60 分钟
+- 1 分钟 = 60 秒
+- 1 秒 = 1,000 毫秒
+- 1 毫秒 = 1,000 微秒
+
+例如，1 年 = 12 * 30 * 24 小时：
+
+```cypher
+RETURN interval('1 year') = interval('8640 hours') AS same_interval;
+// true
+```
+
+固定归一化确保了 `INTERVAL` 类型内的计算一致性，
+但涉及 `DATE` 和 `INTERVAL` 的计算可能会产生不同的
+结果，即使对于原本等效的时间间隔：
+
+```cypher
+RETURN date('2024-02-01') + interval('1 month'),
+       date('2024-02-01') + interval('30 days');
+// 2024-03-01, 2024-03-02
+```
 
 ### 复合类型
 
