@@ -1,0 +1,632 @@
+3:I[4707,[],""]
+5:I[6423,[],""]
+7:I[8003,["185","static/chunks/app/layout-83f0fd3658d76d58.js"],""]
+4:["mdxPath","transaction/checkpoint","oc"]
+8:{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"}
+9:{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"}
+a:{"display":"inline-block"}
+b:{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0}
+0:["0mAFeubIiyjy_Z-DpYL5Z",[[["",{"children":["(docs)",{"children":["zh",{"children":["docs",{"children":[["mdxPath","transaction/checkpoint","oc"],{"children":["__PAGE__?{\"mdxPath\":[\"transaction\",\"checkpoint\"]}",{}]}]}]}]}]},"$undefined","$undefined",true],["",{"children":["(docs)",{"children":["zh",{"children":["docs",{"children":[["mdxPath","transaction/checkpoint","oc"],{"children":["__PAGE__",{},[["$L1","$L2",null],null],null]},[null,["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children","(docs)","children","zh","children","docs","children","$4","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined"}]],null]},[[null,"$L6"],null],null]},[null,["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children","(docs)","children","zh","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined"}]],null]},[null,["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children","(docs)","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":"404"}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],"notFoundStyles":[]}]],null]},[[[["$","link","0",{"rel":"stylesheet","href":"/webpage/pr-preview/pr-13/_next/static/css/16fb04f3f0386afc.css","precedence":"next","crossOrigin":"$undefined"}],["$","link","1",{"rel":"stylesheet","href":"/webpage/pr-preview/pr-13/_next/static/css/67a7a52f53ab1c25.css","precedence":"next","crossOrigin":"$undefined"}]],["$","html",null,{"lang":"en","suppressHydrationWarning":true,"children":[["$","head",null,{"children":["$undefined",["$","style",null,{"children":":root {\n  --nextra-primary-hue: 215deg;\n  --nextra-primary-saturation: 95%;\n  --nextra-primary-lightness: 45%;\n  --nextra-bg: 247,248,250;\n  --nextra-content-width: 90rem;\n}\n.dark {\n  --nextra-primary-hue: 215deg;\n  --nextra-primary-saturation: 95%;\n  --nextra-primary-lightness: 55%;\n  --nextra-bg: 13,17,22;\n}\n::selection {\n  background: hsla(var(--nextra-primary-hue),var(--nextra-primary-saturation),var(--nextra-primary-lightness),.3);\n}\nhtml {\n  background: rgb(var(--nextra-bg));\n}"}],["$","meta",null,{"name":"theme-color","media":"(prefers-color-scheme: light)","content":"rgb(247,248,250)"}],["$","meta",null,{"name":"theme-color","media":"(prefers-color-scheme: dark)","content":"rgb(13,17,22)"}],"$undefined"]}],["$","body",null,{"children":[["$","$L7",null,{"id":"document-language","strategy":"beforeInteractive","children":"document.documentElement.lang = location.pathname.split(\"/\").includes(\"zh\") ? \"zh-CN\" : \"en\";"}],["$","$L7",null,{"id":"initial-color-theme","strategy":"beforeInteractive","children":"try{var t=localStorage.getItem(\"neug-theme\");var d=t===\"dark\"||t===\"light\"?t:matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\";document.documentElement.classList.remove(\"light\",\"dark\");document.documentElement.classList.add(d);document.documentElement.style.colorScheme=d}catch(e){}"}],["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":"$8","children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":"$9","children":"404"}],["$","div",null,{"style":"$a","children":["$","h2",null,{"style":"$b","children":"This page could not be found."}]}]]}]}]],"notFoundStyles":[]}]]}]]}]],null],null],["$Lc",null]]]]
+d:I[8960,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"TOCProvider"]
+e:I[7191,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"Sidebar"]
+f:I[2661,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ClientWrapper"]
+11:I[2972,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],""]
+12:I[6099,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"HeadingAnchor"]
+13:I[8451,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ToggleWordWrapButton"]
+14:I[4108,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ThemeConfigProvider"]
+15:I[6016,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"LastUpdated"]
+16:I[763,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"Search"]
+17:I[5922,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ThemeProvider"]
+18:I[4328,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"SkipNavLink"]
+19:I[7691,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ConfigProvider"]
+1a:I[5507,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"NeuGLogo"]
+1b:I[8212,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ClientNavbar"]
+1c:I[3348,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"GitHubStarCount"]
+1d:I[5112,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"VersionBadge"]
+1e:I[2594,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"LanguageDropdown"]
+1f:I[935,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"ThemeSwitch"]
+20:I[7651,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"Switchers"]
+21:I[6297,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"LocaleSwitch"]
+22:I[7191,["501","static/chunks/c16f53c3-e0b1a3ec107d8984.js","754","static/chunks/754-046d4f68d1da0c0c.js","655","static/chunks/655-3d0e9450a9aade89.js","547","static/chunks/547-5b09632bfd59c7e5.js","632","static/chunks/632-7e40168c76349f2c.js","52","static/chunks/52-d75afe588ac88e62.js","484","static/chunks/app/(docs)/zh/docs/layout-a7265610b8c9eb17.js"],"MobileNav"]
+10:Tb2e0,# Performance Debugging with EXPLAIN and PROFILE
+
+EXPLAIN and PROFILE are Cypher query execution commands that allow you to inspect query execution plans and collect performance metrics during query execution.
+
+## Quick Reference
+
+- **EXPLAIN**: View the execution plan without executing the query
+- **PROFILE**: Execute the query and collect per-operator timing and row count statistics
+
+## Overview
+
+### EXPLAIN Mode
+
+**EXPLAIN** shows the physical execution plan of your query without actually executing it. This is useful for:
+- Understanding how the query optimizer plans your query
+- Identifying suboptimal query structures before execution
+- Debugging complex joins and aggregations
+
+**Results**: Returns the operator tree structure with 0 data rows.
+
+### PROFILE Mode
+
+**PROFILE** executes your query and collects detailed per-operator metrics. This is useful for:
+- Identifying performance bottlenecks in slow queries
+- Comparing execution times across different query structures
+- Understanding data distribution impact on execution
+
+**Results**:
+1. **Query data rows** - The actual result set from your query
+2. **Operator tree structure** - The execution plan (same as EXPLAIN)
+3. **Per-operator metrics** - Execution time and row count for each operator
+
+## Examples
+
+The examples below use the **ldbc_sample** dataset.
+
+### PROFILE Examples
+
+#### 1. Which posts attract the most discussion?
+
+Find the top 10 posts by direct comment volume and identify their authors.
+
+```cypher
+PROFILE MATCH (c:comment)-[:commentReplyOfPost]->(p:post)-[:postHasCreator]->(author:person)
+RETURN p.id,
+       author.firstName,
+       author.lastName,
+       COUNT(c.id) AS direct_reply_count
+ORDER BY direct_reply_count DESC
+LIMIT 10;
+```
+
+Output:
+```
++---------------+--------------------------+----------------------+----------------------+
+|       _2_p.id | _6_author.firstName      | _6_author.lastName   |   direct_reply_count |
++===============+==========================+======================+======================+
+| 1030792245903 | Bona Pinder Yayumayalolo | Collinet             |                   19 |
++---------------+--------------------------+----------------------+----------------------+
+|  343597401905 | Abby                     | Hassan               |                   18 |
++---------------+--------------------------+----------------------+----------------------+
+|  618475479931 | Hao                      | Liu                  |                   18 |
++---------------+--------------------------+----------------------+----------------------+
+| 1030792175730 | Yang                     | Zhang                |                   17 |
++---------------+--------------------------+----------------------+----------------------+
+|  343597520846 | Abdul-Malik              | Binalshibh           |                   17 |
++---------------+--------------------------+----------------------+----------------------+
+|  893353316266 | Emperor of Brazil        | Dom Pedro II         |                   17 |
++---------------+--------------------------+----------------------+----------------------+
+|  549755856528 | Camila                   | Alves                |                   17 |
++---------------+--------------------------+----------------------+----------------------+
+|  274877914558 | Pol                      | Dara                 |                   17 |
++---------------+--------------------------+----------------------+----------------------+
+|  893353214109 | Dumitru                  | David                |                   16 |
++---------------+--------------------------+----------------------+----------------------+
+|  412316913317 | Isabel                   | Fernandez            |                   16 |
++---------------+--------------------------+----------------------+----------------------+
+
+
+╔════════════════════════════════════════╗
+║         PROFILE REPORT                 ║
+╚════════════════════════════════════════╝
+Total output tuples: 10
+Total elapsed time: 52.99 ms
+
+┌───────────────────────────────────────┐
+│           ScanWithGPredOpr            │
+├───────────────────────────────────────┤
+│  time: 12.75ms | rows: 76830 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│  time: 12.16ms | rows: 38044 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│  time: 10.52ms | rows: 38044 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 9.57ms | rows: 38044 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              GroupByOpr               │
+├───────────────────────────────────────┤
+│   time: 7.88ms | rows:  7325 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│         ProjectOrderByOprBeta         │
+├───────────────────────────────────────┤
+│   time: 0.10ms | rows:    10 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:    10 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:    10 tuples   │
+└───────────────────────────────────────┘
+```
+
+What to observe in this profile:
+
+1. **Scan dominates early stages**: `ScanWithGPredOpr` (scans nodes matching predicates) accounts for 12.75ms out of 52.99ms total. This is where all 76,830 comments are loaded into memory—a necessary baseline cost.
+
+2. **Edge expansion is a significant bottleneck**: The two `EdgeExpandVOpr` (expands along relationships to produce new rows) operators combined take 22.68ms (43% of total time), even though the output stabilizes at 38,044 rows. This tells us that edge lookups are relatively expensive in this case; if this query is slow, consider indexing the comment-to-post and post-to-person relationships.
+
+3. **Aggregation is efficient**: `GroupByOpr` (groups rows by key and applies aggregate functions) collapses 38,044 rows down to 7,325 groups in only 7.88ms. This shows that grouping is fast compared to the earlier edge traversal.
+
+4. **Optimizer fuses ORDER + LIMIT**: `ProjectOrderByOprBeta` (fused operator: sorts rows and applies LIMIT in one pass) handles sorting and limiting in just 0.10ms, reducing 7,325 rows to 10 output rows. This demonstrates that the optimizer intelligently merges ORDER BY and LIMIT to avoid sorting the entire intermediate result.
+
+5. **LIMIT does not reduce upstream work**: Notice that all 38,044 comment rows flow through to GroupByOpr before being filtered down. The `LIMIT` clause shortens output, not execution—this is why focusing on early filtering (e.g., date range on comments) would be more impactful than changing LIMIT.
+
+#### 2. Which forum members are liking posts inside the forums they joined?
+
+This is a practical engagement query: it correlates community membership with actual in-forum activity.
+
+```cypher
+PROFILE MATCH (f:forum)-[:forumHasMember]->(member:person),
+              (f)-[:forumContainerOf]->(p:post),
+              (member)-[:personLikesPost]->(p)
+RETURN f.title,
+       member.firstName,
+       member.lastName,
+       COUNT(DISTINCT p.id) AS liked_posts_in_forum;
+```
+
+Output:
+```
++----------------------------+-----------------------+----------------------+------------------------+
+| _0_f.title                 | _2_member.firstName   | _2_member.lastName   | liked_posts_in_forum   |
++============================+=======================+======================+========================+
+| Album 1 of Mahinda Perera  | Dumitru               | David                | 2                      |
++----------------------------+-----------------------+----------------------+------------------------+
+| Album 1 of Mahinda Perera  | Walter                | Becker               | 1                      |
++----------------------------+-----------------------+----------------------+------------------------+
+| Album 3 of Mahinda Perera  | Dumitru               | David                | 1                      |
++----------------------------+-----------------------+----------------------+------------------------+
+| Album 9 of Mahinda Perera  | Walter                | Becker               | 2                      |
++----------------------------+-----------------------+----------------------+------------------------+
+| Album 9 of Mahinda Perera  | Anh                   | Nguyen               | 1                      |
++----------------------------+-----------------------+----------------------+------------------------+
+| Album 10 of Mahinda Perera | Dumitru               | David                | 1                      |
++----------------------------+-----------------------+----------------------+------------------------+
+| ...                        | ...                   | ...                  | ...                    |
++----------------------------+-----------------------+----------------------+------------------------+
+
+
+╔════════════════════════════════════════╗
+║         PROFILE REPORT                 ║
+╚════════════════════════════════════════╝
+Total output tuples: 16254
+Total elapsed time: 96.16 ms
+
+┌───────────────────────────────────────┐
+│           ScanWithGPredOpr            │
+├───────────────────────────────────────┤
+│  time: 26.20ms | rows: 78976 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│  time: 24.70ms | rows: 21636 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│          IntersectOprMultip           │
+├───────────────────────────────────────┤
+│  time: 23.41ms | rows: 21636 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│  time: 12.27ms | rows: 21636 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              GroupByOpr               │
+├───────────────────────────────────────┤
+│   time: 9.58ms | rows: 16254 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows: 16254 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows: 16254 tuples   │
+└───────────────────────────────────────┘
+```
+
+What to observe in this profile:
+
+1. **Scan cost is substantial**: ScanWithGPredOpr takes 26.20ms (27% of total time) scanning 78,976 forums. For engagement queries, starting with the larger collection (forums rather than members) may impact early performance.
+
+2. **Edge expansion is comparable to Example 1**: The EdgeExpandVOpr consumes 24.70ms exploring forum-to-member relationships, reducing to 21,636 rows. This is similar in cost to Example 1, showing that edge lookup overhead is consistent across different query patterns.
+
+3. **IntersectOprMultip: The multi-path correlation bottleneck**: `IntersectOprMultip` (correlates multiple independent relationship paths to find matches) represents aligning three independent paths (23.41ms, 24% of total time):
+   - Forum → Member (forumHasMember)
+   - Forum → Post (forumContainerOf)  
+   - Member → Post (personLikesPost)
+   
+   The high cost reflects the computational overhead of finding all valid (forum, member, post) tuples where the member joined the forum AND likes a post inside that forum. The row count stays constant at 21,636, indicating no data explosion, just expensive correlation work.
+
+4. **GroupByOpr: Moderate overhead for counting distinct values**: GroupByOpr reduces 21,636 rows to 16,254 groups in 9.58ms. The reduction suggests that many (forum, member) pairs like multiple posts within the same forum.
+
+5. **Optimization insights**: If this query is slow, the bottleneck is the IntersectOprMultip correlation step (23.41ms), not aggregation (9.58ms). Consider:
+   - Indexing the forumHasMember and forumContainerOf relationships
+   - Rewriting the query to reduce the number of correlation candidates before the intersection (e.g., filtering forums by size first)
+
+#### 3. Are users liking content that matches their declared interests?
+
+This is a realistic personalization or recommendation-analysis query.
+
+```cypher
+PROFILE MATCH (person:person)-[:personHasInterest]->(tag:tag),
+              (person)-[:personLikesPost]->(post:post)-[:postHasTag]->(tag)
+RETURN person.firstName,
+       person.lastName,
+       tag.name,
+       COUNT(DISTINCT post.id) AS matching_liked_posts;
+```
+
+Output:
+```
++----------------------------+----------------------+----------------------------+------------------------+
+| _0_person.firstName        | _0_person.lastName   | _2_tag.name                | matching_liked_posts   |
++============================+======================+============================+========================+
+| Ali                        | Diori                | Henry_Wadsworth_Longfellow | 1                      |
++----------------------------+----------------------+----------------------------+------------------------+
+| Antonio                    | Alvarez              | Wolfgang_Amadeus_Mozart    | 1                      |
++----------------------------+----------------------+----------------------------+------------------------+
+| Ken                        | Yamada               | Franz_Kafka                | 1                      |
++----------------------------+----------------------+----------------------------+------------------------+
+| Rahul                      | Nair                 | Hamid_Karzai               | 2                      |
++----------------------------+----------------------+----------------------------+------------------------+
+| Fritz                      | Richter              | Orson_Welles               | 1                      |
++----------------------------+----------------------+----------------------------+------------------------+
+| Walter                     | Schmidt              | United_Arab_Emirates       | 1                      |
++----------------------------+----------------------+----------------------------+------------------------+
+| ...                        | ...                  | ...                        | ...                    |
++----------------------------+----------------------+----------------------------+------------------------+
+
+
+╔════════════════════════════════════════╗
+║         PROFILE REPORT                 ║
+╚════════════════════════════════════════╝
+Total output tuples: 503
+Total elapsed time: 26.17 ms
+
+┌───────────────────────────────────────┐
+│           ScanWithGPredOpr            │
+├───────────────────────────────────────┤
+│   time: 9.23ms | rows: 78976 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│   time: 8.40ms | rows: 21636 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│          IntersectOprMultip           │
+├───────────────────────────────────────┤
+│   time: 6.95ms | rows:   715 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 1.05ms | rows:   715 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              GroupByOpr               │
+├───────────────────────────────────────┤
+│   time: 0.54ms | rows:   503 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:   503 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:   503 tuples   │
+└───────────────────────────────────────┘
+```
+
+What to observe in this profile:
+
+1. **Scan establishes the baseline**: ScanWithGPredOpr takes 9.23ms to establish the initial working set for pattern matching. This is the foundational cost before any graph traversal.
+
+2. **Edge expansion shows consistent overhead**: EdgeExpandVOpr consumes 8.40ms exploring personHasInterest relationships, producing 21,636 rows. The cost is comparable to the initial scan (9.23ms), demonstrating that edge lookup carries a consistent per-operation overhead in this query.
+
+3. **IntersectOprMultip is highly selective**: This operator takes 6.95ms and dramatically reduces 21,636 rows down to 715 rows (97% reduction). It represents the core pattern: finding (person, tag) pairs where the person both declares interest in the tag AND has liked a post tagged with that tag. The selectivity reflects that most interests don't overlap with liked posts in the dataset.
+
+4. **Dramatic downstream efficiency**: With only 715 candidate rows after intersection, the remaining operations are fast:
+   - ProjectOpr: 1.05ms
+   - GroupByOpr: 0.54ms (reducing 715 rows to 503 distinct person-tag pairs)
+
+#### 4. What is the company footprint by location and hiring period?
+
+This query combines a work relationship, organisation location, and aggregation over edge properties.
+
+```cypher
+PROFILE MATCH (person:person)-[w:personWorkAt]->(org:organisation)-[:organisationIsLocatedIn]->(place:place)
+RETURN place.name,
+       org.name,
+       COUNT(DISTINCT person.id) AS employee_count,
+       MIN(w.workFrom) AS earliest_work_from,
+       MAX(w.workFrom) AS latest_work_from;
+```
+
+Output:
+```
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| _6_place.name   | _2_org.name                           | employee_count   | earliest_work_from   | latest_work_from   |
++=================+=======================================+==================+======================+====================+
+| Sri_Lanka       | SriLankan_Airlines                    | 2                | 2007                 | 2013               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| Sri_Lanka       | Aero_Lanka                            | 4                | 2003                 | 2013               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| Morocco         | Atlas_Blue                            | 5                | 2002                 | 2012               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| China           | Spring_Airlines                       | 10               | 1999                 | 2010               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| China           | Sichuan_Airlines                      | 11               | 2004                 | 2011               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| Netherlands     | Quick_Airways_Holland                 | 3                | 2005                 | 2006               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| Germany         | Luftfahrtgesellschaft_Walter          | 2                | 2005                 | 2007               |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+| ...             | ...                                   | ...              | ...                  | ...                |
++-----------------+---------------------------------------+------------------+----------------------+--------------------+
+
+
+╔════════════════════════════════════════╗
+║         PROFILE REPORT                 ║
+╚════════════════════════════════════════╝
+Total output tuples: 796
+Total elapsed time: 10.73 ms
+
+┌───────────────────────────────────────┐
+│           ScanWithGPredOpr            │
+├───────────────────────────────────────┤
+│   time: 2.64ms | rows:   903 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandEOpr             │
+├───────────────────────────────────────┤
+│   time: 2.56ms | rows:  1953 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│           GetVFromEdgesOpr            │
+├───────────────────────────────────────┤
+│   time: 2.02ms | rows:  1953 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│   time: 1.38ms | rows:  1953 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 1.34ms | rows:  1953 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              GroupByOpr               │
+├───────────────────────────────────────┤
+│   time: 0.78ms | rows:   796 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:   796 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:   796 tuples   │
+└───────────────────────────────────────┘
+```
+
+What to observe in this profile:
+
+1. **Scan operates on a small collection**: ScanWithGPredOpr takes 2.64ms scanning 903 persons. Starting with the smallest entity in the pattern (person nodes vs. posts or comments) makes early scan operations fast.
+
+2. **Multi-hop traversal remains efficient at scale**: The sequence of operators handles the two-hop traversal (person → organisation → place):
+   - `EdgeExpandEOpr` (expands edges to gather edge+node pairs): 2.56ms (person to their work relationships)
+   - `GetVFromEdgesOpr` (extracts target nodes from edge results): 2.02ms (extracting target organisation nodes)
+   - `EdgeExpandVOpr`: 1.38ms (organisation to locations)
+   
+   The total overhead for multi-hop traversal is ~6ms, modest considering three relationship lookups are performed.
+
+3. **Row counts stay manageable throughout**: The working set grows to 1,953 rows (person-organization pairs) and stays at that cardinality through to aggregation. This small cardinality is the key to fast execution—no intermediate explosion of rows.
+
+4. **Aggregation with edge property functions is efficient**: GroupByOpr reduces 1,953 rows to 796 groups (place × organisation combinations) in just 0.78ms while computing COUNT(DISTINCT person.id), MIN(workFrom), and MAX(workFrom). This shows that aggregating edge properties alongside counting distinct entities is fast when row counts are reasonable.
+
+5. **Total execution demonstrates query efficiency**: At 10.73ms, this query illustrates that multi-hop traversal queries can be very fast when:
+   - You start with a smaller node collection (903 persons)
+   - Traversals don't cause row explosion
+   - Aggregation operates on a compact working set
+
+#### 5. How quickly does a friend-of-a-friend expansion grow?
+
+This query is useful when debugging recommendation-style graph expansion.
+
+```cypher
+PROFILE MATCH (p1:person)-[:personKnows]->(p2:person)-[:personKnows]->(p3:person)
+WHERE p1.id <> p3.id
+RETURN p1.firstName,
+       p1.lastName,
+       p2.firstName,
+       p2.lastName,
+       p3.firstName,
+       p3.lastName
+LIMIT 10;
+```
+
+Output:
+```
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| _0_p1.firstName   | _0_p1.lastName   | _2_p2.firstName   | _2_p2.lastName   | _6_p3.firstName   | _6_p3.lastName   |
++===================+==================+===================+==================+===================+==================+
+| Mahinda           | Perera           | Dumitru           | David            | Nicolae           | Antonescu        |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Amit              | Sharma           |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Jie               | Wang             |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Hans              | Berg             |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Mihai             | David            |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Jan               | Zakrzewski       |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Victor            | Antonescu        |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Chris             | Hall             |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Alexei            | Goma             |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+| Mahinda           | Perera           | Dumitru           | David            | Alec              | Cheng            |
++-------------------+------------------+-------------------+------------------+-------------------+------------------+
+
+
+╔════════════════════════════════════════╗
+║         PROFILE REPORT                 ║
+╚════════════════════════════════════════╝
+Total output tuples: 10
+Total elapsed time: 68.13 ms
+
+┌───────────────────────────────────────┐
+│           ScanWithGPredOpr            │
+├───────────────────────────────────────┤
+│  time: 15.04ms | rows:   903 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│  time: 14.95ms | rows:  6626 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│  time: 14.82ms | rows: 92285 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│               SelectOpr               │
+├───────────────────────────────────────┤
+│  time: 13.89ms | rows: 92285 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 8.34ms | rows: 92285 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│               LimitOpr                │
+├───────────────────────────────────────┤
+│   time: 1.09ms | rows:    10 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:    10 tuples   │
+└───────────────────────────────────────┘
+```
+
+What to observe in this profile:
+
+1. **First hop produces modest expansion**: The first EdgeExpandVOpr scans 903 persons and explores their personKnows relationships, producing 6,626 rows (7x expansion). The cost is 14.95ms—a stable edge lookup overhead.
+
+2. **Second hop causes explosive row growth**: The second EdgeExpandVOpr is the critical point. Taking 14.82ms, it expands 6,626 rows (person → friend) to 92,285 rows (person → friend → friend-of-friend). This represents a **14x expansion**, demonstrating that multi-hop friend-of-friend expansion grows exponentially in social networks where each person has many connections.
+
+3. **WHERE filter is highly selective or unnecessary**: `SelectOpr` (filters rows based on WHERE conditions) processes the `p1.id <> p3.id` condition in 13.89ms. The output remains at 92,285 rows, suggesting either:
+   - The dataset contains no or very few self-loop FOF paths (where p1 == p3)
+   - The social network structure makes such loops rare
+   
+This demonstrates an important principle: not all WHERE conditions produce significant filtering. Understanding your data distribution is crucial for optimization.
+
+4. **Projection overhead on massive row set**: ProjectOpr takes 8.34ms to extract and format the six output columns (p1/p2/p3 names) from 92,285 rows. This moderate per-row cost scales linearly with the row count.
+
+5. **LIMIT does not prevent upstream work**: LimitOpr finally reduces 92,285 rows down to just 10 output rows in only 1.09ms. However, all 92,285 rows had to flow through scan, two expansions, filtering, and projection before the limit took effect. The query's total cost is dominated by this upstream work, not the final output limit.
+
+### EXPLAIN Example
+
+EXPLAIN uses the same formatted report layout as PROFILE, but it does not execute the query. As a result, all elapsed times are `0.00 ms` and all output row counts are `0`.
+
+```cypher
+EXPLAIN MATCH (c:comment)-[:commentReplyOfPost]->(p:post)-[:postHasCreator]->(author:person)
+RETURN p.id,
+       author.firstName,
+       author.lastName,
+       COUNT(c.id) AS direct_reply_count
+ORDER BY direct_reply_count DESC
+LIMIT 10;
+```
+
+Sample output:
+```
+No results (total records: 0)
+
+
+╔════════════════════════════════════════╗
+║         PROFILE REPORT                 ║
+╚════════════════════════════════════════╝
+Total output tuples: 0
+Total elapsed time: 0.00 ms
+
+┌───────────────────────────────────────┐
+│           ScanWithGPredOpr            │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│            EdgeExpandVOpr             │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              GroupByOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│         ProjectOrderByOprBeta         │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│              ProjectOpr               │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│                SinkOpr                │
+├───────────────────────────────────────┤
+│   time: 0.00ms | rows:     0 tuples   │
+└───────────────────────────────────────┘
+```
+
+This makes EXPLAIN useful when you want to validate plan first, and only run PROFILE after the plan looks reasonable.2:["$","div",null,{"className":"x:mx-auto x:flex x:max-w-(--nextra-content-width)","children":["$","$Ld",null,{"value":[{"value":"运行检查点","id":"运行检查点","depth":2},{"value":"嵌入模式示例","id":"嵌入模式示例","depth":3},{"value":"服务模式示例","id":"服务模式示例","depth":3},{"value":"并发","id":"并发","depth":2},{"value":"关闭时自动执行检查点（checkpoint）","id":"关闭时自动执行检查点checkpoint","depth":2},{"value":"故障与恢复","id":"故障与恢复","depth":2},{"value":"持久化批量加载失败","id":"持久化批量加载失败","depth":3}],"children":[["$","$Le",null,{}],["$","$Lf",null,{"metadata":{"title":"检查点","filePath":"content/zh/transaction/checkpoint.md","timestamp":1789023682000},"bottomContent":"$undefined","sourceCode":"$10","children":[["$","div",null,{"id":"nextra-skip-nav"}],["$","main",null,{"data-pagefind-body":true,"children":["$","div",null,{"lang":"zh-CN","data-pagefind-body":true,"data-pagefind-filter":"lang:zh","children":["$","div",null,{"data-pagefind-filter":"type:docs","children":[["$","h1",null,{"id":"$undefined","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-bold x:mt-2 x:text-4xl","children":["检查点","$undefined"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["检查点将当前数据库状态保存到磁盘。自 v0.2 起，嵌入式和服务模式下的常规\n已提交写入已通过 WAL 实现持久化，因此不需要手动检查点。持久化 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"COPY ... FROM"}]," 和\n批量插入在报告成功之前会创建一个检查点。 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"COPY TEMP"}]," 保留\n在内存中，并在数据库关闭时丢失。"]}],"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",["$","table",null,{"className":"x:block x:overflow-x-auto nextra-scrollbar x:not-first:mt-[1.25em] x:p-0","children":[["$","thead",null,{"children":["$","tr",null,{"children":[["$","th",null,{"children":"问题","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:font-semibold x:dark:border-gray-600"}],["$","th",null,{"children":"常规写入，包括索引更改","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:font-semibold x:dark:border-gray-600"}],["$","th",null,{"children":"持久化 COPY/批量插入","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:font-semibold x:dark:border-gray-600"}]],"className":"x:m-0 x:border-t x:border-gray-300 x:p-0 x:dark:border-gray-600 x:even:bg-gray-100 x:even:dark:bg-gray-600/20"}]}],["$","tbody",null,{"children":[["$","tr",null,{"children":[["$","td",null,{"children":["是否需要手动 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CHECKPOINT"}]," 来实现持久化？"],"className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}],["$","td",null,{"children":"否；已提交的更改已保存在 WAL 中","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}],["$","td",null,{"children":"否；在语句报告成功之前会创建一个检查点","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}]],"className":"x:m-0 x:border-t x:border-gray-300 x:p-0 x:dark:border-gray-600 x:even:bg-gray-100 x:even:dark:bg-gray-600/20"}],["$","tr",null,{"children":[["$","td",null,{"children":"为什么要创建？","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}],["$","td",null,{"children":"为了减少恢复期间重放的 WAL 数量","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}],["$","td",null,{"children":"为了使导入的数据持久化","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}]],"className":"x:m-0 x:border-t x:border-gray-300 x:p-0 x:dark:border-gray-600 x:even:bg-gray-100 x:even:dark:bg-gray-600/20"}],["$","tr",null,{"children":[["$","td",null,{"children":"重启后恢复什么？","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}],["$","td",null,{"children":"最新的检查点及之后已提交的更改","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}],["$","td",null,{"children":"来自最新检查点的导入数据","className":"x:m-0 x:border x:border-gray-300 x:px-4 x:py-2 x:dark:border-gray-600"}]],"className":"x:m-0 x:border-t x:border-gray-300 x:p-0 x:dark:border-gray-600 x:even:bg-gray-100 x:even:dark:bg-gray-600/20"}]]}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["有关检查点操作之外的事务边界和并发，请参阅\n",["$","$L11",null,{"href":"../transaction","prefetch":"$undefined","className":"x:focus-visible:nextra-focus x:text-primary-600 x:underline x:hover:no-underline x:decoration-from-font x:[text-underline-position:from-font]","children":"事务管理"}],"。有关检查点在内部如何存储和\n应用，请参阅",["$","$L11",null,{"href":"../how_it_works","prefetch":"$undefined","className":"x:focus-visible:nextra-focus x:text-primary-600 x:underline x:hover:no-underline x:decoration-from-font x:[text-underline-position:from-font]","children":"工作原理"}],"。"]}],"\n",["$","h2",null,{"id":"运行检查点","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-10 x:border-b x:pb-1 x:text-3xl nextra-border","children":["运行检查点",["$","$L12",null,{"id":"运行检查点"}]]}],"\n",["$","div",null,{"data-pagefind-ignore":"all","className":"nextra-code x:relative x:not-first:mt-[1.25em]","children":["$undefined",["$","pre",null,{"className":"x:group x:focus-visible:nextra-focus x:overflow-x-auto x:subpixel-antialiased x:text-[.9em] x:bg-white x:dark:bg-black x:py-4 x:ring-1 x:ring-inset x:ring-gray-300 x:dark:ring-neutral-700 x:contrast-more:ring-gray-900 x:contrast-more:dark:ring-gray-50 x:contrast-more:contrast-150 x:rounded-md not-prose","tabIndex":"0","children":[["$","div",null,{"className":"x:group-hover:opacity-100 x:group-focus:opacity-100 x:opacity-0 x:transition x:focus-within:opacity-100 x:flex x:gap-1 x:absolute x:right-4 x:top-2","children":[["$","$L13",null,{"children":["$","svg",null,{"viewBox":"0 0 24 24","fill":"currentColor","height":"1em","children":["$","path",null,{"d":"M4 19h6v-2H4v2zM20 5H4v2h16V5zm-3 6H4v2h13.25c1.1 0 2 .9 2 2s-.9 2-2 2H15v-2l-3 3l3 3v-2h2c2.21 0 4-1.79 4-4s-1.79-4-4-4z"}]}]}],false]}],["$","code",null,{"className":"nextra-code","dir":"ltr","children":["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"CHECKPOINT;"}]}]}]]}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":[["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CHECKPOINT"}]," 不接受任何参数，并且必须在 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"update"}]," 访问\n模式下运行。"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["如果 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"access_mode"}]," 被省略，NeuG 会推断出 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"update"}],"。如果明确\n指定了它，则必须是 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"update\""}]," 或 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"u\""}],"。任何其他访问模式\n（",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"read\""}],"/",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"r\""}],", ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"insert\""}],"/",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"i\""}],"，或 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"schema\""}],"/",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"\"s\""}],"）将被拒绝，并且\n以只读方式打开的数据库无法创建检查点。"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"使用示例："}],"\n",["$","div",null,{"data-pagefind-ignore":"all","className":"nextra-code x:relative x:not-first:mt-[1.25em]","children":["$undefined",["$","pre",null,{"className":"x:group x:focus-visible:nextra-focus x:overflow-x-auto x:subpixel-antialiased x:text-[.9em] x:bg-white x:dark:bg-black x:py-4 x:ring-1 x:ring-inset x:ring-gray-300 x:dark:ring-neutral-700 x:contrast-more:ring-gray-900 x:contrast-more:dark:ring-gray-50 x:contrast-more:contrast-150 x:rounded-md not-prose","tabIndex":"0","children":[["$","div",null,{"className":"x:group-hover:opacity-100 x:group-focus:opacity-100 x:opacity-0 x:transition x:focus-within:opacity-100 x:flex x:gap-1 x:absolute x:right-4 x:top-2","children":[["$","$L13",null,{"children":["$","svg",null,{"viewBox":"0 0 24 24","fill":"currentColor","height":"1em","children":["$","path",null,{"d":"M4 19h6v-2H4v2zM20 5H4v2h16V5zm-3 6H4v2h13.25c1.1 0 2 .9 2 2s-.9 2-2 2H15v-2l-3 3l3 3v-2h2c2.21 0 4-1.79 4-4s-1.79-4-4-4z"}]}]}],false]}],["$","code",null,{"className":"nextra-code","dir":"ltr","children":[["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn.execute("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"CHECKPOINT\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")  "}],["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# NeuG infers `update`"}]]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn.execute("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"CHECKPOINT\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":", "}],["$","span",null,{"style":{"--shiki-light":"#E36209","--shiki-dark":"#FFAB70"},"children":"access_mode"}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"update\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")  "}],["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# or \"u\"; all other modes are rejected"}]]}]]}]]}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":[["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CHECKPOINT"}]," 还可以与\n",["$","$L11",null,{"href":"../../cypher_manual/explain_profile","prefetch":"$undefined","className":"x:focus-visible:nextra-focus x:text-primary-600 x:underline x:hover:no-underline x:decoration-from-font x:[text-underline-position:from-font]","children":[["$","code",null,{"className":"nextra-code","dir":"ltr","children":"EXPLAIN"}],"/",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"PROFILE"}]," 子句"]}]," 一起使用："]}],"\n",["$","ul",null,{"className":"x:[:is(ol,ul)_&]:my-[.75em] x:not-first:mt-[1.25em] x:list-disc x:ms-[1.5em]","children":["\n",["$","li",null,{"className":"x:my-[.5em]","children":[["$","code",null,{"className":"nextra-code","dir":"ltr","children":"EXPLAIN CHECKPOINT"}]," 返回执行计划而不创建\n检查点。"]}],"\n",["$","li",null,{"className":"x:my-[.5em]","children":[["$","code",null,{"className":"nextra-code","dir":"ltr","children":"PROFILE CHECKPOINT"}]," 创建检查点并将其执行时间报告\n为单个 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CHECKPOINT"}]," 运算符。"]}],"\n"]}],"\n",["$","h3",null,{"id":"嵌入模式示例","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-8 x:text-2xl","children":["嵌入模式示例",["$","$L12",null,{"id":"嵌入模式示例"}]]}],"\n",["$","div",null,{"data-pagefind-ignore":"all","className":"nextra-code x:relative x:not-first:mt-[1.25em]","children":["$undefined",["$","pre",null,{"className":"x:group x:focus-visible:nextra-focus x:overflow-x-auto x:subpixel-antialiased x:text-[.9em] x:bg-white x:dark:bg-black x:py-4 x:ring-1 x:ring-inset x:ring-gray-300 x:dark:ring-neutral-700 x:contrast-more:ring-gray-900 x:contrast-more:dark:ring-gray-50 x:contrast-more:contrast-150 x:rounded-md not-prose","tabIndex":"0","children":[["$","div",null,{"className":"x:group-hover:opacity-100 x:group-focus:opacity-100 x:opacity-0 x:transition x:focus-within:opacity-100 x:flex x:gap-1 x:absolute x:right-4 x:top-2","children":[["$","$L13",null,{"children":["$","svg",null,{"viewBox":"0 0 24 24","fill":"currentColor","height":"1em","children":["$","path",null,{"d":"M4 19h6v-2H4v2zM20 5H4v2h16V5zm-3 6H4v2h13.25c1.1 0 2 .9 2 2s-.9 2-2 2H15v-2l-3 3l3 3v-2h2c2.21 0 4-1.79 4-4s-1.79-4-4-4z"}]}]}],false]}],["$","code",null,{"className":"nextra-code","dir":"ltr","children":[["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"import"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" neug"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# 当关闭时检查点功能（checkpoint-on-close）被禁用时，普通写操作仍可从 WAL 中恢复。"}]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"db "}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" neug.Database("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"/path/to/database\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":", "}],["$","span",null,{"style":{"--shiki-light":"#E36209","--shiki-dark":"#FFAB70"},"children":"checkpoint_on_close"}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#005CC5","--shiki-dark":"#79B8FF"},"children":"False"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn "}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" db.connect()"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn.execute("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"COPY Person FROM 'people.csv'\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# COPY 操作仅在发布其私有批量检查点后返回。"}]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn.execute("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"CREATE (p:Person "}],["$","span",null,{"style":{"--shiki-light":"#005CC5","--shiki-dark":"#79B8FF"},"children":"{id"}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":": 42"}],["$","span",null,{"style":{"--shiki-light":"#005CC5","--shiki-dark":"#79B8FF"},"children":"}"}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":")\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")  "}],["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# 通过逻辑 WAL 实现持久化。"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn.close()"}]}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"db.close()"}]}]]}]]}]]}],"\n",["$","h3",null,{"id":"服务模式示例","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-8 x:text-2xl","children":["服务模式示例",["$","$L12",null,{"id":"服务模式示例"}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["本示例假设 NeuG 服务已处于运行状态。如需启动服务，请参阅\n",["$","$L11",null,{"href":"../../getting_started/getting_started#service-mode","prefetch":"$undefined","className":"x:focus-visible:nextra-focus x:text-primary-600 x:underline x:hover:no-underline x:decoration-from-font x:[text-underline-position:from-font]","children":"服务模式"}],"（",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"db.serve()"}],"）。"]}],"\n",["$","div",null,{"data-pagefind-ignore":"all","className":"nextra-code x:relative x:not-first:mt-[1.25em]","children":["$undefined",["$","pre",null,{"className":"x:group x:focus-visible:nextra-focus x:overflow-x-auto x:subpixel-antialiased x:text-[.9em] x:bg-white x:dark:bg-black x:py-4 x:ring-1 x:ring-inset x:ring-gray-300 x:dark:ring-neutral-700 x:contrast-more:ring-gray-900 x:contrast-more:dark:ring-gray-50 x:contrast-more:contrast-150 x:rounded-md not-prose","tabIndex":"0","children":[["$","div",null,{"className":"x:group-hover:opacity-100 x:group-focus:opacity-100 x:opacity-0 x:transition x:focus-within:opacity-100 x:flex x:gap-1 x:absolute x:right-4 x:top-2","children":[["$","$L13",null,{"children":["$","svg",null,{"viewBox":"0 0 24 24","fill":"currentColor","height":"1em","children":["$","path",null,{"d":"M4 19h6v-2H4v2zM20 5H4v2h16V5zm-3 6H4v2h13.25c1.1 0 2 .9 2 2s-.9 2-2 2H15v-2l-3 3l3 3v-2h2c2.21 0 4-1.79 4-4s-1.79-4-4-4z"}]}]}],false]}],["$","code",null,{"className":"nextra-code","dir":"ltr","children":[["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"from"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" neug "}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"import"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" Session"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"session "}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" Session("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"http://localhost:10000/\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# 此插入操作一旦提交即为持久化；无需执行 CHECKPOINT。"}]}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"session.execute("}]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"    \"CREATE (p:Person {name: 'Alice'})\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":","}]]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#E36209","--shiki-dark":"#FFAB70"},"children":"    access_mode"}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"insert\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":","}]]}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"# 可选的维护操作：发布一个检查点，以限制后续 WAL 重放的范围。"}]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"session.execute("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"CHECKPOINT\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]]}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"session.close()"}]}]]}]]}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["关闭客户端的 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"Session"}]," 仅会断开该客户端的连接；它既不会关闭服务器端的数据库，也不会触发服务器端数据库的检查点操作。当稍后通过设置 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"checkpoint_on_close=True"}]," 关闭服务器端数据库时，所有尚未处理的 WAL 记录将被合并到最终的检查点中；如果禁用了检查点功能，则 WAL 文件将保留在磁盘上，并在下次启动时进行重放。"]}],"\n",["$","h2",null,{"id":"并发","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-10 x:border-b x:pb-1 x:text-3xl nextra-border","children":["并发",["$","$L12",null,{"id":"并发"}]]}],"\n",["$","ul",null,{"className":"x:[:is(ol,ul)_&]:my-[.75em] x:not-first:mt-[1.25em] x:list-disc x:ms-[1.5em]","children":["\n",["$","li",null,{"className":"x:my-[.5em]","children":[["$","strong",null,{"children":"嵌入模式："}]," 检查点获取排他性查询锁。它会等待\n运行中的操作完成，并阻塞新操作，直到其\n完成。"]}],"\n",["$","li",null,{"className":"x:my-[.5em]","children":[["$","strong",null,{"children":"服务模式："}]," 检查点等待进行中的读写操作\n完成而不中断它们，在运行期间暂缓新事务，\n然后在无并发事务的情况下执行。等待时间\n是无界的：单个长时间运行的查询可能会延迟整个检查点。\n成功执行检查点后，现有会话保持有效，且 NeuG\n会启动一个新的空 WAL。"]}],"\n"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":"对于服务模式，请尽可能在空闲时段安排检查点。"}],"\n",["$","h2",null,{"id":"关闭时自动执行检查点checkpoint","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-10 x:border-b x:pb-1 x:text-3xl nextra-border","children":["关闭时自动执行检查点（checkpoint）",["$","$L12",null,{"id":"关闭时自动执行检查点checkpoint"}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["在 Python API 中，持久化读写数据库默认启用 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"checkpoint_on_close=True"}],"，因此关闭数据库时会尝试执行一次最终的检查点操作。若该操作失败，",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"close()"}]," 将抛出异常。具体行为取决于失败发生的时机：数据库可能仍保持打开状态以供后续重试，也可能已实际关闭。"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["当应用程序必须明确知晓维护操作（如检查点）是否成功时，请显式执行 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CHECKPOINT"}]," 命令。若设置 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"checkpoint_on_close=False"}],"，则在嵌入式模式和服务模式下，所有已提交的常规写操作仍可通过 WAL（预写式日志）进行恢复。而成功的持久化批量写操作均已自行创建检查点。"]}],"\n",["$","h2",null,{"id":"故障与恢复","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-10 x:border-b x:pb-1 x:text-3xl nextra-border","children":["故障与恢复",["$","$L12",null,{"id":"故障与恢复"}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["启动时，NeuG 会加载由 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CURRENT"}],"。当 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CURRENT"}],"\n存在时，NeuG 不会回退到较旧的数据库目录。来自中断操作的不完整\n检查点将被忽略。如果 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CURRENT"}]," 缺失，则\n读写打开可能会执行一次性的 v1 迁移；请参阅\n",["$","$L11",null,{"href":"../how_it_works#upgrading-legacy-checkpoint-directories","prefetch":"$undefined","className":"x:focus-visible:nextra-focus x:text-primary-600 x:underline x:hover:no-underline x:decoration-from-font x:[text-underline-position:from-font]","children":"工作原理"}],"。\n然后，持久化嵌入式和服务数据库将重放在所选检查点\n之后创建的已提交 WAL 记录。"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":[["$","strong",null,{"children":"手动"}]," ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CHECKPOINT"}]," 可能会以两种方式失败："]}],"\n",["$","ul",null,{"className":"x:[:is(ol,ul)_&]:my-[.75em] x:not-first:mt-[1.25em] x:list-disc x:ms-[1.5em]","children":["\n",["$","li",null,{"className":"x:my-[.5em]","children":"如果 NeuG 无法启动检查点，该语句将返回错误，并且\n数据库保持可用。"}],"\n",["$","li",null,{"className":"x:my-[.5em]","children":["如果在 NeuG 开始替换当前状态后失败，NeuG 将终止\n进程以避免使用不安全的状态。重新启动将从由 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"CURRENT"}]," 选择的检查点以及后续的已提交写入中恢复。"]}],"\n"]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":[["$","code",null,{"className":"nextra-code","dir":"ltr","children":"checkpoint_on_recovery"}]," 在打开读写数据库时，会在 WAL 恢复后\n可选地创建检查点。默认情况下禁用此功能。如果失败，\n打开操作将返回错误而不会终止进程。修复根本\n原因（例如，磁盘空间或权限），然后重试。"]}],"\n",["$","h3",null,{"id":"持久化批量加载失败","className":"x:tracking-tight x:text-slate-900 x:dark:text-slate-100 x:font-semibold x:target:animate-[fade-in_1.5s] x:mt-8 x:text-2xl","children":["持久化批量加载失败",["$","$L12",null,{"id":"持久化批量加载失败"}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["持久化的 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"COPY"}]," 和批量插入操作是原子性的。如果导入过程或其检查点（checkpoint）失败，则所有新数据均不会对外可见，且数据库将保持先前的有效状态。"]}],"\n",["$","div",null,{"data-pagefind-ignore":"all","className":"nextra-code x:relative x:not-first:mt-[1.25em]","children":["$undefined",["$","pre",null,{"className":"x:group x:focus-visible:nextra-focus x:overflow-x-auto x:subpixel-antialiased x:text-[.9em] x:bg-white x:dark:bg-black x:py-4 x:ring-1 x:ring-inset x:ring-gray-300 x:dark:ring-neutral-700 x:contrast-more:ring-gray-900 x:contrast-more:dark:ring-gray-50 x:contrast-more:contrast-150 x:rounded-md not-prose","tabIndex":"0","children":[["$","div",null,{"className":"x:group-hover:opacity-100 x:group-focus:opacity-100 x:opacity-0 x:transition x:focus-within:opacity-100 x:flex x:gap-1 x:absolute x:right-4 x:top-2","children":[["$","$L13",null,{"children":["$","svg",null,{"viewBox":"0 0 24 24","fill":"currentColor","height":"1em","children":["$","path",null,{"d":"M4 19h6v-2H4v2zM20 5H4v2h16V5zm-3 6H4v2h13.25c1.1 0 2 .9 2 2s-.9 2-2 2H15v-2l-3 3l3 3v-2h2c2.21 0 4-1.79 4-4s-1.79-4-4-4z"}]}]}],false]}],["$","code",null,{"className":"nextra-code","dir":"ltr","children":[["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"import"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" neug"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"db "}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" neug.Database("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"/path/to/database\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":", "}],["$","span",null,{"style":{"--shiki-light":"#E36209","--shiki-dark":"#FFAB70"},"children":"checkpoint_on_close"}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#005CC5","--shiki-dark":"#79B8FF"},"children":"False"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"conn "}],["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"="}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":" db.connect()"}]]}],"\n",["$","span",null,{"children":" "}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"try"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":":"}]]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":"    conn.execute("}],["$","span",null,{"style":{"--shiki-light":"#032F62","--shiki-dark":"#9ECBFF"},"children":"\"COPY Person FROM 'large_batch.csv'\""}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":")"}]]}],"\n",["$","span",null,{"children":[["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"except"}],["$","span",null,{"style":{"--shiki-light":"#005CC5","--shiki-dark":"#79B8FF"},"children":" Exception"}],["$","span",null,{"style":{"--shiki-light":"#24292E","--shiki-dark":"#E1E4E8"},"children":":"}]]}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#6A737D","--shiki-dark":"#6A737D"},"children":"    # 此时数据库仍维持先前的状态，且可正常使用。"}]}],"\n",["$","span",null,{"children":["$","span",null,{"style":{"--shiki-light":"#D73A49","--shiki-dark":"#F97583"},"children":"    pass"}]}]]}]]}]]}],"\n",["$","p",null,{"className":"x:not-first:mt-[1.25em] x:leading-7","children":["每次成功的持久化 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"COPY"}]," 操作都会创建一个检查点。例外情况是 ",["$","code",null,{"className":"nextra-code","dir":"ltr","children":"COPY TEMP"}],"：它仅更新内存中的数据库。建议尽可能在应用层执行批量输入，并预留充足的临时磁盘空间以支持检查点创建及后续清理工作。"]}]]}]}]}]]}]]}]}]
+6:["$","div",null,{"className":"neug-docs-root","children":["$","$L14",null,{"value":{"children":"$undefined","darkMode":true,"docsRepositoryBase":"https://github.com/alibaba/neug/blob/main/doc","editLink":"Edit this page","feedback":{"content":"Question? Give us feedback","labels":"feedback"},"i18n":[],"lastUpdated":["$","$L15",null,{}],"navigation":{"next":true,"prev":true},"search":["$","$L16",null,{"placeholder":"搜索文档和博客…","searchOptions":{"filters":{"lang":"zh"}}}],"sidebar":{"defaultMenuCollapseLevel":1,"defaultOpen":true,"toggleButton":true,"autoCollapse":false},"themeSwitch":{"dark":"Dark","light":"Light","system":"System"},"toc":{"backToTop":"Scroll to top","float":true,"title":"On This Page"}},"children":["$","$L17",null,{"attribute":"class","defaultTheme":"system","disableTransitionOnChange":true,"storageKey":"neug-theme","children":[["$","$L18",null,{}],"$undefined",["$","$L19",null,{"pageMap":[{"data":{"overview":{"title":"概览"},"installation":{"title":"安装"},"getting_started":{"title":"快速入门"},"tutorials":{"title":"教程"},"data_io":{"title":"数据 I/O"},"cypher_manual":{"title":"Cypher 手册"},"storage_index":{"title":"存储索引"},"extensions":{"title":"扩展"},"transaction":{"title":"事务与检查点"},"user_clients":{"title":"用户客户端"},"reference":{"title":"API 参考"},"development":{"title":"开发指南"},"blog":{"display":"hidden"}}},{"name":"overview","route":"/zh/docs/overview","children":[{"data":{"introduction":{"title":"简介"}}},{"name":"introduction","route":"/zh/docs/overview/introduction","frontMatter":{"title":"简介","filePath":"content/zh/overview/introduction.md","timestamp":1789023682000},"title":"简介"}],"title":"概览"},{"name":"installation","route":"/zh/docs/installation","children":[{"data":{"installation":{"title":"安装指南"}}},{"name":"installation","route":"/zh/docs/installation/installation","frontMatter":{"title":"安装","filePath":"content/zh/installation/installation.mdx","timestamp":1789023682000},"title":"安装指南"}],"title":"安装"},{"name":"getting_started","route":"/zh/docs/getting_started","children":[{"data":{"getting_started":{"title":"快速入门"},"neug_ui":{"title":"NeuG UI"}}},{"name":"getting_started","route":"/zh/docs/getting_started/getting_started","frontMatter":{"title":"快速入门","filePath":"content/zh/getting_started/getting_started.md","timestamp":1789023682000},"title":"快速入门"},{"name":"neug_ui","route":"/zh/docs/getting_started/neug_ui","frontMatter":{"title":"NeuG Web UI","filePath":"content/zh/getting_started/neug_ui.md","timestamp":1789023682000},"title":"NeuG UI"}],"title":"快速入门"},{"name":"tutorials","route":"/zh/docs/tutorials","children":[{"data":{"tinysnb_tutorial":{"title":"探索社交网络"},"codegraph-openclaw-example":{"title":"基于 OpenClaw 的 CodeGraph"},"benchmark-neug-dual-mode":{"title":"NeuG 基准测试：双模式图数据库"},"code-graph-wiki-pipeline":{"title":"使用图构建代码 Wiki"}}},{"name":"tinysnb_tutorial","route":"/zh/docs/tutorials/tinysnb_tutorial","frontMatter":{"title":"使用 NeuG 探索社交网络","filePath":"content/zh/tutorials/tinysnb_tutorial.md","timestamp":1789023682000},"title":"探索社交网络"},{"name":"codegraph-openclaw-example","route":"/zh/docs/tutorials/codegraph-openclaw-example","frontMatter":{"title":"CodeGraph：使用知识图谱进行代码分析","filePath":"content/zh/tutorials/codegraph-openclaw-example.md","timestamp":1789023682000},"title":"基于 OpenClaw 的 CodeGraph"},{"name":"benchmark-neug-dual-mode","route":"/zh/docs/tutorials/benchmark-neug-dual-mode","frontMatter":{"title":"NeuG 性能评测：双模式图数据库","filePath":"content/zh/tutorials/benchmark-neug-dual-mode.md","timestamp":1789023682000},"title":"NeuG 基准测试：双模式图数据库"},{"name":"code-graph-wiki-pipeline","route":"/zh/docs/tutorials/code-graph-wiki-pipeline","frontMatter":{"title":"使用图构建代码 Wiki","filePath":"content/zh/tutorials/code-graph-wiki-pipeline.md","timestamp":1789023682000},"title":"使用图构建代码 Wiki"},{"name":"data-pipeline","route":"/zh/docs/tutorials/data-pipeline","frontMatter":{"title":"数据管道教程：云存储 → 图查询 → Parquet 导出","filePath":"content/zh/tutorials/data-pipeline.md","timestamp":1789023682000},"title":"数据管道教程：云存储 → 图查询 → Parquet 导出"}],"title":"教程"},{"name":"data_io","route":"/zh/docs/data_io","children":[{"data":{"index":{"title":"概述"},"load_data":{"title":"加载数据"},"import_data":{"title":"导入数据"},"export_data":{"title":"导出数据"}}},{"name":"index","route":"/zh/docs/data_io","frontMatter":{"title":"概述","filePath":"content/zh/data_io/index.md","timestamp":1789023682000},"title":"概述"},{"name":"load_data","route":"/zh/docs/data_io/load_data","frontMatter":{"title":"加载数据","filePath":"content/zh/data_io/load_data.md","timestamp":1789023682000},"title":"加载数据"},{"name":"import_data","route":"/zh/docs/data_io/import_data","frontMatter":{"title":"COPY FROM","filePath":"content/zh/data_io/import_data.md","timestamp":1789023682000},"title":"导入数据"},{"name":"export_data","route":"/zh/docs/data_io/export_data","frontMatter":{"title":"导出数据","filePath":"content/zh/data_io/export_data.md","timestamp":1789023682000},"title":"导出数据"}],"title":"数据 I/O"},{"name":"cypher_manual","route":"/zh/docs/cypher_manual","children":[{"data":{"data_types":{"title":"数据类型"},"ddl_clause":{"title":"DDL 子句"},"dml_clause":{"title":"DML 子句"},"namespace":{"title":"命名空间"},"expression":{"title":"表达式"},"query_clauses":{"title":"查询子句"},"explain_profile":{"title":"执行计划分析"}}},{"name":"index","route":"/zh/docs/cypher_manual","frontMatter":{"title":"概述","filePath":"content/zh/cypher_manual/index.md","timestamp":1789023682000},"title":"概述"},{"name":"data_types","route":"/zh/docs/cypher_manual/data_types","frontMatter":{"title":"数据类型","filePath":"content/zh/cypher_manual/data_types.md","timestamp":1789023682000},"title":"数据类型"},{"name":"ddl_clause","route":"/zh/docs/cypher_manual/ddl_clause","frontMatter":{"title":"DDL 子句","filePath":"content/zh/cypher_manual/ddl_clause.md","timestamp":1789023682000},"title":"DDL 子句"},{"name":"dml_clause","route":"/zh/docs/cypher_manual/dml_clause","frontMatter":{"title":"DML 语句","filePath":"content/zh/cypher_manual/dml_clause.md","timestamp":1789023682000},"title":"DML 子句"},{"name":"namespace","route":"/zh/docs/cypher_manual/namespace","frontMatter":{"title":"命名空间","filePath":"content/zh/cypher_manual/namespace.md","timestamp":1789023682000},"title":"命名空间"},{"name":"expression","route":"/zh/docs/cypher_manual/expression","children":[{"data":{"arithmetic_op":{"title":"算术运算符"},"comparison_op":{"title":"比较运算符"},"logical_op":{"title":"逻辑运算符"},"null_op":{"title":"空值运算符"},"list_op":{"title":"列表运算符"},"list_func":{"title":"列表函数"},"string_func":{"title":"字符串函数"},"cast_func":{"title":"类型转换函数"},"agg_func":{"title":"聚合函数"},"graph_func":{"title":"图函数"},"temporal_func":{"title":"时间函数"}}},{"name":"index","route":"/zh/docs/cypher_manual/expression","frontMatter":{"title":"表达式","filePath":"content/zh/cypher_manual/expression/index.md","timestamp":1789023682000},"title":"表达式"},{"name":"arithmetic_op","route":"/zh/docs/cypher_manual/expression/arithmetic_op","frontMatter":{"title":"算术运算符","filePath":"content/zh/cypher_manual/expression/arithmetic_op.md","timestamp":1789023682000},"title":"算术运算符"},{"name":"comparison_op","route":"/zh/docs/cypher_manual/expression/comparison_op","frontMatter":{"title":"比较运算符","filePath":"content/zh/cypher_manual/expression/comparison_op.md","timestamp":1789023682000},"title":"比较运算符"},{"name":"logical_op","route":"/zh/docs/cypher_manual/expression/logical_op","frontMatter":{"title":"逻辑运算符","filePath":"content/zh/cypher_manual/expression/logical_op.md","timestamp":1789023682000},"title":"逻辑运算符"},{"name":"null_op","route":"/zh/docs/cypher_manual/expression/null_op","frontMatter":{"title":"空值运算符","filePath":"content/zh/cypher_manual/expression/null_op.md","timestamp":1789023682000},"title":"空值运算符"},{"name":"list_op","route":"/zh/docs/cypher_manual/expression/list_op","frontMatter":{"title":"列表与数组运算符","filePath":"content/zh/cypher_manual/expression/list_op.md","timestamp":1789023682000},"title":"列表运算符"},{"name":"list_func","route":"/zh/docs/cypher_manual/expression/list_func","frontMatter":{"title":"列表函数","filePath":"content/zh/cypher_manual/expression/list_func.md","timestamp":1789023682000},"title":"列表函数"},{"name":"string_func","route":"/zh/docs/cypher_manual/expression/string_func","frontMatter":{"title":"字符串函数","filePath":"content/zh/cypher_manual/expression/string_func.md","timestamp":1789023682000},"title":"字符串函数"},{"name":"cast_func","route":"/zh/docs/cypher_manual/expression/cast_func","frontMatter":{"title":"CAST 函数","filePath":"content/zh/cypher_manual/expression/cast_func.md","timestamp":1789023682000},"title":"类型转换函数"},{"name":"agg_func","route":"/zh/docs/cypher_manual/expression/agg_func","frontMatter":{"title":"聚合函数","filePath":"content/zh/cypher_manual/expression/agg_func.md","timestamp":1789023682000},"title":"聚合函数"},{"name":"graph_func","route":"/zh/docs/cypher_manual/expression/graph_func","frontMatter":{"title":"图模式函数","filePath":"content/zh/cypher_manual/expression/graph_func.md","timestamp":1789023682000},"title":"图函数"},{"name":"temporal_func","route":"/zh/docs/cypher_manual/expression/temporal_func","frontMatter":{"title":"时间函数","filePath":"content/zh/cypher_manual/expression/temporal_func.md","timestamp":1789023682000},"title":"时间函数"},{"name":"case_expr","route":"/zh/docs/cypher_manual/expression/case_expr","frontMatter":{"title":"CASE 表达式","filePath":"content/zh/cypher_manual/expression/case_expr.md","timestamp":1789023682000},"title":"CASE 表达式"}],"title":"表达式"},{"name":"query_clauses","route":"/zh/docs/cypher_manual/query_clauses","children":[{"data":{"match_clause":{"title":"MATCH 子句"},"where_clause":{"title":"WHERE 子句"},"return_clause":{"title":"RETURN 子句"},"with_clause":{"title":"WITH 子句"},"order_clause":{"title":"ORDER BY 子句"},"limit_clause":{"title":"LIMIT 子句"},"union_clause":{"title":"UNION 子句"}}},{"name":"index","route":"/zh/docs/cypher_manual/query_clauses","frontMatter":{"title":"查询子句","filePath":"content/zh/cypher_manual/query_clauses/index.md","timestamp":1789023682000},"title":"查询子句"},{"name":"match_clause","route":"/zh/docs/cypher_manual/query_clauses/match_clause","frontMatter":{"title":"Match 子句","filePath":"content/zh/cypher_manual/query_clauses/match_clause.md","timestamp":1789023682000},"title":"MATCH 子句"},{"name":"where_clause","route":"/zh/docs/cypher_manual/query_clauses/where_clause","frontMatter":{"title":"WHERE 子句","filePath":"content/zh/cypher_manual/query_clauses/where_clause.md","timestamp":1789023682000},"title":"WHERE 子句"},{"name":"return_clause","route":"/zh/docs/cypher_manual/query_clauses/return_clause","frontMatter":{"title":"RETURN 子句","filePath":"content/zh/cypher_manual/query_clauses/return_clause.md","timestamp":1789023682000},"title":"RETURN 子句"},{"name":"with_clause","route":"/zh/docs/cypher_manual/query_clauses/with_clause","frontMatter":{"title":"WITH 子句","filePath":"content/zh/cypher_manual/query_clauses/with_clause.md","timestamp":1789023682000},"title":"WITH 子句"},{"name":"order_clause","route":"/zh/docs/cypher_manual/query_clauses/order_clause","frontMatter":{"title":"ORDER 子句","filePath":"content/zh/cypher_manual/query_clauses/order_clause.md","timestamp":1789023682000},"title":"ORDER BY 子句"},{"name":"limit_clause","route":"/zh/docs/cypher_manual/query_clauses/limit_clause","frontMatter":{"title":"LIMIT 子句","filePath":"content/zh/cypher_manual/query_clauses/limit_clause.md","timestamp":1789023682000},"title":"LIMIT 子句"},{"name":"union_clause","route":"/zh/docs/cypher_manual/query_clauses/union_clause","frontMatter":{"title":"UNION 子句","filePath":"content/zh/cypher_manual/query_clauses/union_clause.md","timestamp":1789023682000},"title":"UNION 子句"},{"name":"merge_clause","route":"/zh/docs/cypher_manual/query_clauses/merge_clause","frontMatter":{"title":"合并子句","filePath":"content/zh/cypher_manual/query_clauses/merge_clause.md","timestamp":1789023682000},"title":"合并子句"}],"title":"查询子句"},{"name":"explain_profile","route":"/zh/docs/cypher_manual/explain_profile","frontMatter":{"title":"使用 EXPLAIN 和 PROFILE 进行性能调试","filePath":"content/zh/cypher_manual/explain_profile.md","timestamp":1789023682000},"title":"执行计划分析"}],"title":"Cypher 手册"},{"name":"storage_index","route":"/zh/docs/storage_index","children":[{"data":{"index":{"title":"概览"}}},{"name":"index","route":"/zh/docs/storage_index","frontMatter":{"title":"存储索引","filePath":"content/zh/storage_index/index.md","timestamp":1789023682000},"title":"概览"}],"title":"存储索引"},{"name":"extensions","route":"/zh/docs/extensions","children":[{"data":{"index":{"title":"概览"},"vector_search":{"title":"向量搜索"},"fts_search":{"title":"全文搜索"},"develop_extension":{"title":"开发树外扩展"},"load_json":{"title":"JSON 扩展"},"load_parquet":{"title":"Parquet 扩展"},"load_httpfs":{"title":"HTTPFS 扩展"},"load_gds":{"title":"GDS 扩展"},"pattern_match":{"title":"模式匹配扩展"}}},{"name":"index","route":"/zh/docs/extensions","frontMatter":{"title":"概述","filePath":"content/zh/extensions/index.md","timestamp":1789023682000},"title":"概览"},{"name":"vector_search","route":"/zh/docs/extensions/vector_search","frontMatter":{"title":"向量搜索扩展","filePath":"content/zh/extensions/vector_search.md","timestamp":1789023682000},"title":"向量搜索"},{"name":"fts_search","route":"/zh/docs/extensions/fts_search","frontMatter":{"title":"全文搜索扩展","filePath":"content/zh/extensions/fts_search.md","timestamp":1789023682000},"title":"全文搜索"},{"name":"develop_extension","route":"/zh/docs/extensions/develop_extension","frontMatter":{"title":"开发树外扩展","filePath":"content/zh/extensions/develop_extension.md","timestamp":1789023682000},"title":"开发树外扩展"},{"name":"load_json","route":"/zh/docs/extensions/load_json","frontMatter":{"title":"JSON 扩展","filePath":"content/zh/extensions/load_json.md","timestamp":1789023682000},"title":"JSON 扩展"},{"name":"load_parquet","route":"/zh/docs/extensions/load_parquet","frontMatter":{"title":"Parquet 扩展","filePath":"content/zh/extensions/load_parquet.md","timestamp":1789023682000},"title":"Parquet 扩展"},{"name":"load_httpfs","route":"/zh/docs/extensions/load_httpfs","frontMatter":{"title":"HTTPFS 扩展","filePath":"content/zh/extensions/load_httpfs.md","timestamp":1789023682000},"title":"HTTPFS 扩展"},{"name":"load_gds","route":"/zh/docs/extensions/load_gds","frontMatter":{"title":"GDS（图数据科学）扩展","filePath":"content/zh/extensions/load_gds.md","timestamp":1789023682000},"title":"GDS 扩展"},{"name":"pattern_match","route":"/zh/docs/extensions/pattern_match","frontMatter":{"title":"模式匹配扩展","filePath":"content/zh/extensions/pattern_match.md","timestamp":1789023682000},"title":"模式匹配扩展"}],"title":"扩展"},{"name":"transaction","route":"/zh/docs/transaction","children":[{"data":{"transaction":{"title":"事务管理"},"explicit_transactions":{"title":"显式事务"},"checkpoint":{"title":"检查点"},"how_it_works":{"title":"工作原理"}}},{"name":"transaction","route":"/zh/docs/transaction/transaction","frontMatter":{"title":"事务管理","filePath":"content/zh/transaction/transaction.mdx","timestamp":1789023682000},"title":"事务管理"},{"name":"explicit_transactions","route":"/zh/docs/transaction/explicit_transactions","frontMatter":{"title":"显式事务","filePath":"content/zh/transaction/explicit_transactions.mdx","timestamp":1789023682000},"title":"显式事务"},{"name":"checkpoint","route":"/zh/docs/transaction/checkpoint","frontMatter":{"title":"检查点","filePath":"content/zh/transaction/checkpoint.md","timestamp":1789023682000},"title":"检查点"},{"name":"how_it_works","route":"/zh/docs/transaction/how_it_works","frontMatter":{"title":"工作原理","filePath":"content/zh/transaction/how_it_works.md","timestamp":1789023682000},"title":"工作原理"}],"title":"事务与检查点"},{"name":"user_clients","route":"/zh/docs/user_clients","children":[{"data":{"cli":{"title":"命令行工具"}}},{"name":"cli","route":"/zh/docs/user_clients/cli","frontMatter":{"title":"命令行界面（CLI）","filePath":"content/zh/user_clients/cli.md","timestamp":1789023682000},"title":"命令行工具"}],"title":"用户客户端"},{"name":"reference","route":"/zh/docs/reference","children":[{"data":{"python_api":{"title":"Python 接口"},"nodejs_api":{"title":"Node.js 接口"},"java_api":{"title":"Java 接口"},"cpp_api":{"title":"C++ 接口"}}},{"name":"python_api","route":"/zh/docs/reference/python_api","children":[{"data":{"index":{"title":"Python API 概述"},"database":{"title":"数据库"},"connection":{"title":"连接"},"session":{"title":"会话"},"query_result":{"title":"查询结果"}}},{"name":"index","route":"/zh/docs/reference/python_api","frontMatter":{"title":"Python API 参考","filePath":"content/zh/reference/python_api/index.md","timestamp":1789023682000},"title":"Python API 概述"},{"name":"database","route":"/zh/docs/reference/python_api/database","frontMatter":{"title":"模块 neug.database","filePath":"content/zh/reference/python_api/database.md","timestamp":1789023682000},"title":"数据库"},{"name":"connection","route":"/zh/docs/reference/python_api/connection","frontMatter":{"title":"模块 neug.connection","filePath":"content/zh/reference/python_api/connection.md","timestamp":1789023682000},"title":"连接"},{"name":"session","route":"/zh/docs/reference/python_api/session","frontMatter":{"title":"模块 neug.session","filePath":"content/zh/reference/python_api/session.md","timestamp":1789023682000},"title":"会话"},{"name":"query_result","route":"/zh/docs/reference/python_api/query_result","frontMatter":{"title":"模块 neug.query_result","filePath":"content/zh/reference/python_api/query_result.md","timestamp":1789023682000},"title":"查询结果"}],"title":"Python 接口"},{"name":"nodejs_api","route":"/zh/docs/reference/nodejs_api","children":[{"data":{"index":{"title":"Node.js API 概述"},"database":{"title":"数据库"},"connection":{"title":"连接"},"query_result":{"title":"查询结果"}}},{"name":"index","route":"/zh/docs/reference/nodejs_api","frontMatter":{"title":"Node.js API 参考","filePath":"content/zh/reference/nodejs_api/index.md","timestamp":1789023682000},"title":"Node.js API 概述"},{"name":"database","route":"/zh/docs/reference/nodejs_api/database","frontMatter":{"title":"模块 neug.database","filePath":"content/zh/reference/nodejs_api/database.md","timestamp":1789023682000},"title":"数据库"},{"name":"connection","route":"/zh/docs/reference/nodejs_api/connection","frontMatter":{"title":"模块 neug.connection","filePath":"content/zh/reference/nodejs_api/connection.md","timestamp":1789023682000},"title":"连接"},{"name":"query_result","route":"/zh/docs/reference/nodejs_api/query_result","frontMatter":{"title":"模块 neug.query_result","filePath":"content/zh/reference/nodejs_api/query_result.md","timestamp":1789023682000},"title":"查询结果"}],"title":"Node.js 接口"},{"name":"java_api","route":"/zh/docs/reference/java_api","children":[{"data":{"index":{"title":"Java API 概述"},"driver":{"title":"驱动"},"session":{"title":"会话"},"result_set":{"title":"查询结果"}}},{"name":"index","route":"/zh/docs/reference/java_api","frontMatter":{"title":"Java API 参考","filePath":"content/zh/reference/java_api/index.md","timestamp":1789023682000},"title":"Java API 概述"},{"name":"driver","route":"/zh/docs/reference/java_api/driver","frontMatter":{"title":"驱动程序","filePath":"content/zh/reference/java_api/driver.md","timestamp":1789023682000},"title":"驱动"},{"name":"session","route":"/zh/docs/reference/java_api/session","frontMatter":{"title":"会话","filePath":"content/zh/reference/java_api/session.md","timestamp":1789023682000},"title":"会话"},{"name":"result_set","route":"/zh/docs/reference/java_api/result_set","frontMatter":{"title":"ResultSet","filePath":"content/zh/reference/java_api/result_set.md","timestamp":1789023682000},"title":"查询结果"}],"title":"Java 接口"},{"name":"cpp_api","route":"/zh/docs/reference/cpp_api","children":[{"data":{"index":{"title":"C++ API 概述"},"neug_db":{"title":"数据库"},"connection":{"title":"连接"},"service":{"title":"服务"},"query_result":{"title":"查询结果"}}},{"name":"index","route":"/zh/docs/reference/cpp_api","frontMatter":{"title":"C++ API 参考","filePath":"content/zh/reference/cpp_api/index.md","timestamp":1789023682000},"title":"C++ API 概述"},{"name":"neug_db","route":"/zh/docs/reference/cpp_api/neug_db","frontMatter":{"title":"NeugDB","filePath":"content/zh/reference/cpp_api/neug_db.md","timestamp":1789023682000},"title":"数据库"},{"name":"connection","route":"/zh/docs/reference/cpp_api/connection","frontMatter":{"title":"连接","filePath":"content/zh/reference/cpp_api/connection.md","timestamp":1789023682000},"title":"连接"},{"name":"service","route":"/zh/docs/reference/cpp_api/service","frontMatter":{"title":"NeugDBService","filePath":"content/zh/reference/cpp_api/service.md","timestamp":1789023682000},"title":"服务"},{"name":"query_result","route":"/zh/docs/reference/cpp_api/query_result","frontMatter":{"title":"QueryResult","filePath":"content/zh/reference/cpp_api/query_result.md","timestamp":1789023682000},"title":"查询结果"}],"title":"C++ 接口"}],"title":"API 参考"},{"name":"development","route":"/zh/docs/development","children":[{"data":{"dev_guide":{"title":"开发指南"},"code_style_guide":{"title":"代码风格指南"},"ai_coding":{"title":"AI 编程"},"error_code":{"title":"错误代码"}}},{"name":"dev_guide","route":"/zh/docs/development/dev_guide","frontMatter":{"title":"开发者指南","filePath":"content/zh/development/dev_guide.md","timestamp":1789023682000},"title":"开发指南"},{"name":"code_style_guide","route":"/zh/docs/development/code_style_guide","frontMatter":{"title":"代码风格指南","filePath":"content/zh/development/code_style_guide.md","timestamp":1789023682000},"title":"代码风格指南"},{"name":"ai_coding","route":"/zh/docs/development/ai_coding","frontMatter":{"title":"AI 辅助开发","filePath":"content/zh/development/ai_coding.md","timestamp":1789023682000},"title":"AI 编程"},{"name":"error_code","route":"/zh/docs/development/error_code","frontMatter":{"title":"NeuG 错误码","filePath":"content/zh/development/error_code.md","timestamp":1789023682000},"title":"错误代码"}],"title":"开发指南"}],"navbar":["$","header",null,{"className":"nextra-navbar x:sticky x:top-0 x:z-30 x:w-full x:bg-transparent x:print:hidden x:max-md:[.nextra-banner:not([class$=hidden])~&]:top-(--nextra-banner-height)","children":[["$","div",null,{"className":"nextra-navbar-blur x:absolute x:-z-1 x:size-full nextra-border x:border-b x:backdrop-blur-md x:bg-nextra-bg/70"}],["$","nav",null,{"style":{"height":"var(--nextra-navbar-height)"},"className":"x:mx-auto x:flex x:max-w-(--nextra-content-width) x:items-center x:gap-4 x:pl-[max(env(safe-area-inset-left),1.5rem)] x:pr-[max(env(safe-area-inset-right),1.5rem)] x:justify-end neug-docs-navbar","children":[["$","$L11",null,{"href":"/zh/","className":"x:flex x:items-center x:me-auto x:transition-opacity x:focus-visible:nextra-focus x:hover:opacity-75","aria-label":"Home page","children":["$","$L1a",null,{"height":28}]}],["$","$L1b",null,{"className":"","children":[["$","a",null,{"href":"https://github.com/alibaba/neug","target":"_blank","rel":"noreferrer","children":[["$","span",null,{"className":"neug-docs-github","aria-label":"NeuG on GitHub","children":[["$","svg",null,{"xmlns":"http://www.w3.org/2000/svg","width":24,"height":24,"viewBox":"0 0 24 24","fill":"none","stroke":"currentColor","strokeWidth":2,"strokeLinecap":"round","strokeLinejoin":"round","className":"lucide lucide-github","aria-hidden":"true","children":[["$","path","tonef",{"d":"M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"}],["$","path","9comsn",{"d":"M9 18c-4.51 2-5-2-7-2"}],"$undefined"]}],["$","$L1c",null,{"className":"neug-docs-star-count","initialCount":148}]]}],false],"className":"x:focus-visible:nextra-focus"}],"$undefined",[["$","$L11",null,{"className":"neug-docs-nav-link","href":"/zh/","children":"首页"}],["$","$L11",null,{"className":"neug-docs-nav-link","href":"/zh/blog/","children":"博客"}],["$","span",null,{"className":"neug-docs-version","children":["$","$L1d",null,{}]}],["$","$L1e",null,{"currentLang":"zh"}],["$","$L1f",null,{"lite":true,"className":"neug-docs-theme-switch"}]]]}]]}]]}],"footer":["$","div",null,{"className":"x:bg-gray-100 x:pb-[env(safe-area-inset-bottom)] x:dark:bg-neutral-900 x:print:bg-transparent","children":[["$","$L20",null,{"children":["$","div",null,{"className":"x:mx-auto x:flex x:max-w-(--nextra-content-width) x:gap-2 x:py-2 x:px-4","children":[["$","$L21",null,{}],["$","$L1f",null,{}]]}]}],["$","hr",null,{"className":"nextra-border"}],["$","footer",null,{"className":"x:mx-auto x:flex x:max-w-(--nextra-content-width) x:justify-center x:py-12 x:text-gray-600 x:dark:text-gray-400 x:md:justify-start x:pl-[max(env(safe-area-inset-left),1.5rem)] x:pr-[max(env(safe-area-inset-right),1.5rem)]","children":"NeuG：面向 Agent 应用的全能数据索引。"}]]}],"children":[["$","$L22",null,{}],["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children","(docs)","children","zh","children","docs","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined"}]]}]]}]}]}]
+c:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","1",{"charSet":"utf-8"}],["$","title","2",{"children":"检查点 | NeuG"}],["$","meta","3",{"name":"description","content":"NeuG 产品与开发文档。"}],["$","meta","4",{"name":"msapplication-TileColor","content":"#f7f8fa"}],["$","link","5",{"rel":"canonical","href":"https://neug.io/zh/docs/transaction/checkpoint/"}],["$","link","6",{"rel":"alternate","hrefLang":"en-US","href":"https://neug.io/docs/transaction/checkpoint/"}],["$","link","7",{"rel":"alternate","hrefLang":"zh-CN","href":"https://neug.io/zh/docs/transaction/checkpoint/"}],["$","meta","8",{"property":"og:title","content":"检查点"}],["$","meta","9",{"property":"og:description","content":"NeuG 产品与开发文档。"}],["$","meta","10",{"property":"og:url","content":"https://neug.io/zh/docs/transaction/checkpoint/"}],["$","meta","11",{"property":"og:type","content":"article"}],["$","meta","12",{"name":"twitter:card","content":"summary"}],["$","meta","13",{"name":"twitter:title","content":"检查点"}],["$","meta","14",{"name":"twitter:description","content":"NeuG 产品与开发文档。"}],["$","link","15",{"rel":"icon","href":"/webpage/pr-preview/pr-13/icon.svg?3ebfb277bff4c3ea","type":"image/svg+xml","sizes":"any"}]]
+1:null
