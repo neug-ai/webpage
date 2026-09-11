@@ -1,0 +1,219 @@
+# 显式事务
+
+显式事务将多条查询组合成一个工作单元。开始事务后执行查询，最后一起提交全部变更，
+或将其全部回滚。
+
+嵌入式模式（AP）和服务模式（TP）提供相同的显式事务保障，并采用相同的开始、提交和
+回滚流程。两者使用的事务模型不同，拥有事务的客户端对象以及与网络有关的失败情况也
+有所不同。
+
+import { Tabs } from 'nextra/components'
+
+## 客户端支持
+
+| 客户端 | 嵌入式 `Connection` | 服务端 `Session` |
+|--------|-----------------------|---------------------|
+| C++ | 支持 | — |
+| Python | 支持 | 支持 |
+| Node.js | 支持 | — |
+| Java | — | 支持 |
+
+## 运行显式事务
+
+### 嵌入式模式
+
+在嵌入式模式下，事务由 `Connection` 持有。
+
+<Tabs items={['Python', 'Node.js', 'C++']}>
+
+<Tab>
+
+```python
+conn.begin_transaction()
+try:
+    conn.execute("CREATE (:Person {name: 'Alice'})", access_mode="insert")
+    rows = conn.execute("MATCH (p:Person) RETURN p.name", access_mode="read")
+    conn.commit()
+except Exception:
+    conn.rollback()
+    raise
+```
+
+</Tab>
+
+<Tab>
+
+```javascript
+conn.beginTransaction();
+try {
+  conn.execute("CREATE (:Person {name: 'Alice'})", 'insert');
+  const rows = conn.execute('MATCH (p:Person) RETURN p.name', 'read');
+  conn.commit();
+} catch (error) {
+  conn.rollback();
+  throw error;
+}
+```
+
+</Tab>
+
+<Tab>
+
+```cpp
+auto status = conn->BeginTransaction(neug::TransactionMode::kReadWrite);
+if (!status.ok()) {
+  // Handle the begin error.
+}
+
+auto created = conn->Query("CREATE (:Person {name: 'Alice'})", "insert");
+auto rows = conn->Query("MATCH (p:Person) RETURN p.name", "read");
+
+status = conn->Commit();
+if (!status.ok()) {
+  conn->Rollback();
+}
+```
+
+</Tab>
+
+</Tabs>
+
+默认使用读写事务。每种客户端也提供开始只读事务的选项。有关准确的方法签名，请参阅
+[Python](../reference/python_api/connection.md)、
+[Node.js](../reference/nodejs_api/connection.md) 和
+[C++](../reference/cpp_api/connection.md) API 参考。
+
+### 服务模式
+
+在服务模式下，每个 `Session` 同一时间最多持有一个事务。
+
+<Tabs items={['Python', 'Java']}>
+
+<Tab>
+
+```python
+from neug import Session
+
+session = Session.open("http://localhost:10000", num_threads=1)
+try:
+    session.begin_transaction()
+    session.execute("CREATE (:Person {name: 'Alice'})", access_mode="insert")
+    rows = session.execute(
+        "MATCH (p:Person) RETURN p.name",
+        access_mode="read",
+    )
+    session.commit()
+except Exception:
+    session.rollback()
+    raise
+finally:
+    session.close()
+```
+
+</Tab>
+
+<Tab>
+
+```java
+import com.alibaba.neug.driver.Driver;
+import com.alibaba.neug.driver.GraphDatabase;
+import com.alibaba.neug.driver.Session;
+import com.alibaba.neug.driver.Transaction;
+
+try (Driver driver = GraphDatabase.driver("http://localhost:10000");
+        Session session = driver.session();
+        Transaction txn = session.beginTransaction()) {
+    txn.run("CREATE (:Person {name: 'Alice'})").close();
+    txn.run("MATCH (p:Person) RETURN p.name").close();
+    txn.commit();
+}
+```
+
+</Tab>
+
+</Tabs>
+
+有关具体的事务控制方法，请参阅 [Python Session](../reference/python_api/session.md)
+和 [Java Session](../reference/java_api/session.md) API 参考。
+
+## 共同行为
+
+显式事务在两种部署模式下遵循相同的规则：
+
+- 每个 `Connection` 或 `Session` 同一时间只能有一个活动的显式事务，不支持嵌套事务；
+- 只读事务在其生命周期内保持一致的读取视图，并拒绝写入；
+- 读写事务可以读取自身已成功执行的写入；
+- 变更只有在提交后才对其他事务可见；
+- 回滚会丢弃该事务产生的所有变更；
+- 不支持保存点和部分回滚；
+- 不要通过同一个 `Connection` 或 `Session` 并发发送请求。
+
+## 不能在显式事务中运行的语句
+
+显式事务处于活动状态时，不得执行以下语句：
+
+| 语句类型 | 示例 |
+|----------|------|
+| 文件和批量操作 | `LOAD FROM`、`COPY FROM`、`COPY TEMP`、`COPY TO` |
+| 数据库维护 | `CHECKPOINT` |
+| 扩展管理 | `INSTALL`、`LOAD`、`UNINSTALL` |
+| 修改状态的过程调用 | 会修改状态的 `CALL`，例如 `project_graph` 或 `drop_projected_graph` |
+| Cypher 事务控制 | 以查询文本提交的 `BEGIN`、`COMMIT`、`ROLLBACK` |
+
+只读过程调用不受此限制。
+
+两种部署模式在此有一个重要区别：
+
+- **嵌入式模式：**文件和批量语句仅支持以自动提交方式运行。使用这些语句之前，
+  请先结束显式事务。
+- **服务模式：**无论是否有显式事务处于活动状态，都不支持 `LOAD FROM` 和任何
+  `COPY` 语句。
+
+## 失败与仅可回滚状态
+
+如果语句已到达 NeuG 并执行失败，其所在的显式事务将进入**仅可回滚**状态。该事务
+无法提交；必须先将其回滚，之后才能执行其他查询或开始另一个事务。
+
+这类失败包括语法错误、语义分析错误、编译错误和执行错误，也包括在只读事务中尝试写入，
+以及执行上述规则禁止的语句。
+
+如果校验错误发生在客户端发送查询之前，则不会改变事务状态。例如，Python 会抛出
+`ValueError` 来报告无效的 `access_mode`，事务仍可继续使用。
+
+## 客户端生命周期差异
+
+两种模式的提交和回滚保障相同，但本地客户端与网络客户端在生命周期和失败情况上有所不同。
+
+### 嵌入式客户端
+
+- 事务保持活动状态，直到应用提交、回滚或关闭其 `Connection`；
+- 事务没有超时时间；
+- 关闭连接时会尝试回滚尚未结束的事务。
+
+### 服务模式客户端
+
+- 关闭 `Session` 时会尝试回滚其尚未结束的事务；
+- 服务端可能使长时间无人使用的事务过期。下一次请求会报告该事务已过期，随后客户端会
+  清除其本地事务句柄；
+- 服务端关闭或网络故障后，本地客户端状态可能已经过期。请关闭该会话并创建新会话；
+- 如果提交或回滚期间网络中断，最终结果可能无法确定。驱动不会重试，因为重放请求可能
+  导致操作执行两次。
+
+## 推荐用法
+
+无论执行成功还是失败，都应结束事务：
+
+```python
+session.begin_transaction()
+try:
+    session.execute("CREATE (:Person {name: 'Alice'})", access_mode="insert")
+    session.commit()
+except Exception:
+    session.rollback()
+    raise
+```
+
+显式事务应尽量保持简短。如果多条语句不需要一起提交，请使用自动提交。
+
+面向用户的使用说明请参阅[概览](transaction.mdx)，并参阅[事务模型](transaction_model.md)
+了解并发和持久化机制。

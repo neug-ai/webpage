@@ -1,486 +1,123 @@
-# 事务管理
+# 概览
 
-本文档描述了 NeuG 的事务管理系统，该系统在不同部署模式下具有不同的运行机制。NeuG 支持两种主要模式：适用于分析型处理（AP）的 **嵌入式模式（Embedded mode）** 和适用于事务型处理（TP）的 **服务模式（Service mode）**。
+NeuG 在两种部署模式下提供相同的事务保障：面向进程内分析工作负载（AP）的
+**嵌入式模式**，以及面向并发事务工作负载（TP）的**服务模式**。
 
-import { Tabs } from 'nextra/components'
+在应用层，两种模式遵循相同的基本保障和使用规则：
 
-## 设计理念
+- 每条查询都在事务中运行；
+- 默认采用自动提交；
+- 可以通过显式事务将多条查询组合为一个工作单元；
+- 成功提交具有原子性，并与其他事务隔离；
+- 持久化数据库中已提交的变更可在重启后恢复。
 
-NeuG 的事务模型基于对图工作负载特征的深入理解，体现了相应的权衡取舍：
+两种模式面向应用的主要能力差异在于文件 I/O：`LOAD FROM` 和所有 `COPY`
+语句仅在嵌入式模式下可用，服务模式不支持这些语句。
 
-- **图原生工作负载** 以读操作为主，并频繁执行插入操作，而更新和模式变更则相对少见；
-- **分析型工作负载** 更注重单次查询的吞吐量，而非复杂的强一致性保证；
-- **事务型工作负载** 则要求在并发读/插入场景下具备高性能，同时提供强隔离性。
+## NeuG 中的 ACID
 
-NeuG 并未采用一种高复杂度、试图“一统天下”的通用事务系统，而是针对不同工作负载提供相适应的事务保证，在简洁性、性能与正确性之间取得平衡。
+两种部署模式提供相同的、用户可观察到的 ACID 保障：
 
-## 事务模型
+| 特性 | 行为 |
+|------|------|
+| **原子性（Atomicity）** | 一个事务要么提交全部变更，要么不发布任何变更。 |
+| **一致性（Consistency）** | 在变更可见之前，NeuG 会检查模式约束、主键唯一性和边的参照完整性。 |
+| **隔离性（Isolation）** | 事务看到一致的数据库视图；并发执行不会暴露部分变更。 |
+| **持久性（Durability）** | 持久化数据库中的事务一旦提交，NeuG 就能在重启后恢复它。内存数据库不具备持久性。 |
 
-### v0.2 版本之前
+有关这些保障背后的不同事务模型，请参阅[事务模型](transaction_model.md)。
 
-NeuG 仅暴露了一种隐式的、自动提交的事务模型。它没有提供用户可见的显式事务原语：每次调用 `execute()` 或 `Query()` 都是一个语句级事务。
+## 选择部署模式
+
+根据应用的连接方式，以及是否需要文件操作或批量操作来选择模式：
+
+| | 嵌入式模式（AP） | 服务模式（TP） |
+|---|----------------|----------------|
+| **典型用途** | 分析、ETL、本地工具、批处理 | 交互式应用和网络服务 |
+| **连接方式** | 进程内 `Connection` | 网络 `Session` |
+| **客户端** | C++、Python、Node.js | Python、Java |
+| **常规 Cypher** | 读取、插入、更新、删除以及模式和索引操作 | 相同 |
+| **文件和批量语句** | 支持 `LOAD FROM`、`COPY FROM`、`COPY TEMP` 和 `COPY TO` | 不支持 |
+| **显式事务** | 支持 | 支持 |
+
+两种模式对常规 Cypher 查询采用相同的提交和回滚语义。在两种模式之间迁移应用时，
+通常需要改变的是连接方式，而不是常规操作的提交和回滚方式。
+
+## 运行事务
+
+### 默认采用自动提交
+
+除非已有显式事务处于活动状态，否则每次 `execute()` 或 `Query()` 调用都是一个独立事务：
 
 ```python
-
-# 每次 execute() 都是一个独立的、自动提交的事务。
-conn.execute("CREATE (p:Person {name: 'Alice'})")  # 事务 1
-conn.execute("CREATE (p:Person {name: 'Bob'})")    # 事务 2
+conn.execute("CREATE (p:Person {name: 'Alice'})")  # committed
+conn.execute("CREATE (p:Person {name: 'Bob'})")    # committed separately
 ```
 
-### 自 v0.2 版本起
+如果语句失败，对应的自动提交事务会回滚，其部分变更不会对外可见。
 
-自动提交（Auto-commit）在所有受支持的接口中仍为默认行为。此外，以下客户端支持以编程方式显式地管理事务：
+如果多条语句不需要作为一组共同成功或失败，自动提交是最简单的选择。
 
-| 客户端 | AP — 嵌入式 `Connection` | TP — 服务端 `Session` |
-|--------|--------------------------|------------------------|
-| C++ | ✅ | — |
-| Python | ✅ | ✅ |
-| Node.js | ✅ | — |
-| Java | — | ✅ |
+### 使用显式事务组合相关查询
 
-✅ 表示该模式已支持 · — 表示该模式暂无对应客户端。
-
-下方示例使用了各部署模式下可用的客户端。
-
-显式事务跨越多个查询：首先开启一个事务，然后在该事务内执行查询，最后提交或回滚该事务。只读事务会固定一个读取视图，并拒绝任何写入操作；而读写事务则拥有一个私有的写时复制（COW）视图，可读取自身已成功执行的写入操作，并且仅当提交成功后才将变更发布出去。
-
-两种模式均不支持保存点（Savepoints）和部分回滚（partial rollback）。事务生命周期限制也有所不同：嵌入式 AP 事务永不超时，因此应用程序必须主动完成它；而 TP 服务端事务可能具有服务端配置的绝对生命周期上限，并可由服务端主动终止。
-
-#### 在显式事务内部不支持
-
-在事务处于活动状态时，两种模式均拒绝执行相同类别的语句：
-
-| 被拒绝的语句 | 具体示例 |
-|--------------|----------|
-| 批量、文件及临时加载语句 | `COPY … FROM`、`COPY … TO`、`COPY TEMP`、`LOAD FROM` |
-| 管理类语句 | `CHECKPOINT`，以及扩展的 `INSTALL` / `LOAD` / `UNINSTALL` |
-| 可变状态的过程调用 | 调用会改变状态的过程（例如 `project_graph` 或 `drop_projected_graph`）的 `CALL`；只读的 `CALL` 是允许的 |
-
-其余所有操作均被允许，包括读取、插入、更新、删除，以及常规 DDL 操作，例如 `CREATE NODE TABLE`、`ALTER`、`DROP` 和索引创建。
-被拒绝的语句行为与其他任何失败语句一致：它会使当前事务变为仅可回滚（rollback-only）状态。
-
-#### 失败与仅可回滚状态
-
-一条语句在抵达数据库后执行失败，将使其所属事务进入**仅可回滚（rollback-only）状态**：该事务无法再提交，且必须在客户端发出下一条查询或启动下一个事务之前终止。属于此类失败的情形包括：
-
-- 语义分析、语法或编译错误
-- 执行失败
-- 在只读事务中尝试执行写操作
-- 任何被上表所拒绝的语句
-- 以查询形式提交的 Cypher `BEGIN`、`COMMIT` 或 `ROLLBACK` —— 这些语句不受支持；请改用客户端提供的事务控制方法
-
-客户端绑定在语句抵达数据库**之前**所拒绝的错误，不会影响当前事务。例如，Python 会以 `ValueError` 拒绝无效的 `access_mode`，而事务仍可正常使用。
-
-嵌套的 `begin` 调用以及非法的程序化控制调用，会报告事务状态错误，但不会改变原本处于活跃状态的事务。
-
-仅可回滚事务的终止方式取决于所使用的模式；详见下方两个小节。
-
-#### 嵌入式 AP 模式下的显式事务
-
-在嵌入式模式下，显式事务由其 `Connection`.
-
-<Tabs items={['Python', 'Node.js', 'C++']}>
-
-<Tab>
+当多条语句必须一起提交时，请使用显式事务：
 
 ```python
 conn.begin_transaction()
-created = conn.execute("CREATE (:Person {name: 'Alice'})", "insert")
-visible = conn.execute("MATCH (p:Person) RETURN p.name")
-conn.commit()
+try:
+    conn.execute("CREATE (:Person {name: 'Alice'})", access_mode="insert")
+    conn.execute("CREATE (:Person {name: 'Bob'})", access_mode="insert")
+    conn.commit()
+except Exception:
+    conn.rollback()
+    raise
 ```
 
-</Tab>
-
-<Tab>
-
-```javascript
-conn.beginTransaction();
-
-const created = conn.execute("CREATE (:Person {name: 'Alice'})", 'insert');
-const visible = conn.execute('MATCH (p:Person) RETURN p.name', 'read');
-
-conn.commit(); // Publishes all successful writes as one commit.
-```
-
-</Tab>
-
-<Tab>
-
-```cpp
-auto status = conn->BeginTransaction(neug::TransactionMode::kReadWrite);
-if (!status.ok()) {
-  // Handle the begin error.
-}
-
-auto created = conn->Query("CREATE (:Person {name: 'Alice'})", "insert");
-auto visible = conn->Query("MATCH (p:Person) RETURN p.name", "read");
-
-status = conn->Commit();  // Publishes all successful writes as one commit.
-```
-
-</Tab>
-
-</Tabs>
-
-当客户端未指定模式时，默认为读写模式；每个客户端
-还公开其 begin 调用的只读变体。有关确切的签名，请参阅
-[Python](../reference/python_api/connection.md)、
-[Node.js](../reference/nodejs_api/connection.md) 和
-[C++](../reference/cpp_api/connection.md) 连接参考。
-
-**并发。** 读写事务在其
-整个生命周期内持有排他性的 AP 准入：所有其他 AP 操作都会等待，直到它提交、回滚或
-其连接关闭。嵌入式 READ_WRITE 模式还只允许一个公共
-`Connection` 同时执行。
-
-**生命周期。** 没有超时限制。事务保持打开状态，直到
-应用程序结束它，并且在它打开期间，没有其他 AP 工作继续执行——因此请及时
-结束它。
-
-**结束仅可回滚事务。** 将其回滚，或关闭连接。
-在此之前，连接仍会报告存在活动事务。
-
-#### TP 服务模式下的显式事务
-
-在服务模式下，显式事务由其 `Session` 拥有，且一个
-`Session` 在同一时间最多拥有一个事务。
-
-<Tabs items={['Python', 'Java']}>
-
-<Tab>
-
-```python
-from neug import Session
-
-session = Session.open("http://localhost:10000", num_threads=1)
-session.begin_transaction()
-session.execute("CREATE (:Person {name: 'Alice'})", "insert")
-assert list(session.execute("MATCH (p:Person) RETURN p.name")) == [["Alice"]]
-session.commit()
-session.close()
-```
-
-</Tab>
-
-<Tab>
-
-```java
-import com.alibaba.neug.driver.Driver;
-import com.alibaba.neug.driver.GraphDatabase;
-import com.alibaba.neug.driver.Session;
-import com.alibaba.neug.driver.Transaction;
-
-try (Driver driver = GraphDatabase.driver("http://localhost:10000");
-        Session session = driver.session();
-        Transaction txn = session.beginTransaction()) {
-    txn.run("CREATE (:Person {name: 'Alice'})").close();
-    txn.run("MATCH (p:Person) RETURN p.name").close();
-    txn.commit();
-}
-```
-
-</Tab>
-
-</Tabs>
-
-有关服务模式的事务控制，请参阅
-[Python 会话参考](../reference/python_api/session.md) 和
-[Java 会话和事务 API](../reference/java_api/session.md)。
-
-**使用会话。** Python 将活动 `Session` 上的查询路由到
-其事务中。在 Java 中，通过
-`Transaction.run(...)` 执行每个事务语句；直接 `Session.run(...)` 调用会被拒绝，直到该
-事务结束。两个客户端都允许每个
-`Session` 最多一个显式事务，关闭会话会尝试将其回滚。切勿通过一个
-`Session` 发出并发
-请求——每个客户端工作线程使用一个 `Session`。模式查询始终显示服务端已提交的模式，而不显示事务私有模式。
-
-**并发。** 读写事务持有 TP 更新租约。当它
-持有租约时，其他读写事务无法开始，普通的插入和
-更新会等待其完成；读取保持并发。成功的提交会追加
-并发布一个 WAL 提交。
-
-**生命周期。** 当事务的绝对
-生命周期到期或在关闭期间，服务会回滚并移除事务。到期是延迟报告的：下一个
-事务请求返回 `410 Gone`，并且 `Session` 随后清除其本地
-句柄。关闭或网络故障后，本地状态可能已过时；请关闭
-会话。普通的语句失败会使事务变为仅可回滚状态。
-
-**结束仅可回滚的事务。** 调用 `rollback()`（或 Java
-`Transaction.rollback()`）。如果 Python 事务已到期，该
-调用会在 `RuntimeError` 上引发 `410 Gone`，但会清除本地句柄。在 Java 中，被
-`Transaction.run(...)` 拒绝的
-语句会使事务变为仅可回滚状态，
-因此只允许 `rollback()`。如果 Java 在提交或
-回滚时网络失败，最终结果未知；驱动程序不会重试，并且
-所属会话必须被关闭和替换。
-
-**被放弃的事务。** 从未完成的读写事务会保留
-更新租约，并延迟普通的 TP 写入，直到服务释放它。
-务必在成功和失败路径上都结束事务。
-
-## 部署模式概览
-
-| 方面 | 嵌入式模式 | 服务模式 |
-|--------|-------------------|-------------------|
-| **适用场景** | 分析、ETL、批处理 | 交互式应用、Web 服务 |
-| **并发性** | 单用户、顺序写入 | 多用户、并发访问 |
-| **持久化** | v0.2+：普通写入使用 WAL；批量写入/物化使用检查点（checkpoint） | 自动基于 WAL 的持久化 |
-| **优化目标** | 单查询性能最大化 | 并发读取/插入吞吐量 |
-
-## ACID 特性
-
-### 嵌入式模式（面向分析处理，AP-oriented）
-
-嵌入式模式专为分析型工作负载设计，其设计重点在于简洁性和单次查询性能，而非复杂的事务保障。
-
-#### 原子性（Atomicity）
-
-**v0.2 版本之前：** 大型分析处理（AP）写操作未完全保证语句级原子性。在大型写操作（例如 `COPY`）执行过程中若发生失败，可能导致部分数据残留在内存中。应用程序通常将检查点（checkpoint）用作此类操作的恢复点；有关检查点生命周期及 `checkpoint_on_close` 行为，请参阅 [Checkpoints](checkpoint.md)。
-
-**自 v0.2 版本起：** 普通 AP 写操作使用私有的写时复制（COW）图，并仅在 WAL 提交成功后才将其发布。持久化的直接批量操作同样使用该私有图，并在成功时发布一个检查点；临时批量对象则仅驻留在内存中。显式的读写事务会将其所支持的普通写操作累积至一个私有图中，并仅在调用 `Commit()` 时统一发布。
-
-当前 WAL 格式已足以支持常规重放（replay），但其最终的帧格式（framing）、损坏处理（corruption handling）以及“提交状态未知”（commit-unknown）情形下的恢复规则仍在持续加固中。对于在批量加载后需要具备持久化物化检查点（durable materialized checkpoint）的应用程序，应采用 [Checkpoints](checkpoint.md) 中所述的检查点生命周期机制。
-
-#### 一致性
-
-模式约束和参照完整性在语句级别强制执行。无效操作（例如创建重复主键或违反边约束）将被拒绝。
-
-#### 隔离性
-
-所有写操作均采用**悲观独占锁（Pessimistic exclusive locking）**。任何写语句（包括插入、更新、删除或模式修改）都会获取一个独占锁，阻塞所有其他操作，直至该写操作完成。
-
-| 操作类型 | 并发行为 |
-|----------|----------|
-| 读 + 读 | 允许并发执行 |
-| 写 + 读 / 写 | 互斥 |
-
-这种简单的锁机制足以满足单用户分析型工作负载的需求，并避免了细粒度并发控制的复杂性。
-
-#### 持久性
-
-**v0.2 版本之前：** AP 的变更仅在显式执行 `CHECKPOINT` 语句，或以 `checkpoint_on_close=True` 参数关闭数据库时才会被持久化。
-
-**自 v0.2 版本起：** 普通的 AP 写入操作（包括一次成功的显式读-写提交）会将逻辑重做日志追加至 WAL，并在正常重启时重放。持久化的直接批量操作则通过发布其检查点（checkpoint）来实现持久性。显式的 `CHECKPOINT` 语句，或以 `checkpoint_on_close=True` 参数关闭数据库，将创建一个物化的检查点并管理 WAL 的轮转。
-
-对于内存数据库，由于数据仅存在于易失性内存中，因此不涉及持久性。有关使用方式及故障行为，请参阅 [检查点（Checkpoints）](checkpoint.md)。
-
-### 服务模式
-
-服务模式专为高吞吐量事务型工作负载及并发客户端访问而设计。其并发模型针对图原生访问模式进行了优化，适用于以读取和插入操作为主的场景。
-
-#### 原子性
-
-每条语句均作为“全有或全无”的操作执行。失败的语句会自动回滚，且其他事务无法看到任何部分状态变更。
-
-#### 一致性
-
-强制执行模式约束和参照完整性。所有并发操作均观察到数据库的一致视图。
-
-#### 隔离性
-
-NeuG 采用**多版本并发控制（MVCC）** 提供可串行化隔离，并针对不同操作类型定义了特定的并发规则：
-
-| 操作类型 | 并发行为 |
-|----------|-----------|
-| 读取（Read） | 读取一个一致的快照；在正在进行的插入或更新期间仍可继续执行。 |
-| 插入（Insert） | 可与读取及其他插入操作并发执行；若当前有更新正在进行，则需等待。 |
-| 更新（Update） | 一次仅允许一个更新操作执行；读取操作可在一致快照上持续进行；插入及其他更新操作需等待当前更新完成。 |
-| 模式变更（Schema，DDL） | 并发行为与更新操作相同。 |
-| 检查点（Checkpoint） | 独占式维护操作；详见 [Checkpoints](checkpoint.md)。 |
-
-> 注意：若读取请求在更新操作即将完成时到达，可能短暂等待，通常为毫秒级。
-
-**设计依据**：该混合策略反映了图计算工作负载的实际特征：
-
-- **读取和插入** 是大多数图应用（如社交网络、知识图谱、推荐系统）中最主要的操作；
-- **更新和模式变更** 相对罕见，因此串行执行；而读取操作始终基于一致快照持续运行，仅在写入操作即将完成时短暂等待；
-- **检查点** 属于数据库级别的维护操作；其并发行为详见 [Checkpoints](checkpoint.md)；
-- 若对所有写入类型均实现完整的 MVCC，将显著增加系统复杂度，但对典型的图工作负载而言收益甚微。
-
-```python
-from neug import Session
-
-# 并发会话
-session1 = Session("http://localhost:10000/")
-session2 = Session("http://localhost:10000/")
-
-# 这些操作可以并发执行（读取 + 插入）
-session1.execute("MATCH (p:Person) RETURN count(p)", access_mode="read")
-session2.execute("CREATE (p:Person {name: 'Bob'})", access_mode="insert")
-
-# 此更新与插入及其他更新串行执行。
-
-# 更新运行期间，读取仍在一致快照上继续执行。
-session1.execute("MATCH (p:Person) SET p.updated = true", access_mode="update")
-```
-
-#### 持久性
-
-所有修改均通过 **预写日志（WAL）** 立即持久化：
-
-- 在执行完成前，变更已记录到 WAL 中
-- 崩溃恢复时会自动重放 WAL，以恢复一致状态
-- 持久性无需显式执行检查点；检查点仅用于 WAL 合并。参见 [检查点](checkpoint.md)
+只读显式事务会拒绝写入。读写事务可以读取自身已成功执行的写入，并且只有提交后，
+这些变更才对其他事务可见。
+
+有关各客户端 API、受支持的客户端、不允许执行的语句以及仅可回滚状态，请参阅
+[显式事务](explicit_transactions.mdx)。
 
 ## 访问模式
 
-执行查询时，您可以指定 `access_mode` 以控制事务行为并优化性能：
+可选参数 `access_mode` 用于说明查询执行的操作类型：
 
-| 模式 | 别名 | 描述 |
+| 模式 | 别名 | 用途 |
 |------|------|------|
-| `read` | `r` | 只读操作（不包含修改的 MATCH 查询） |
-| `insert` | `i` | 仅插入操作（CREATE 新顶点/边） |
-| `update` | `u` | 更新/删除操作（SET、DELETE、MERGE） |
-| `schema` | `s` | 模式修改操作（CREATE/DROP 节点/边表） |
+| `read` | `r` | 不修改数据的查询 |
+| `insert` | `i` | 创建新的节点和边 |
+| `update` | `u` | 更新、删除和 `MERGE` |
+| `schema` | `s` | 创建或修改节点表和边表 |
 
-**默认行为：** 若未显式指定，则 NeuG 将自动推断合适的模式。在 Service 模式下，显式指定正确的访问模式可实现更优的并发性能优化。
+如果省略 `access_mode`，NeuG 会根据查询推断访问模式。如果显式指定的模式不允许执行该查询，
+NeuG 将返回错误。
 
-**访问模式能力说明：** 访问模式按操作类型区分，而非严格的层级关系。在服务模式下，`read` 和 `insert` 属于窄范围模式，而 `update` 和 `schema` 使用通用的串行更新路径。若指定的模式不支持计划执行的操作，将返回错误。
+在服务模式下，指定范围最小且正确的模式有助于 NeuG 高效调度并发请求。在嵌入式模式下，
+通常让 NeuG 自动推断即可；应用也可以显式指定模式来校验自身意图。
 
-下表**仅适用于 Service 模式**：
+`CHECKPOINT` 是管理语句。它以 `update` 模式自动提交，并且不能在显式事务中运行。
+请参阅[检查点](checkpoint.md)。
 
-| 指定的模式 | 实际执行的操作 | 结果 |
-|------------|----------------|------|
-| `read` | read | ✅ 成功 |
-| `read` | insert/update/schema/checkpoint | ❌ 错误 |
-| `insert` | insert | ✅ 成功 |
-| `insert` | read/update/schema/checkpoint | ❌ 错误 |
-| `update` | read/insert/update/schema/checkpoint | ✅ 成功（走串行更新路径） |
-| `schema` | read/insert/update/schema | ✅ 成功（走串行更新路径） |
+## 模式特有限制：文件 I/O
 
-在 Embedded 模式下，除 `read` 外的其他模式主要影响查询锁的类型（共享锁 vs. 排他锁），而非采用不同的事务实现机制。显式指定 `read` 模式仍会拒绝写操作；此外，下方所述的特殊 `CHECKPOINT` 限制在两种部署模式下均适用。
+`LOAD FROM` 和所有 `COPY` 语句仅在嵌入式模式下可用，并且必须以自动提交方式运行。
+服务模式不支持这些语句。持久化的 `COPY ... FROM` 具有原子性，只有在其检查点发布后
+才会返回成功。
 
-`CHECKPOINT` 是一种特殊的管理语句。有关其支持的访问模式以及 `EXPLAIN`/`PROFILE` 行为，请参阅
-[Checkpoints](checkpoint.md)。
+有关支持的语句和格式，请参阅[数据 I/O](../data_io/index.md)。
 
-```python
+## 持久性与失败处理
 
-# 最优实践：为获得最佳并发性能，将访问模式与操作相匹配
-conn.execute("MATCH (n) RETURN n", access_mode="read")        # 仅读锁
-conn.execute("CREATE (p:Person {name: 'Alice'})", access_mode="insert")  # 插入锁
+持久化数据库中的常规提交写入无需手动执行 `CHECKPOINT` 即可恢复。自动提交语句失败时，
+不会发布任何部分变更。显式事务内的数据库端操作失败后，该事务会进入仅可回滚状态；
+必须先将其回滚，再执行其他查询。
 
-# 可运行但非最优：读取查询的更新模式会进入更新路径
-conn.execute("MATCH (n) RETURN n", access_mode="update")      # 可运行，但会降低写入并发性
-```
+有关事务失败规则，请参阅[显式事务](explicit_transactions.mdx)；有关持久化维护与恢复，
+请参阅[检查点](checkpoint.md)。
 
-## 数据持久化
+## 延伸阅读
 
-### 嵌入式模式：WAL 与检查点（Checkpoint）
-
-自 v0.2 起，已提交的常规写入操作会被保存至 WAL（Write-Ahead Log），并在重启后自动恢复。
-持久化的 `COPY ... FROM` 操作会在报告成功前创建一个检查点；而 `COPY TEMP` 则仅驻留在内存中，数据库关闭时其数据将丢失。
-为保证数据持久性，手动执行检查点并非必需，但可减少恢复过程中需重放的 WAL 数据量。详情请参阅 [检查点（Checkpoint）](checkpoint.md)。
-
-### 服务模式：基于 WAL（预写日志）
-
-变更通过预写日志（Write-Ahead Logging，WAL）自动持久化：
-
-```python
-from neug import Session
-
-session = Session("http://localhost:10000/")
-
-# 每条语句均立即具备持久性
-session.execute("CREATE (p:Person {name: 'Alice'})")  # 通过 WAL 实现持久化
-session.execute("CREATE (p:Person {name: 'Bob'})")    # 通过 WAL 实现持久化
-
-session.close()
-```
-
-可选的检查点（checkpoint）可用于合并 WAL，但并非语句持久性的必要条件。参见 [检查点](checkpoint.md)。
-
-## 错误恢复
-
-### 嵌入式模式
-
-启动时，NeuG 会加载由 `CURRENT` 指定的检查点，并自动重放该检查点 `base_ts` 之后已提交的 WAL 记录。失败或未提交的私有写时复制（copy-on-write）更改永远不会发布。有关恢复行为和故障处理，请参阅[检查点](checkpoint.md)。
-
-### 服务模式
-
-使用 WAL 实现自动崩溃恢复：
-
-- 未提交的操作将自动回滚
-- 数据库在启动时恢复到最后的一致状态
-- 无需人工干预
-
-## 最佳实践
-
-### 嵌入式模式
-
-```python
-import neug
-
-db = neug.Database("/path/to/database")
-conn = db.connect()
-
-# 1. 创建 schema；普通已提交写入操作由 WAL 提供支持
-conn.execute("CREATE NODE TABLE Person(id INT64, name STRING, PRIMARY KEY(id))")
-conn.execute("CREATE NODE TABLE Company(id INT64, name STRING, PRIMARY KEY(id))")
-conn.execute("CREATE REL TABLE WORKS_AT(FROM Person TO Company)")
-
-# 可选维护：物化状态并合并 WAL
-conn.execute("CHECKPOINT")
-
-# 2. 每个持久化的 COPY ... FROM 在成功执行时都会发布自己的检查点
-conn.execute("COPY Person FROM 'employees_batch1.csv'")
-conn.execute("COPY Person FROM 'employees_batch2.csv'")
-conn.execute("COPY Company FROM 'companies.csv'")
-conn.execute("COPY WORKS_AT FROM 'employment.csv'")
-
-# 3. 运行分析查询（只读，高性能）
-result = conn.execute("MATCH (p:Person)-[:WORKS_AT]->(c:Company) RETURN c.name, count(p)")
-
-conn.close()
-db.close()
-```
-
-### 服务模式（面向事务处理，TP-oriented）
-
-```python
-from neug import Session
-
-session = Session("http://localhost:10000/")
-
-try:
-    # 读取与插入操作可在不同会话间并发执行
-    session.execute("CREATE (p:Person {name: 'Alice'})", access_mode="insert")
-
-    # 读取操作不会阻塞插入操作
-    result = session.execute("MATCH (p:Person) RETURN count(p)", access_mode="read")
-
-    # 更新操作与插入操作及其他更新操作是串行化的。读取操作在一致的快照上继续执行，
-    # 但在高并发场景下应尽量缩短更新操作的持续时间。
-    session.execute(
-        "MATCH (p:Person) WHERE p.name = 'Alice' SET p.verified = true",
-        access_mode="update",
-    )
-
-    # 周期性检查点以合并 WAL（可选）
-    session.execute("CHECKPOINT")
-
-finally:
-    session.close()
-```
-
-## 概述
-
-| 属性 | 嵌入式模式 | 服务模式 |
-|----------|-------------------|-------------------|
-| **原子性** | 语句级；支持将写操作显式分组为事务 | 完整（自动回滚） |
-| **一致性** | 强制执行模式约束 | 强制执行模式约束 |
-| **隔离性** | 独占写锁 | 读取/插入使用 MVCC；更新/DDL 操作串行化；检查点为独占式 |
-| **持久性** | 普通写操作使用 WAL；持久化批量操作使用检查点 | 自动 WAL 持久化 |
-| **并发读取** | 是 | 是，但在独占检查点维护期间除外 |
-| **并发插入** | 否 | 是，除非有正在进行的更新操作 |
-| **并发更新** | 否 | 否，更新操作被串行化，而读取操作则在一致快照上持续进行 |
-| **恢复** | 自动检查点恢复与 WAL 重放 | 自动 WAL 重放 |
-
-## 路线图
-
-**恢复与持久性**
-- 为嵌入式模式（Embedded mode）提供更透明的恢复诊断
-- 增量式持久化的 Delta 检查点（Delta checkpointing）
-- 降低大规模数据集的检查点阻塞时间
-- 基于策略的周期性检查点（Policy-driven periodic checkpointing）
+- [显式事务](explicit_transactions.mdx) — 客户端 API 和事务生命周期规则
+- [检查点](checkpoint.md) — 面向用户的持久化与维护说明
+- [事务模型](transaction_model.md) — AP 锁、TP MVCC、WAL 和检查点内部机制

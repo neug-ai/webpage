@@ -7,7 +7,7 @@ export default {
   cypher_manual: "Cypher 手册",
   storage_index: "存储索引",
   extensions: "扩展",
-  transaction: "事务",
+  transaction: "事务管理",
   user_clients: "客户端工具",
   reference: "API 参考",
   development: "开发指南",
