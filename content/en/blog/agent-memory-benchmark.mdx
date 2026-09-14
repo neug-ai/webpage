@@ -1,0 +1,125 @@
+---
+title: >-
+  NeuG-based Agent Memory Benchmark: Graphiti / Mem0 / Cognee Integration
+  Results
+description: >-
+  A single agent memory system's retrieval layer is usually stitched together
+  from several engines: a vector store for semantic recall, a full-text index
+  for keyword hits, and a graph database for relational reasoning. What if one
+  engine c...
+date: '2026-09-14'
+author: NeuG Team
+category: engineering
+tags:
+  - NeuG
+  - engineering
+  - vector search
+  - full-text search
+  - graph traversal
+  - Cypher
+  - graph database
+translationKey: agent-memory-benchmark
+draft: false
+aliases: []
+cover: /images/blog/agent-memory-benchmark/banner_en.png
+locale: en
+---
+![Article cover](/images/blog/agent-memory-benchmark/banner_en.png)
+
+A single agent memory system's retrieval layer is usually stitched together from several engines: a vector store for semantic recall, a full-text index for keyword hits, and a graph database for relational reasoning. What if one engine could unify all three natively — and what would that do to end-to-end quality and performance? This benchmark measures exactly that on three real systems.
+
+---
+
+## Background
+
+In a previous post, we introduced [NeuG v0.2.0](https://github.com/alibaba/neug) and its core capability: vector search, full-text search, and graph traversal natively unified in one embedded engine, where a single Cypher query can combine all three. In this post, we integrate NeuG into three mainstream agent memory systems and run end-to-end evaluations to see what NeuG, as a data index for agent applications, actually delivers in terms of retrieval quality and performance.
+
+---
+
+## Systems Compared
+
+We integrated NeuG into three open-source agent memory systems and compared it against each system's native backend:
+
+- **[Graphiti](https://github.com/getzep/graphiti)** (getzep/graphiti, ~30k stars, Apache-2.0): Zep's open-source agent memory framework that builds temporal knowledge graphs for agents, tracking how facts evolve over time and where they come from; retrieval is a hybrid search of vector + full-text + graph BFS. Graphiti itself is framework-layer only, with backends including Neo4j, FalkorDB, Neptune, and Kùzu. We compared against its default recommendation, Neo4j ([NeuG integration](https://github.com/BingqingLyu/graphiti/tree/neug-driver)).
+
+- **[Mem0](https://github.com/mem0ai/mem0)** (mem0ai/mem0, ~64k stars, Apache-2.0): the most popular general-purpose agent memory layer. Its extract-update pipeline distills conversations into memory entries; retrieval is an additive fusion of vector + BM25 keywords. Since v2.0.0, the open-source edition has dropped external graph store integration. The system currently has 25 backend implementations — open-source stores like Qdrant and pgvector, plus managed SaaS like azure_mysql and databricks — 15 of which support both full-text and vector search, while the remaining 10 support vector only. For this experiment we picked the two most mainstream and lightest to deploy: Qdrant and PGVector ([NeuG integration](https://github.com/BingqingLyu/mem0/tree/feature/neug-vector-store)).
+
+- **[Cognee](https://github.com/topoteretes/cognee)** (topoteretes/cognee, ~30k stars, Apache-2.0): an open-source AI memory engine whose ECL pipeline (Extract-Cognify-Load) builds knowledge graphs from unstructured data; its 19 SearchTypes cover vector, lexical, graph traversal, and LLM-generated Cypher. The default backend runs three stores at once: the embedded graph library ladybug (a Kùzu fork) + LanceDB + SQLite. We compared directly against this default combo ([NeuG integration](https://github.com/BingqingLyu/cognee/tree/feature/neug-graph-adapter)).
+
+---
+
+## Benchmark Design
+
+We focused on two questions: does integrating NeuG affect end-to-end memory retrieval quality, and how does retrieval efficiency change as data volume grows? Accordingly, we designed two benchmark tracks: a quality track measuring end-to-end answer accuracy, and a performance track measuring retrieval latency and recall at scale.
+
+### Quality Track: LoCoMo
+
+Dataset: [LoCoMo-10](https://github.com/snap-stanford/locomo) (10 long conversations, 272 sessions, 5,882 turns), with 1,540 questions from categories cat1–4. The answering model is qwen-plus and the judging model is qwen-max with binary classification (CORRECT/WRONG) at temperature=0, all systems sharing the same endpoint. Each system's answering and grading prompts are kept as-is — no per-system tuning.
+
+Ingestion results from LLM extraction are cached per system and reused across backends: swapping the backend within a system uses exactly the same extraction artifacts, so backend switches introduce no ingest data differences.
+
+LoCoMo's four categories are divided by reasoning type: cat1 single-hop (answerable within one session), cat2 temporal (relies on time cues), cat3 open-domain (mostly tests the model, not retrieval), cat4 multi-hop (synthesizes across sessions). They measure end-to-end result recall quality rather than any specific retrieval capability.
+
+### Performance Track: LongMemEval-M + Four Query Types
+
+Corpus: [LongMemEval-M](https://github.com/xiaowu0162/LongMemEval) (51,661-session dedup pool, ~1.5M tokens). Here we mainly use the large-scale data for performance evaluation and did not fully use its quality evaluation protocol. All systems run on the same data and the same query set.
+
+For ingestion, we pre-prepared the LLM extraction results so that all backends receive the same chunks / embeddings / graph data. We selected a 200-query set split evenly into 4 retrieval categories, 50 each: vector top-k, FTS keyword, hybrid (vector pre-filter → BM25 re-rank), and graph multi-hop. Metrics: p50/p95 latency and recall@10. Recall ground truth is the exact solution computed by brute force on the same data, computed once and shared across all systems. Query types a system doesn't support are marked N/A.
+
+---
+
+## Results
+
+### Mem0 (NeuG vs Qdrant / PGVector)
+
+| Metric | +NeuG | Qdrant | PGVector |
+|---|---|---|---|
+| accuracy | 0.4786 | 0.4786 | 0.4584 |
+
+**Quality track results as shown in the table**: NeuG ties the best baseline that actually uses an index, Qdrant (same accuracy 0.4786, both answering 737/1540 questions), and beats PGVector by 2.02pp. In other words, swapping the backend to NeuG keeps end-to-end answer quality intact — no quality traded for speed.
+
+![Performance track p50 retrieval latency: Qdrant / PGVector vs NeuG-integrated (x-axis: four query types; y-axis: log latency, shorter = faster; blue text = speedup)](/images/blog/agent-memory-benchmark/perf_p50_mem0.png)
+
+**Performance track results as shown in the figure above**: NeuG's vector p50 is just 2.64ms — 8.1× faster than Qdrant and 414× faster than PGVector — with recall still at 0.996. Why 8.1× over Qdrant: Qdrant also builds HNSW, but it runs as a separate service, so every query pays cross-process round trips and vector deserialization; NeuG's HNSW comes from zvec statically linked in native C++, and the index reads vector data directly from the storage layer, eliminating that copy/deserialization. Why 414× over PGVector: PGVector builds HNSW too, but Mem0's retrieval always carries a `user_id` filter, and PGVector's HNSW cannot use the index with filters — it degrades to a full sequential scan. NeuG's ANN supports filtered search and stays on the index with the `user_id` condition. Full-text search: NeuG's latency is slightly above both baselines (6.62ms vs 5.05ms / 3.59ms), but recall is the highest (0.949) — an acceptable trade-off. Hybrid search also leads, with p50 27.2ms — 1.36× faster than Qdrant and 40.9× faster than PGVector. Graph queries are NeuG-only: Qdrant and PGVector structurally cannot do graph multi-hop; NeuG reaches p50 5.86ms with recall 1.0.
+
+### Cognee (NeuG vs ladybug + LanceDB + SQLite)
+
+| Metric | +NeuG | Default backend combo |
+|---|---|---|
+| accuracy | **0.661** | 0.650 |
+
+**Quality track results as shown in the table**: NeuG's accuracy is slightly above the default backend (0.661 vs 0.650, +1.1pp) — end-to-end answer quality ties or slightly exceeds.
+
+![Performance track p50 retrieval latency: default combo vs NeuG-integrated (x-axis: four query types; y-axis: log latency, shorter = faster; blue text = speedup)](/images/blog/agent-memory-benchmark/perf_p50_cognee.png)
+
+**Performance track results as shown in the figure above**: NeuG leads across all four query types (vector 10.9× / fts 958× / hybrid 5.7× / graph 3.1×). Why the default backend is slow: Cognee's LanceDB integration does not build an ANN index by default, so vector queries run exact brute-force scans, and full-text search reads all chunks back into memory to compute BM25 on the fly. NeuG builds HNSW + native FTS indexes, trading 0.6pp of vector recall for a 10.9× latency win. On graph queries, NeuG is 3.1× faster than the default ladybug backend; as a reference, Cognee's Neo4j server backend scores a graph_multihop p50 of 145ms, which NeuG beats by 26.6×.
+
+### Graphiti (NeuG vs Neo4j)
+
+| Metric | +NeuG | Neo4j |
+|---|---|---|
+| accuracy | 0.4526 | 0.4455 |
+
+**Quality track results as shown in the table**: NeuG's accuracy is basically tied with Neo4j (0.4526 vs 0.4455, +0.71pp) — no quality loss from swapping the backend.
+
+![Performance track p50 retrieval latency: Neo4j vs NeuG-integrated (x-axis: four query types; y-axis: log latency, shorter = faster; blue text = speedup)](/images/blog/agent-memory-benchmark/perf_p50_graphiti.png)
+
+**Performance track results as shown in the figure above**: NeuG leads across all four query types (vector 328× / fts 12.9× / hybrid 214× / graph 16.4×) — the vector and hybrid gaps are especially striking. The reason lies on the vector side: Graphiti's Neo4j integration does not build a vector index, so vector queries run a full label scan plus scalar cosine brute force, and hybrid's vector pre-filter stage does the same; NeuG builds an HNSW ANN index, so latency drops dramatically. For fts and graph, Neo4j's full-text uses Lucene and graph traversal uses Cypher, yet NeuG still holds an order-of-magnitude performance edge.
+
+---
+
+## Conclusion
+
+Storage-layer choices for agent applications are shifting from "assembling multiple engines" to "three native index paths inside one engine". NeuG v0.2.0 is exactly that path — an embedded library you pip-install once, combining three retrieval modes in a single Cypher query.
+
+This benchmark gives a clear answer across three real systems: swapping in NeuG keeps end-to-end quality intact, cuts large-scale retrieval latency across the board, and fills in retrieval capabilities those systems were missing — as a data index for agent applications, NeuG holds up on both quality and performance.
+
+---
+
+## About NeuG
+
+NeuG is an embedded graph database built for AI scenarios, unifying vector, full-text, and graph retrieval in a single engine. If you're interested, give it a try — stars, issues, and PRs are all welcome.
+
+- GitHub: https://github.com/alibaba/neug
+
+Follow our blog for more NeuG updates.
