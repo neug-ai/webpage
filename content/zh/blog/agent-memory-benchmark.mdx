@@ -1,0 +1,130 @@
+---
+title: NeuG-based Agent Memory Benchmark：Graphiti / Mem0 / Cognee 接入实测
+description: >-
+  上一篇博文中，我们介绍了 NeuG v0.2.0[1] 新版本带来的核心能力：把向量搜索、全文检索、图遍历原生统一进同一个嵌入式引擎，一条 Cypher
+  就能组合三种检索。本篇中，我们把 NeuG 接进三个主流 agent memory 系统，在端到端的系统评测中，看看 NeuG 作为 Agent
+  应用的数据索引，在检索质量和检索性能方面，究竟能发挥怎样的作用。
+date: '2026-09-14'
+author: NeuG Team
+category: engineering
+tags:
+  - NeuG
+  - engineering
+  - vector search
+  - full-text search
+  - graph traversal
+  - Cypher
+  - graph database
+translationKey: agent-memory-benchmark
+draft: false
+aliases: []
+cover: /images/blog/agent-memory-benchmark/banner_zh.png
+locale: zh
+---
+![文章封面](/images/blog/agent-memory-benchmark/banner_zh.png)
+
+## 背景
+
+上一篇博文中，我们介绍了 NeuG v0.2.0[1] 新版本带来的核心能力：把向量搜索、全文检索、图遍历原生统一进同一个嵌入式引擎，一条 Cypher 就能组合三种检索。本篇中，我们把 NeuG 接进三个主流 agent memory 系统，在端到端的系统评测中，看看 NeuG 作为 Agent 应用的数据索引，在检索质量和检索性能方面，究竟能发挥怎样的作用。
+
+---
+
+## 对比系统
+
+我们在测试中把 NeuG 接入了 3 个开源 agent memory 系统，与它们各自的原生后端做对比：
+
+- **Graphiti**[2]（getzep/graphiti，~30k★，Apache-2.0）：Zep 公司的开源 agent memory 框架，为智能体构建时序知识图谱，追踪事实随时间的演化与溯源；检索是向量 + 全文 + 图 BFS 的 hybrid search。Graphiti 本身只做框架层，后端支持 Neo4j、FalkorDB、Neptune、Kùzu 等。我们选它默认推荐的 Neo4j 作对比（NeuG 接入实现见 [3]）。
+
+- **Mem0**[4]（mem0ai/mem0，~64k★，Apache-2.0）：目前最流行的通用 agent memory 层，“抽取-更新”管线把对话沉淀为记忆条目；检索是向量 + BM25 关键词的加性融合。自 v2.0.0 起，开源版移除了外部图存储的接入。系统目前有 25 个后端实现（既有 qdrant、pgvector 这类开源存储，也有 azure_mysql、databricks 这类云托管 SaaS），其中 15 个同时支持全文和向量检索，剩下 10 个只支持向量。本次实验选取其中两个最主流、部署也最轻量的后端 Qdrant 和 PGVector 作对比（NeuG 接入实现见 [5]）。
+
+- **Cognee**[6]（topoteretes/cognee，~30k★，Apache-2.0）：开源 AI memory 引擎，ECL 管线（Extract-Cognify-Load）把非结构化数据构建成知识图谱；19 种 SearchType 覆盖向量、词法、图遍历、LLM 生成 Cypher 四路检索。默认后端同时跑三套：内嵌图库 ladybug（Kùzu fork）+ LanceDB + SQLite。我们直接拿这套默认组合作对比（NeuG 接入实现见 [7]）。
+
+---
+
+## Benchmark 设计
+
+我们在测评中主要关注两个点：一是接入 NeuG 之后，对整个 memory 检索的结果质量有没有影响；二是随着数据量增大，检索的效率如何变化。因此，benchmark 分两个维度：质量维度测端到端答对率，性能维度测大规模数据下的检索延时与召回。
+
+### 质量维度：LoCoMo
+
+数据集 LoCoMo-10[8]（10 段超长对话，272 session，5882 turn），题集取 cat1-4 共 1540 题。答题用的模型是 qwen-plus，评判用的模型是 qwen-max 二分类（CORRECT/WRONG），temperature=0，全系统共享同一端点。各系统的答题/判分 prompt 保持原样，不做逐系统调优。
+
+ingestion 阶段的 LLM 抽取结果按系统缓存、跨后端复用——同一系统换后端时抽取产物完全相同，后端切换不会引入 ingest 数据的差异。
+
+LoCoMo 的 4 个类目按推理类型划分：cat1 单跳（单 session 可答），cat2 时序（依赖时间线索），cat3 开放域（主要测模型不测检索），cat4 多跳（跨 session 综合），没有按照具体检索能力来划分，而是测端到端的结果召回质量。
+
+### 性能维度：LongMemEval-M + 四类查询
+
+语料用 LongMemEval-M[9]（51,661 session 去重池，~1.5M token），这里我们主要是利用大规模数据做性能评测，没有完整使用其质量评测协议。所有系统走同一份数据、同一套 query 集合。
+
+ingestion 阶段，我们提前准备了 LLM 抽取后的结果，让所有后端拿到同一份 chunks / embeddings / 图数据。我们选取了 200 条 Query 集合，按检索分 4 类，每类各占 50 条：向量 top-k、FTS 关键词、混合（向量粗筛→BM25 重排）、图多跳。指标统计了 p50/p95 延时和 recall@10。其中，recall 的 Ground truth 是同一份数据上，我们通过暴力搜索得到的精确解，一次性算好全系统共享。系统不支持的查询类型标 N/A。
+
+---
+
+## 结果
+
+### Mem0（NeuG vs Qdrant / PGVector）
+
+| 维度 | 指标 | +NeuG | Qdrant | PGVector | 说明 |
+|---|---|---|---|---|---|
+| 质量 | accuracy | 0.4786 | 0.4786 | 0.4584 | 与最优公平基线 Qdrant-server **打平**（同 737/1540），高于 PGVector +2.02pp |
+| 性能 | vector p50 / recall | **2.64ms** / 0.996 | 21.5ms / 0.976 | 1093ms / 0.998 | 快 Qdrant-server **8.1×**、快 PGVector **414×** |
+| 性能 | fts p50 / recall | 6.62ms / **0.949** | **5.05ms** / 0.897 | **3.59ms** / 0.846 | 延时略高于两基线，但 **recall 最高** |
+| 性能 | hybrid p50 / recall | **27.2ms** / 0.646 | 37.0ms / 0.654 | 1111ms / 0.554 | 快 Qdrant-server 1.36×、快 PGVector 40.9× |
+| 性能 | graph_multihop p50 / recall | **5.86ms** / 1.0 | N/A | N/A | **NeuG 独占**（其他两个后端均不支持图查询） |
+
+质量维度上，NeuG 与真正用上索引的最优基线 Qdrant 打平（accuracy 同为 0.4786，都答对 737/1540 题），比 PGVector 高 2.02pp。也就是说，把后端换成 NeuG，端到端答案质量不掉，没有拿质量换速度。
+
+性能维度上，向量检索 NeuG 的 p50 只有 2.64ms，比 Qdrant 快 8.1×、比 PGVector 快 414×，recall 仍有 0.996。这里，NeuG 比 Qdrant 快 8.1× 的主要原因是：虽然 Qdrant 同样建了 HNSW，但它要起独立服务，每次检索都要跨进程往返、反序列化向量；而 NeuG 的 HNSW 由 zvec 以原生 C++ 静态链接进引擎，索引直接访问存储层的向量数据，省掉了这次拷贝/反序列化。NeuG 比 PGVector 快 414× 的主要原因则是：PGVector 虽然建了 HNSW，但 mem0 的检索永远带 `user_id` 过滤，PGVector 的 HNSW 不支持带过滤走索引，于是退化成全表顺序 Scan；NeuG 的 ANN 支持带过滤检索，加上 `user_id` 条件仍走索引。全文检索 NeuG 延时略高于两个基线（6.62ms vs 5.05ms / 3.59ms），但 recall 最高（0.949），这个取舍可以接受。混合检索同样领先，p50 27.2ms，快 Qdrant 1.36×、快 PGVector 40.9×。图查询则是 NeuG 独占——Qdrant、PGVector 结构上都不支持图上多跳，NeuG 能跑到 p50 5.86ms、recall 1.0。
+
+### Cognee（NeuG vs ladybug + LanceDB + SQLite）
+
+| 维度 | 指标 | +NeuG | 默认组合后端 | 说明 |
+|---|---|---|---|---|
+| 质量 | accuracy | **0.661** | 0.650 | +1.1pp |
+| 性能 | vector p50 / recall | **1.21ms** / 0.994 | 13.18ms / 1.0 | **10.9× 快** |
+| 性能 | fts p50 / recall | **1.59ms** / 1.0 | 1527.7ms / 1.0 | **958× 快** |
+| 性能 | hybrid p50 / recall | **2.67ms** / 0.532 | 15.20ms / 0.530 | **5.7× 快** |
+| 性能 | graph_multihop p50 / recall | **5.45ms** / 1.0 | 17.04ms / 1.0 | **3.1× 快** |
+
+质量维度上，NeuG 的 accuracy 略高于默认后端（0.661 vs 0.650，+1.1pp），端到端答案质量打平甚至略优。
+
+性能维度上，四类查询 NeuG 全面领先（vector 10.9× / fts 958× / hybrid 5.7× / graph 3.1×）。默认后端慢的主要原因在于：Cognee 接入 LanceDB 时默认不建 ANN 索引，向量查询走精确暴力全扫、全文检索把全量切片读回内存现算 BM25；而 NeuG 构建了 HNSW + 原生 FTS 索引，用 0.6pp 向量 recall 换来 10.9× 的延时优势。图查询上，NeuG 对比默认的 ladybug 后端快 3.1×；此外我们还拿 Cognee 的 Neo4j 服务端后端作参考，其 graph_multihop p50 为 145ms，NeuG 快 26.6×。
+
+### Graphiti（NeuG vs Neo4j）
+
+| 维度 | 指标 | +NeuG | Neo4j | 说明 |
+|---|---|---|---|---|
+| 质量 | accuracy | 0.4526 | 0.4455 | +0.71pp |
+| 性能 | vector p50 / recall | **2.51ms** / 0.994 | 825.8ms / 0.998 | **328× 快** |
+| 性能 | fts p50 / recall | **0.63ms** / 0.974 | 8.14ms / 1.0 | **12.9× 快** |
+| 性能 | hybrid p50 / recall | **3.87ms** / 0.510 | 825.9ms / 0.560 | **214× 快** |
+| 性能 | graph_multihop p50 / recall | **5.72ms** / 1.0 | 94.0ms / 1.0 | **16.4× 快** |
+
+质量维度上，NeuG 的 accuracy 与 Neo4j 基本打平（0.4526 vs 0.4455，+0.71pp），换成 NeuG 后端端到端答案质量不掉。
+
+性能维度上，四类查询 NeuG 全面领先（vector 328× / fts 12.9× / hybrid 214× / graph 16.4×），其中 vector 和 hybrid 的差距尤其悬殊。悬殊的原因在向量这一侧：Graphiti 的 Neo4j 集成没有建向量索引，向量查询走全标签扫描 + 标量 cosine 暴力计算，hybrid 的向量粗筛阶段也一样；而 NeuG 构建了 HNSW ANN 索引，延时因此大幅下降。fts 和 graph 方面，Neo4j 全文走 Lucene 索引、图遍历走 Cypher，但 NeuG 仍然有一个数量级的性能优势。
+
+---
+
+## 结语
+
+Agent 应用的存储层选型正在从「多引擎拼装」走向「引擎内原生三路索引」。NeuG v0.2.0 想做的就是这条路——一个 pip 装完的嵌入式库，一条 Cypher 组合三种检索。
+
+这轮 benchmark 在三个真实系统上给出了明确的答案：换用 NeuG 后端，端到端质量不掉，大规模检索延时全面下降，还补齐了一些系统原本缺失的检索能力——NeuG 作为 Agent 应用的数据索引，质量和性能都能扛得住。
+
+如果你也感兴趣，欢迎上手试用 NeuG，也欢迎 Star、Issue、PR。
+
+---
+
+## References
+
+- [1] NeuG: https://github.com/alibaba/neug
+- [2] Graphiti: https://github.com/getzep/graphiti
+- [3] Graphiti neug-adapter: https://github.com/BingqingLyu/graphiti/tree/neug-driver
+- [4] Mem0: https://github.com/mem0ai/mem0
+- [5] Mem0 neug-adapter: https://github.com/BingqingLyu/mem0/tree/feature/neug-vector-store
+- [6] Cognee: https://github.com/topoteretes/cognee
+- [7] Cognee neug-adapter: https://github.com/BingqingLyu/cognee/tree/feature/neug-graph-adapter
+- [8] LoCoMo: https://github.com/snap-stanford/locomo
+- [9] LongMemEval-M: https://github.com/xiaowu0162/LongMemEval

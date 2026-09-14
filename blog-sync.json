@@ -48,6 +48,27 @@
         "banner_en.png",
         "banner_zh.png"
       ]
+    },
+    "agent-memory-benchmark": {
+      "siteSlug": "agent-memory-benchmark",
+      "commit": "67cb2356aba0249954ab7088dcd7b22f57e6122e",
+      "sourceHash": "93ae1cb616745a6b5a798c0236b73f835591bd8d364e564c419cea25d07c0948",
+      "chineseSourceFile": "mother.md",
+      "chineseSourceHash": "6f7674b221a8f20331028958d08e3734e3d5d1c5a00a3dbae67bc3b6219922da",
+      "fingerprint": "a7937b48cba12ba659d43aedee2650753e9be9ab1647075b2f10617db2bcc752",
+      "syncSchemaVersion": "3",
+      "date": "2026-09-14",
+      "syncedAt": "2026-09-14T08:03:49.574Z",
+      "assets": [
+        "banner_en.png",
+        "banner_zh.png",
+        "perf_p50_cognee.png",
+        "perf_p50_graphiti.png",
+        "perf_p50_mem0.png",
+        "zh/perf_p50_cognee.png",
+        "zh/perf_p50_graphiti.png",
+        "zh/perf_p50_mem0.png"
+      ]
     }
   }
 }
