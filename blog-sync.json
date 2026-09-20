@@ -69,6 +69,29 @@
         "zh/perf_p50_graphiti.png",
         "zh/perf_p50_mem0.png"
       ]
+    },
+    "neug-codescope-cpg": {
+      "siteSlug": "neug-codescope-cpg",
+      "commit": "e1590d6db856b57fd073da6736b4c0ea3f048faa",
+      "sourceHash": "ab611c5896bdb5b16a9c457e7748a99578a27a7f1d4160b4e6b2aef957c0d6ad",
+      "chineseSourceFile": "mother.md",
+      "chineseSourceHash": "e6eae3ee59887f30b5f28b6d2ad09009b6965880af57ee0f0382513d8e14e8b3",
+      "fingerprint": "07a6f60259ea419a9f82aacaac558f52e3694087e52e8adfe6b17747381af8d2",
+      "syncSchemaVersion": "3",
+      "date": "2026-09-20",
+      "syncedAt": "2026-09-20T02:51:27.893Z",
+      "assets": [
+        "banner_en.png",
+        "banner_zh.png",
+        "exp1-formai-en.png",
+        "exp2-cybergym-en.png",
+        "exp3-l-f1-en.png",
+        "exp3-s-f1-en.png",
+        "zh/exp1-formai.png",
+        "zh/exp2-cybergym.png",
+        "zh/exp3-l-f1.png",
+        "zh/exp3-s-f1.png"
+      ]
     }
   }
 }
