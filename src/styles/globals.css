@@ -694,6 +694,11 @@ html[data-theme-transition] *::after {
 #neug-product-home .np-blog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 #neug-product-home .np-blog-card { min-width: 0; overflow: hidden; border: 1px solid var(--np-line); border-radius: 14px; background: var(--np-paper); transition: transform .18s ease, border-color .18s ease; }
 #neug-product-home .np-blog-card:hover { transform: translateY(-2px); border-color: var(--np-line-strong); }
+#neug-product-home .np-blog-card-cover { display: block; aspect-ratio: 47 / 20; overflow: hidden; border-bottom: 1px solid var(--np-line); background: #f7f8fa; }
+#neug-product-home .np-blog-card-cover img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+#neug-product-home .np-blog-card:hover .np-blog-card-cover img { transform: scale(1.018); }
+.dark #neug-product-home .np-blog-card-cover { background: #e9edf2; }
+.dark #neug-product-home .np-blog-card-cover img { filter: brightness(.82) contrast(1.08); }
 #neug-product-home .np-blog-card-body { padding: 22px; }
 #neug-product-home .np-blog-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--np-faint); font: 650 10px/1.4 ui-monospace, monospace; letter-spacing: .04em; text-transform: uppercase; }
 #neug-product-home .np-blog-meta span:first-child { color: var(--np-blue); }
