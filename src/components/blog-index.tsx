@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import type { BlogPost } from "@/lib/blog";
 import { localePrefix, type SiteLocale } from "@/lib/site";
@@ -42,8 +43,22 @@ export function BlogIndex({ posts, locale }: { posts: BlogPost[]; locale: SiteLo
         ))}
       </div>
       <div className="np-blog-grid">
-        {visiblePosts.map((post) => (
+        {visiblePosts.map((post, index) => (
           <article className="np-blog-card" key={post.slug}>
+            <Link
+              className="np-blog-card-cover"
+              href={`${prefix}/blog/${post.slug}/`}
+              aria-label={post.title}
+            >
+              <Image
+                src={post.cover}
+                alt=""
+                width={1916}
+                height={821}
+                priority={index < 3}
+                sizes="(max-width: 680px) calc(100vw - 48px), (max-width: 920px) calc(50vw - 40px), 374px"
+              />
+            </Link>
             <div className="np-blog-card-body">
               <div className="np-blog-meta">
                 <span>{labels[post.category]}</span>
