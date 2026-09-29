@@ -7,11 +7,11 @@
 <language>en-US</language>
 <atom:link href="https://neug.io/feed.xml" rel="self" type="application/rss+xml" />
 <item>
-<title>From a Lean Proof to Real-Graph Benchmarks: Implementing BMSSP in NeuG</title>
+<title>From Theory to Real-Graph Benchmarks: Implementing BMSSP in NeuG</title>
 <link>https://neug.io/blog/bmssp-shortest-path/</link>
 <guid isPermaLink="true">https://neug.io/blog/bmssp-shortest-path/</guid>
 <pubDate>Tue, 29 Sep 2026 00:00:00 GMT</pubDate>
-<description>Vals AI used Lean to verify a theoretically faster shortest-path algorithm. We took the next engineering step: implement this line of work in a graph database and measure it on public datasets.</description>
+<description>Inspired by recent progress on faster shortest paths, we implemented BMSSP—the STOC 2025 Best Paper algorithm—in NeuG and benchmarked it against frontier and Dijkstra on public Graphalytics datasets.</description>
 <category>NeuG</category><category>engineering</category><category>GDS</category><category>SSSP</category><category>graph algorithms</category><category>benchmark</category>
 </item>
 <item>
