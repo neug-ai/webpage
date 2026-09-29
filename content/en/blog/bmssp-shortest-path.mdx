@@ -11,12 +11,14 @@ tags:
   - SSSP
   - graph algorithms
   - benchmark
-cover: "/images/blog/bmssp-shortest-path/02-sorting-barrier.png"
+cover: "/images/blog/bmssp-shortest-path/banner-v2.png"
 locale: en
 translationKey: bmssp-shortest-path
 draft: false
 aliases: []
 ---
+
+![BMSSP shortest-path exploration across a directed graph](/images/blog/bmssp-shortest-path/banner-v2.png)
 
 On September 20, 2026, Vals AI published
 [“A Faster Shortest Path Algorithm”](https://www.vals.ai/blogs/faster-shortest-path-algorithm).
@@ -50,7 +52,7 @@ We integrated the BMSSP ideas into the NeuG GDS extension and evaluated them on 
 
 Those numbers have an important scope. Both graphs converged on the adaptive implementation’s frontier fast path and never entered the recursive fallback. NeuG’s current Dijkstra core is also serial. The measurements compare the current NeuG implementations; they are not a full experimental reproduction of the paper’s asymptotic bound.
 
-![Timeline from Dijkstra to breaking the sorting barrier](/images/blog/bmssp-shortest-path/01-history.png)
+![Timeline from Dijkstra to breaking the sorting barrier](/images/blog/bmssp-shortest-path/en/01-history.png)
 
 > Figure 1: Dijkstra conceived the algorithm in 1956 and published it in 1959; the Fibonacci heap conference paper appeared in 1984. A randomized algorithm crossed the sorting barrier for undirected graphs in 2023. The 2025 result extended the breakthrough to directed graphs and made it deterministic.
 
@@ -60,7 +62,7 @@ Dijkstra’s execution is familiar: insert candidate vertices into a minimum-pri
 
 SSSP only requires the distance from the source to every vertex. The paper exploits that distinction. Instead of making all candidates compete to become the next global minimum, it divides the frontier into bounded distance layers and maintains only the partial order needed by later computation.
 
-![Dijkstra’s total ordering compared with BMSSP’s layered partial ordering](/images/blog/bmssp-shortest-path/02-sorting-barrier.png)
+![Dijkstra’s total ordering compared with BMSSP’s layered partial ordering](/images/blog/bmssp-shortest-path/en/02-sorting-barrier.png)
 
 > Figure 2: Dijkstra continuously maintains a global minimum candidate. BMSSP keeps only the ordering required by local exploration, pivot selection, and recursive layers.
 
@@ -81,7 +83,7 @@ A theoretical algorithm can assume graph-specific data structures. A database ex
 
 We use a two-stage execution path.
 
-![NeuG adaptive BMSSP execution path](/images/blog/bmssp-shortest-path/03-adaptive-path.png)
+![NeuG adaptive BMSSP execution path](/images/blog/bmssp-shortest-path/en/03-adaptive-path.png)
 
 > Figure 3: NeuG first runs a bounded parallel frontier probe directly on the projected graph. If it converges, the distances are returned. If it has not converged after 32 rounds, the probe labels are discarded, a compact CSR is built, and execution enters recursive BMSSP followed by repair.
 
@@ -122,7 +124,7 @@ The old `implementation` option remains for compatibility but is deprecated. Sup
 
 A shortest-path bug can look plausible: one missed relaxation may change only a few values. We therefore used four layers of evidence rather than relying on a handful of hand-written examples.
 
-![BMSSP correctness evidence chain](/images/blog/bmssp-shortest-path/07-validation.png)
+![BMSSP correctness evidence chain](/images/blog/bmssp-shortest-path/en/07-validation.png)
 
 > Figure 4: Small official graphs cover the interface and reference output; randomized graphs cover edge cases; a long chain forces the fallback; the full `datagen-8_1-fb` result is compared vertex by vertex with the official SSSP output.
 
@@ -146,7 +148,7 @@ The `frontier` control is NeuG’s existing parallel SSSP implementation. It pro
 | `datagen-8_0-fb` | 1,706,561 | 107,507,376 | Undirected | 6 |
 | `datagen-8_1-fb` | 2,072,117 | 134,267,822 | Undirected | 6 |
 
-![Median SSSP latency on two Graphalytics graphs](/images/blog/bmssp-shortest-path/04-latency.png)
+![Median SSSP latency on two Graphalytics graphs](/images/blog/bmssp-shortest-path/en/04-latency.png)
 
 > Figure 5: The y-axis uses a logarithmic scale. BMSSP medians were 0.150 and 0.237 seconds; Dijkstra medians were 2.037 and 3.207 seconds.
 
@@ -155,7 +157,7 @@ The `frontier` control is NeuG’s existing parallel SSSP implementation. It pro
 | `datagen-8_0-fb` | **0.150 s** | 0.157 s | 2.037 s |
 | `datagen-8_1-fb` | **0.237 s** | 0.274 s | 3.207 s |
 
-![BMSSP improvement over frontier and Dijkstra](/images/blog/bmssp-shortest-path/05-speedup.png)
+![BMSSP improvement over frontier and Dijkstra](/images/blog/bmssp-shortest-path/en/05-speedup.png)
 
 > Figure 6: From the millisecond-rounded CSV medians, BMSSP reduced runtime relative to frontier by 4.46% and 13.50%, shown as 4.5% and 13.5%. Dijkstra/BMSSP was 13.58× and 13.53×, shown as 13.6× and 13.5×.
 
@@ -163,7 +165,7 @@ All three queries specify `concurrency: 8`, but NeuG’s current Dijkstra priori
 
 Five raw timings were retained for `datagen-8_1-fb`:
 
-![Five timed runs on datagen-8_1-fb](/images/blog/bmssp-shortest-path/06-run-stability.png)
+![Five timed runs on datagen-8_1-fb](/images/blog/bmssp-shortest-path/en/06-run-stability.png)
 
 > Figure 7: BMSSP: 0.233, 0.237, 0.254, 0.238, 0.236 seconds; frontier: 0.261, 0.274, 0.249, 0.360, 0.387 seconds; Dijkstra: 3.574, 3.202, 3.252, 3.207, 3.041 seconds. Dashed lines show medians.
 
