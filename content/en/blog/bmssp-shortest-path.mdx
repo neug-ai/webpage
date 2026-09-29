@@ -1,0 +1,251 @@
+---
+title: "From Theory to Real-Graph Benchmarks: Implementing BMSSP in NeuG"
+description: "Inspired by recent progress on faster shortest paths, we implemented BMSSP—the STOC 2025 Best Paper algorithm—in NeuG and benchmarked it against frontier and Dijkstra on public Graphalytics datasets."
+date: "2026-09-29"
+author: "NeuG Team"
+category: engineering
+tags:
+  - NeuG
+  - engineering
+  - GDS
+  - SSSP
+  - graph algorithms
+  - benchmark
+cover: "/images/blog/bmssp-shortest-path/banner-v2.png"
+locale: en
+translationKey: bmssp-shortest-path
+draft: false
+aliases: []
+---
+
+![BMSSP shortest-path exploration across a directed graph](/images/blog/bmssp-shortest-path/banner-v2.png)
+
+On September 20, 2026, Vals AI published
+[“A Faster Shortest Path Algorithm”](https://www.vals.ai/blogs/faster-shortest-path-algorithm).
+Ten Claude Opus 5.5 agents worked together for 15 hours and exchanged 733 messages, producing a new algorithm called C-HD and a formal Lean proof. For a class of sparse graphs, C-HD moves the theoretical bound forward again.
+
+The result is interesting for more than its asymptotic improvement. It also demonstrates a new research workflow: agents search for an algorithm, while the Lean kernel checks the proof. Vals AI is equally clear about what the result does not show. It was not benchmarked on large real-world graphs, and the constants in the formal construction are very large. A better theoretical bound is not yet a faster production implementation.
+
+That leaves the engineering question we care about: what happens when an asymptotically better SSSP algorithm is placed inside a real graph database and compared with existing backends on public data?
+
+We did not start with C-HD. Its proven advantage currently applies to graphs much sparser than the datasets used here, and the released artifact focuses on formal verification rather than a large-graph performance implementation.
+
+Instead, we began with BMSSP from last year’s STOC Best Paper. The work has been peer reviewed, specifies its pseudocode, data structures, and correctness invariants, and directly handles the directed graphs with non-negative real weights already supported by NeuG.
+
+## Last Year’s STOC Best Paper
+
+Edsger Dijkstra conceived his shortest-path algorithm for a 1956 demonstration of the ARMAC computer and published it in 1959. In 1984, Fredman and Tarjan introduced the Fibonacci heap at FOCS, bringing the classic bound for SSSP with non-negative real weights to `O(m + n log n)`. That remained the sparse-graph benchmark for more than four decades.
+
+In April 2025, Ran Duan, Jiayi Mao, Xiao Mao, Xinkai Shu, and Longhui Yin published
+[“Breaking the Sorting Barrier for Directed Single-Source Shortest Paths”](https://arxiv.org/abs/2504.17033).
+Their deterministic `O(m log^(2/3) n)` algorithm works on directed graphs with arbitrary non-negative real edge weights in the comparison-addition model. On sparse graphs, it is the first improvement over Dijkstra’s `O(m + n log n)` bound. The paper appeared at STOC 2025 and received the
+[Best Paper Award](https://www.sigact.sigact.hosting.acm.org/prizes/best_paper.html).
+
+The result drew attention well beyond the algorithms community. Tsinghua University published an
+[overview](https://www.tsinghua.edu.cn/info/1175/118821.htm),
+[Quanta Magazine](https://www.quantamagazine.org/new-method-is-the-fastest-way-to-find-the-best-routes-20250806/)
+ran a long feature, and
+[WIRED](https://www.wired.com/story/new-method-is-the-fastest-way-to-find-the-best-routes/)
+republished it. The central question was not whether someone had invented a faster heap. It was more basic: does finding shortest distances really require sorting every vertex by distance?
+
+We integrated the BMSSP ideas into the NeuG GDS extension and evaluated them on two LDBC Graphalytics `datagen` graphs. BMSSP reduced runtime by 4.5% and 13.5% relative to NeuG’s existing frontier backend, and was 13.6× and 13.5× faster than NeuG’s current Dijkstra backend.
+
+Those numbers have an important scope. Both graphs converged on the adaptive implementation’s frontier fast path and never entered the recursive fallback. NeuG’s current Dijkstra core is also serial. The measurements compare the current NeuG implementations; they are not a full experimental reproduction of the paper’s asymptotic bound.
+
+![Timeline from Dijkstra to breaking the sorting barrier](/images/blog/bmssp-shortest-path/en/01-history.png)
+
+> Figure 1: Dijkstra conceived the algorithm in 1956 and published it in 1959; the Fibonacci heap conference paper appeared in 1984. A randomized algorithm crossed the sorting barrier for undirected graphs in 2023. The 2025 result extended the breakthrough to directed graphs and made it deterministic.
+
+## The Barrier Is Sorting, Not Just the Priority Queue
+
+Dijkstra’s execution is familiar: insert candidate vertices into a minimum-priority queue, repeatedly remove the vertex with the smallest distance, and relax its outgoing edges. This ordering is useful, but it also computes something SSSP does not ask for: a total order in which vertices become final.
+
+SSSP only requires the distance from the source to every vertex. The paper exploits that distinction. Instead of making all candidates compete to become the next global minimum, it divides the frontier into bounded distance layers and maintains only the partial order needed by later computation.
+
+![Dijkstra’s total ordering compared with BMSSP’s layered partial ordering](/images/blog/bmssp-shortest-path/en/02-sorting-barrier.png)
+
+> Figure 2: Dijkstra continuously maintains a global minimum candidate. BMSSP keeps only the ordering required by local exploration, pivot selection, and recursive layers.
+
+The algorithm also brings Bellman–Ford back into the picture. Bellman–Ford does not require distance ordering, but repeatedly running it over the entire graph is expensive. The new algorithm performs only a bounded number of relaxations and uses the result to select pivots: entry points that represent substantial portions of shortest-path trees. It then recursively solves Bounded Multi-Source Shortest Path, or BMSSP, around those pivots.
+
+The main steps are:
+
+1. Perform a small number of Bellman–Ford relaxations to obtain a local reachable region.
+2. Select pivots that reduce the number of sources entering recursion.
+3. Pull the frontier in bounded distance batches instead of globally sorting vertices one by one.
+4. Recursively solve each bounded subproblem and merge the finalized distances.
+
+With `k = floor(log^(1/3) n)` and `t = floor(log^(2/3) n)`, the paper proves total time `O(m log^(2/3) n)`. The 2023 undirected result was randomized; this work crosses the barrier for directed graphs and is the first deterministic algorithm to cross it even for undirected graphs.
+
+## Implementing It in NeuG
+
+A theoretical algorithm can assume graph-specific data structures. A database executor starts with different constraints. NeuG already has CSR storage, property columns, and graph projections. Rebuilding a separate graph for every query can erase an algorithmic gain through additional memory traffic. The implementation must also account for cache locality, atomic updates, and thread scheduling.
+
+We use a two-stage execution path.
+
+![NeuG adaptive BMSSP execution path](/images/blog/bmssp-shortest-path/en/03-adaptive-path.png)
+
+> Figure 3: NeuG first runs a bounded parallel frontier probe directly on the projected graph. If it converges, the distances are returned. If it has not converged after 32 rounds, the probe labels are discarded, a compact CSR is built, and execution enters recursive BMSSP followed by repair.
+
+The first stage is a sparse/dense frontier probe capped at 32 rounds. With a small active set, it pushes updates out from the frontier. Once the active set exceeds 5% of all vertices, it switches to dense pull. The parallel path uses the requested `concurrency`. If the probe converges, it returns the distances without materializing another CSR.
+
+The second stage runs only when the probe does not converge. It discards the probe’s intermediate labels, reinitializes the state, builds a compact CSR, and performs pivot selection, frontier operations, and base-case recursion. A final fixed-point repair continues propagating valid relaxations until no edge can improve a distance.
+
+The repair stage protects correctness, but it also distinguishes this implementation from the paper. It prevents partially converged labels from reaching users while changing the theoretical work bound. The current implementation therefore does not carry the paper’s asymptotic complexity guarantee.
+
+Both performance datasets converged before the 32-round probe limit and never built the fallback CSR. The saved profile for `datagen-8_1-fb` used six rounds. The reported performance therefore measures the adaptive fast path; recursive BMSSP currently has correctness coverage but not a representative large performance sample.
+
+## The Entry Point Remains `sssp`
+
+There is no separate procedure name. The existing `sssp` entry point selects a backend through `algo`:
+
+```cypher
+CALL sssp('social', {
+  source: '6',
+  weight: 'weight',
+  directed: false,
+  concurrency: 8,
+  algo: 'bmssp'
+})
+YIELD node, distance
+RETURN node.id, distance;
+```
+
+Four values are supported:
+
+- `auto`: the default; uses frontier for ordinary distance queries and Dijkstra when predicates or `path` are requested.
+- `frontier`: NeuG’s existing parallel sparse/dense frontier implementation.
+- `dijkstra`: the priority-queue implementation with predicate and path-output support.
+- `bmssp`: the experimental adaptive backend described here.
+
+The old `implementation` option remains for compatibility but is deprecated. Supplying both `algo` and `implementation` is an error.
+
+## Establishing Correctness First
+
+A shortest-path bug can look plausible: one missed relaxation may change only a few values. We therefore used four layers of evidence rather than relying on a handful of hand-written examples.
+
+![BMSSP correctness evidence chain](/images/blog/bmssp-shortest-path/en/07-validation.png)
+
+> Figure 4: Small official graphs cover the interface and reference output; randomized graphs cover edge cases; a long chain forces the fallback; the full `datagen-8_1-fb` result is compared vertex by vertex with the official SSSP output.
+
+- The full `tests/test_graphalytics.py` suite reports `27 passed`. Its SSSP conformance test compares `frontier`, `dijkstra`, and `bmssp` with the same official reference output.
+- Seeded 64-vertex random graphs cover directed and undirected modes, three sources, zero-weight edges, and parallel edges. BMSSP with one and four threads matches Dijkstra.
+- A 96-vertex chain exceeds the 32-round probe limit and enters the fallback. Both serial and parallel configurations match Dijkstra.
+- All 2,072,117 vertices in `datagen-8_1-fb` were compared. The maximum absolute error was `8.88e-16`.
+
+The last value is near double-precision machine epsilon and is consistent with rounding differences caused by a different relaxation order.
+
+## Performance
+
+The benchmark machine was a MacBook Pro (Mac16,8) with a 12-core Apple M4 Pro (8 performance and 4 efficiency cores), 48 GB of memory, and macOS 15.7.9 arm64. NeuG used eight threads. Each backend ran once for warm-up and five timed times; we report the median.
+
+The query executes the complete SSSP kernel but returns only a count, avoiding Python serialization of millions of result rows. Initial `COPY FROM`, graph projection, and checkpoint creation are excluded.
+
+The `frontier` control is NeuG’s existing parallel SSSP implementation. It processes only vertices whose distance changed in the previous round, pushing when the active set is small and switching to dense pull above 5% of the graph. This is similar to parallel Bellman–Ford with an active set: easy to parallelize, but a vertex may be revisited across several rounds.
+
+| Dataset | Vertices | NeuG stored edges | Direction | Source |
+|---|---:|---:|---|---:|
+| `datagen-8_0-fb` | 1,706,561 | 107,507,376 | Undirected | 6 |
+| `datagen-8_1-fb` | 2,072,117 | 134,267,822 | Undirected | 6 |
+
+![Median SSSP latency on two Graphalytics graphs](/images/blog/bmssp-shortest-path/en/04-latency.png)
+
+> Figure 5: The y-axis uses a logarithmic scale. BMSSP medians were 0.150 and 0.237 seconds; Dijkstra medians were 2.037 and 3.207 seconds.
+
+| Dataset | BMSSP | Frontier | Dijkstra |
+|---|---:|---:|---:|
+| `datagen-8_0-fb` | **0.150 s** | 0.157 s | 2.037 s |
+| `datagen-8_1-fb` | **0.237 s** | 0.274 s | 3.207 s |
+
+![BMSSP improvement over frontier and Dijkstra](/images/blog/bmssp-shortest-path/en/05-speedup.png)
+
+> Figure 6: From the millisecond-rounded CSV medians, BMSSP reduced runtime relative to frontier by 4.46% and 13.50%, shown as 4.5% and 13.5%. Dijkstra/BMSSP was 13.58× and 13.53×, shown as 13.6× and 13.5×.
+
+All three queries specify `concurrency: 8`, but NeuG’s current Dijkstra priority-queue core is serial. The 13× gap cannot be generalized into “BMSSP is always 13× faster than parallel Dijkstra.” The frontier comparison is more informative: both use parallel graph scans, and the BMSSP fast path still used about 13.5% less time on the second graph.
+
+Five raw timings were retained for `datagen-8_1-fb`:
+
+![Five timed runs on datagen-8_1-fb](/images/blog/bmssp-shortest-path/en/06-run-stability.png)
+
+> Figure 7: BMSSP: 0.233, 0.237, 0.254, 0.238, 0.236 seconds; frontier: 0.261, 0.274, 0.249, 0.360, 0.387 seconds; Dijkstra: 3.574, 3.202, 3.252, 3.207, 3.041 seconds. Dashed lines show medians.
+
+For the first dataset, only the median was retained, not the five individual run logs. Its `run_seconds` field is therefore empty in the raw CSV; we did not fill it with estimates.
+
+## What Profiling Showed
+
+With `NEUG_BMSSP_PROFILE=1`, the implementation records probe rounds and stage latency. A near-cold run on `datagen-8_1-fb` produced:
+
+```text
+BMSSP probe profile: init_ms=5.17579 rounds=6 concurrency=8 compute_ms=283.403
+```
+
+The profiled query took about 0.311 seconds, above the 0.237-second median with extra logging disabled, so it is used only to locate stages and is not included in the performance table. The log confirms that this graph performed no CSR build, recursive call, or repair.
+
+The next useful datasets are high-diameter road networks, sparse directed graphs, and long chains. Their frontiers remain sparse for longer and are more likely to trigger the fallback. They will let us separate CSR construction, pivot search, recursive frontier work, and repair time.
+
+## What Is Still Missing
+
+The backend remains experimental for five reasons:
+
+- `OrderedFrontier` is a priority queue that retains one best key per vertex, not the full block data structure from Lemma 3.3.
+- The explicit constant-outdegree graph transformation from the paper is omitted to avoid expanding the graph on every query.
+- The fallback is currently single-threaded; most parallel benefit comes from the probe.
+- Fixed-point repair guarantees correctness but does not satisfy the paper’s original work analysis.
+- Only finite, non-negative weights and distance output on unfiltered projected graphs are supported.
+
+The performance sample also contains only two graphs from the same `datagen` family. They show that this execution path merits further optimization, not that it will lead on every graph distribution.
+
+In February 2026, Duan, Mao, Shu, and Yin published
+[follow-up work](https://arxiv.org/abs/2602.07868) that further improves directed SSSP complexity. Theory did not stop after crossing the sorting barrier, and neither should the implementation work.
+
+## Reproducing the Experiment
+
+The benchmark script does not compile NeuG. First follow the
+[build instructions in the benchmark README](https://github.com/longbinlai/neug/blob/codex/bmssp-graphalytics-report/extension/gds/benchmark/README.md#build-the-current-gds-extension)
+to build the Python binding and `neug_gds_extension` from the current checkout, then set the documented `PYTHONPATH`. Otherwise Python may load an older installed NeuG package.
+
+The two Graphalytics graphs, official reference outputs, SHA-256 manifest, and ETL script are available from public OSS storage. The download script verifies and extracts the archives and creates the `.csv` aliases used by NeuG `COPY FROM`:
+
+```bash
+python3 extension/gds/benchmark/fetch_graphalytics_data.py \
+  --dataset all \
+  --output ./graphalytics-data
+```
+
+Run all three backends:
+
+```bash
+python3 extension/gds/benchmark/graphalytics_bench.py \
+  --data-root ./graphalytics-data/datagen \
+  --db-root ./neug-bench-db \
+  --dataset datagen-8_1-fb \
+  --concurrency 8 \
+  --warmup-runs 1 \
+  --runs 5 \
+  --sssp-only \
+  --sssp-algos bmssp,frontier,dijkstra
+```
+
+Resources:
+
+- [NeuG implementation branch](https://github.com/longbinlai/neug/tree/codex/bmssp-graphalytics-report)
+- [Full technical report](https://github.com/longbinlai/neug/blob/codex/bmssp-graphalytics-report/extension/gds/benchmark/BMSSP_TECHNICAL_REPORT.md)
+- [Raw result CSV](https://github.com/longbinlai/neug/blob/codex/bmssp-graphalytics-report/extension/gds/benchmark/bmssp_results.csv)
+- [Public data and checksums](https://neug.oss-cn-beijing.aliyuncs.com/datasets/ldbc-graphalytics/SHA256SUMS)
+
+## Conclusion
+
+The useful idea here is not simply replacing one Dijkstra data structure with another. It is bringing a claim from the paper into a database executor: shortest paths require exact distances, but not necessarily a complete ordering of those distances.
+
+NeuG’s current answer is adaptive execution. Low-diameter graphs first use a parallel probe over the existing storage layout. Only graphs that do not converge there pay the cost of constructing data for recursive BMSSP. The two measured graphs show a fast-path benefit, while the 96-vertex chain demonstrates correctness through the fallback. The next step is to turn the fallback’s correctness evidence into performance evidence on large graphs that actually exercise it.
+
+## References
+
+1. Vals AI, [A Faster Shortest Path Algorithm](https://www.vals.ai/blogs/faster-shortest-path-algorithm), 2026-09-20.
+2. Ran Duan, Jiayi Mao, Xiao Mao, Xinkai Shu, Longhui Yin, [Breaking the Sorting Barrier for Directed Single-Source Shortest Paths](https://arxiv.org/abs/2504.17033), 2025.
+3. [STOC 2025 proceedings version](https://doi.org/10.1145/3717823.3718179), pp. 36–44.
+4. Michael L. Fredman, Robert Endre Tarjan, [Fibonacci Heaps and Their Uses in Improved Network Optimization Algorithms](https://doi.org/10.1109/SFCS.1984.715934), FOCS 1984.
+5. Edsger W. Dijkstra, [A Note on Two Problems in Connexion with Graphs](https://doi.org/10.1007/BF01386390), 1959.
+6. Tsinghua University, [Duan Ran’s team receives the STOC 2025 Best Paper Award](https://www.tsinghua.edu.cn/info/1175/118821.htm).
+7. Ben Brubaker, [New Method Is the Fastest Way To Find the Best Routes](https://www.quantamagazine.org/new-method-is-the-fastest-way-to-find-the-best-routes-20250806/), Quanta Magazine, 2025-08-06.
+8. Ran Duan, Xiao Mao, Xinkai Shu, Longhui Yin, [A Faster Directed Single-Source Shortest Path Algorithm](https://arxiv.org/abs/2602.07868), 2026.
