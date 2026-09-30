@@ -1,6 +1,7 @@
-# 模式匹配扩展
+# 模式匹配
 
-自 NeuG **v0.2.0** 起，我们引入了模式匹配（Pattern Match）扩展，该扩展支持在当前 NeuG 图上执行子图模式匹配。
+自 NeuG **v0.2.0** 起，我们引入了模式匹配扩展，它提供了对当前 NeuG 图的子图模式匹配。
+
 
 ```cypher
 CALL PATTERN_MATCH(Pattern, size, is_sampled)
@@ -8,11 +9,11 @@ CALL PATTERN_MATCH(Pattern, size, is_sampled)
 RETURN *;
 ```
 
-- **`Pattern`** — 待匹配的图模式，例如 `'(a:Person)-[r:person_knows_person]->(b:Person)'`。其语法采用 Cypher 的节点/关系表示法。它仅是一个模式，而非完整查询：每个节点和关系都必须显式写出（但允许内联 `WHERE` 子句，用于对节点或关系的属性进行过滤）。
-- **`size`**（可选）— 一个正整数（`>= 1`）。在精确匹配模式下，它表示提前终止的界限（即找到前 `size` 个匹配结果后即停止）；在采样匹配模式下，它表示采样规模。
-- **`is_sampled`**（可选）— 一个布尔值，用于选择匹配算法：`false` 表示精确匹配，`true` 表示采样匹配（FaSTest）。该参数必须明确写作 `true` 或 `false`（不可写作 `0` 或 `1`）。
+- **`Pattern`** — 要匹配的图模式，例如 `'(a:Person)-[r:person_knows_person]->(b:Person)'`。它使用 Cypher 节点/边语法。它仅仅是一个模式，而不是一个完整的查询：每个节点和边都必须显式写出，尽管允许内联 `WHERE` （用于节点/边属性过滤器）。
+- **`size`** *(可选)* — 一个正整数（`>= 1`）。在精确模式下，它是提前终止界限（在找到前 `size` 个匹配后停止）；在采样模式下，它是样本量。
+- **`is_sampled`** *(可选)* — 一个用于选择算法的布尔值：`false` → 精确匹配，`true` → 采样匹配（FaSTest）。必须写为 `true` / `false`（而不是 `0` / `1`).
 
-`size` 和 `is_sampled` 需配合使用。若两者均省略，则执行针对全部匹配结果的普通精确匹配：
+`size` 和 `is_sampled` 需成对使用。省略两者则对所有匹配进行纯精确匹配：
 
 ```cypher
 CALL PATTERN_MATCH('(a:Person)-[r:person_knows_person]->(b:Person)') RETURN *;

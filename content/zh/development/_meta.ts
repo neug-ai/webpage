@@ -1,6 +1,7 @@
 export default {
-  dev_guide: "开发指南",
+  dev_guide: "开发 NeuG",
+  develop_extension: "开发扩展",
+  ai_coding: "AI辅助开发",
   code_style_guide: "代码风格指南",
-  ai_coding: "AI 编程",
-  error_code: "错误代码",
+  error_code: "NeuG 错误码",
 };
