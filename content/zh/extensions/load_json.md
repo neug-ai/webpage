@@ -1,8 +1,8 @@
-# JSON 扩展
+# JSON
 
-> **版本说明：** 自 v0.1.2 版本起，我们将 JSON 支持作为内置功能，因此在使用前无需安装 JSON 扩展。对于 NeuG 版本 < 0.1.2，JSON 支持通过扩展提供，需要在使用前执行 `INSTALL json; LOAD json;`。详情请参见 [LOAD FROM 参考](../data_io/load_data)。
+> **版本说明：** 自 v0.1.2 版本起，JSON 支持已成为内置功能，因此您在使用前无需安装 JSON 扩展。对于 NeuG 版本 < 0.1.2，JSON 支持通过扩展提供，并且需要 `INSTALL json; LOAD json;` 才能使用。有关详细信息，请参阅 [LOAD FROM 参考](../data_io/load_data)。
 
-JSON（JavaScript 对象表示法）是一种广泛使用的数据格式，用于 Web API 和数据交换。NeuG 通过扩展框架支持 JSON 文件导入功能。加载 JSON 扩展后，用户可以直接使用 `LOAD FROM` 语法加载外部 JSON 文件，或使用 `COPY TO` 语法将查询结果导出到 JSON 文件。
+JSON（JavaScript 对象表示法）是 Web API 和数据交换中广泛使用的数据格式。NeuG 通过扩展框架支持 JSON 文件导入功能。加载 JSON 扩展后，用户可以直接使用 `LOAD FROM` 语法，或使用 `COPY TO` 语法。
 
 ## 安装扩展
 

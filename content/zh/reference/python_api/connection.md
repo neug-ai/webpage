@@ -69,19 +69,23 @@ def has_active_transaction() -> bool
 
 <a id="neug.connection.Connection.begin_transaction"></a>
 
-### begin_transaction
+### begin\_transaction
 
 ```python
 def begin_transaction(read_only: bool = False)
 ```
 
-开始一个显式的嵌入式 AP 事务。
+开始一个显式嵌入式 AP 事务。
 
 - **参数：**
-  - `read_only`（bool）：若为 `True`，则固定一个只读视图并拒绝写入操作。默认情况下，将启动一个具有私有写时复制（COW）视图的读写事务。
+  - `read_only` (bool)
+    当为 true 时，固定一个读视图并拒绝写入。默认情况下，启动一个带有私有写时复制（COW）视图的读写事务。
 
-- **异常：**
-  - **RuntimeError**：如果连接已关闭，或当前已存在活动事务。
+- **引发：**
+  - **RuntimeError**
+    如果连接已关闭或已经存在活动事务。
+
+<a id="neug.connection.Connection.commit"></a>
 
 ### commit
 
@@ -89,7 +93,13 @@ def begin_transaction(read_only: bool = False)
 def commit()
 ```
 
-提交当前的显式事务。仅可回滚的事务必须执行回滚操作，而不能提交。
+提交活动显式事务。
+
+自 v0.2.1 起，持久化 ``COPY FROM`` 语句——可以
+与普通 DML/DDL 和 ``COPY TEMP`` 在同一个读写
+事务中组合——通过单个检查点发布。其他写入
+使用普通的逻辑 WAL 提交路径。仅可回滚事务
+必须改为回滚。
 
 <a id="neug.connection.Connection.rollback"></a>
 
@@ -111,19 +121,32 @@ def execute(query: str,
             parameters: Optional[Dict[str, Any]] = None) -> QueryResult
 ```
 
-在数据库上执行 Cypher 查询。用户可在单个字符串中指定多个查询，各查询之间以分号分隔。这些查询将按其在字符串中出现的顺序依次执行。若其中任一查询执行失败，则整个执行过程将回滚。
+在数据库上执行 cypher 查询。用户可以在单个字符串中指定多个查询，
+用分号分隔。查询将按指定的顺序执行。
+如果任何查询失败，整个执行将被回滚。
+如果查询是 DDL 查询，例如 `CREATE NODE TABLE`, `CREATE REL TABLE`, `DROP TABLE` 等，数据库将
+进行相应的修改。
 
-若查询为 DDL（数据定义语言）语句，例如 `CREATE NODE TABLE`、`CREATE REL TABLE`、`DROP TABLE` 等，数据库结构将相应地被修改。
+有关查询语法的详细信息，请参阅 cypher 手册文档。
+查询的结果将作为 `QueryResult` 对象返回，该对象包含
+查询的结果和查询的元数据。
+QueryResult 对象类似于迭代器，提供遍历结果的方法，
+例如 `__iter__` 和 `__next__`。
 
-有关查询语法的详细信息，请参阅 Cypher 手册文档。查询结果将以 `QueryResult` 对象形式返回，该对象包含查询结果本身及其元数据。`QueryResult` 对象具有迭代器行为，提供如 `__iter__` 和 `__next__` 等方法，用于遍历查询结果。
+如果查询是 DDL 或 DML 查询，结果将是一个空的 `QueryResult` 对象。
 
-若查询为 DDL 或 DML（数据操作语言）语句，则返回的 `QueryResult` 对象为空。
+在显式事务中，到达数据库引擎并
+失败的查询会使事务变为仅可回滚状态。调用 `rollback()` 以执行
+另一个查询。在执行前发生的客户端验证错误，例如
+无效的 `access_mode`，不会改变事务状态。
 
-在显式事务中，若某查询已送达数据库引擎但执行失败，则该事务将进入“仅可回滚”（rollback-only）状态。此时，在执行下一条查询前必须先调用 `rollback()`。而发生在执行前的客户端校验错误（例如指定了无效的 `access_mode`）则不会改变当前事务的状态。
+某些 cypher 查询可以改变数据库的状态，例如 `CREATE NODE TABLE`, `INSERT`,
+`UPDATE`, `DELETE` 等。其他查询，例如 `MATCH(n) RETURN n.id`，不会改变
+数据库的状态，但会返回查询的结果。
 
-部分 Cypher 查询会改变数据库状态，例如 `CREATE NODE TABLE`、`INSERT`、`UPDATE`、`DELETE` 等；而其他查询（如 `MATCH(n) RETURN n.id`）则不会改变数据库状态，仅返回查询结果。
-
-若数据库以只读模式（`read-only mode`）打开，则任何 DDL 或 DML 查询均会抛出异常。若数据库以读写模式（`read-write mode`）打开，则所有查询均可执行，且数据库状态将随之更新。
+如果数据库以只读模式打开，任何 DDL 或 DML 查询都会引发异常。
+如果数据库以读写模式打开，则可以执行所有查询，并且数据库的状态将
+相应地改变。
 
 ```python
 
@@ -138,27 +161,31 @@ def execute(query: str,
     >>> for record in res:
     >>>    print(record)
     >>> res = conn.execute('MATCH(p:Person)-[:KNOWS]->(q:Person) RETURN p.id, q.id LIMIT 10;')
-    >>> # 提交带参数的查询
+    >>> # submitting query with parameters
     >>> res = conn.execute(
         'MATCH (n:Person) WHERE n.id = $id RETURN n.name', access_mode='r', parameters={'id': 12345})
 
 ```
 
-- **参数说明：**
-  - `query`（str）
-    待执行的查询语句。
-  - `access_mode`（str）
-    查询的访问模式。可取值为 `read(r)`（只读）、`insert(i)`（仅插入）、`update(u)`（更新，含删除）或 `schema(s)`（模式修改）。用户应为查询指定正确的访问模式，以确保数据库一致性。若未指定 `access_mode`，NeuG 将根据查询文本自动推断。支持的访问模式包括：
-    - `read`、`r`、`READ`、`R`：用于只读查询；
-    - `insert`、`i`、`INSERT`、`I`：用于仅插入查询；
-    - `update`、`u`、`UPDATE`、`U`：用于更新查询（含删除）；
-    - `schema`、`s`、`SCHEMA`、`S`：用于模式修改操作。
-  - `parameters`（dict[str, Any] | None）
-    查询中使用的参数。该参数应为字典类型，键为参数名，值为对应参数值。若无需参数，可设为 `None`。
+- **参数：**
+  - `query` (str)
+    要执行的查询。
+  - `access_mode` (str)
+    查询的访问模式。可以是 `read(r)`, `insert(i)`, `update(u)`（包括删除），
+    或 `schema(s)` 用于模式修改。用户应为查询指定正确的访问模式
+    以确保数据库的正确性。如果未指定访问模式，则从
+    查询文本中推断。支持的访问模式包括：
+    - `read`,`r`,`READ`,`R`：用于只读查询
+    - `insert`,`i`,`INSERT`,`I`：用于仅插入查询
+    - `update`,`u`,`UPDATE`,`U`：用于更新查询（包括删除）
+    - `schema`,`s`,`SCHEMA`,`S`：用于模式修改操作
+  - `parameters` (dict[str, Any] | None)
+    查询中要使用的参数。参数应为一个字典，其中键为
+    参数名称，值为参数值。如果不需要参数，可以将其设置为 None。
 
-- **返回值：**
-  - `query_result`（QueryResult）
-    查询执行结果。
+- **返回：**
+  - `query_result` (QueryResult)
+    查询的结果。
 
 <a id="neug.connection.Connection.get_schema"></a>
 

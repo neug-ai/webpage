@@ -1,8 +1,8 @@
 # 安装
 
-NeuG 可在现代 Linux 和 macOS 系统上运行，并支持 x86 和 ARM 架构。对于 Windows 用户，我们建议使用 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)。
+NeuG 可在现代 Linux、macOS 和 Windows 系统上运行。Linux 和 macOS 软件包同时提供 x86_64 和 ARM64 架构版本；Windows 软件包提供 x86_64 和 ARM64 版本（自 v0.2.1 起）——请注意，Windows ARM64 上的原生 Python 支持需要 Python 3.11 或更高版本。
 
-NeuG 支持多种语言绑定。请选择下方您偏好的语言以开始使用。
+NeuG 支持多种语言绑定。请在下方选择您首选的语言以开始使用。
 
 import { Tabs } from 'nextra/components'
 
@@ -80,10 +80,10 @@ pip install --upgrade neug
 npm install @graphscope-neug/neug
 ```
 
-或者从本地 tarball 安装：
+或者从本地 tar 包安装：
 
 ```bash
-npm install /path/to/neug-0.2.0.tgz
+npm install /path/to/neug-0.2.1.tgz
 ```
 
 ### 验证安装
@@ -163,6 +163,14 @@ cmake .. -DCMAKE_PREFIX_PATH=/opt/neug
 </Tab>
 
 </Tabs>
+
+## Windows 注意事项
+
+Windows wheel 包（x86_64 和 ARM64，自 v0.2.1 起）目前发布时未包含 HTTP 服务器和动态加载扩展：
+
+- **服务模式不可用。** `Database.serve()` 抛出 `RuntimeError: HTTP server is not enabled in this build.` 一个 [`Session`](../../reference/python_api/session) 在 Windows 上仍可连接到运行在 Linux 或 macOS 上的远程 NeuG 服务。
+- **扩展不可用。** `INSTALL`/`LOAD` 不适用于诸如 `vector_search`, `fts`, `parquet`, `httpfs` 和 `gds`，因此向量索引、全文索引、Parquet I/O 和 GDS 算法在 Windows 上不可用（请参阅[扩展](../../extensions/index)）。内置的 CSV 和 JSON 导入/导出不受影响。
+- 如果需要在 Windows 机器上使用这些功能，请在 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 
 ## 故障排除
 

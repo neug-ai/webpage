@@ -1,47 +1,59 @@
-# 向量搜索扩展
+# 向量搜索
 
-自 NeuG v0.2.0 起，NeuG 通过专用的 `vector_search` 扩展提供向量搜索能力。
+自 NeuG v0.2.0 起，NeuG 通过专用的 `vector_search` 扩展。
 
-有关所有索引类型（包括检查、事务与恢复）所共用的语法和保障机制，请参阅 [存储索引](../storage_index/index.md)。
+有关所有索引类型共享的语法和保证（包括检查、
+事务和恢复），请参阅[存储索引](../storage_index/index.md)。
 
-向量搜索扩展通过融合向量存储、距离计算以及基于 HNSW 的近似最近邻（ANN）索引，实现对图数据的高效相似性搜索。
+向量搜索扩展通过结合向量存储、距离计算和基于 HNSW 的近似最近邻 (ANN) 索引，实现了对图数据的高效相似性搜索。
 
 .. warning::
 
-   **余弦 HNSW 索引创建默认会覆写向量数据**
+   **默认情况下，创建余弦 HNSW 索引会覆盖向量数据**
 
-   创建余弦 HNSW 索引时，默认启用 ``cosine_normalize = true``。
-   NeuG 可能永久性地将被索引属性中的每个现有值替换为其 L2 归一化后的值。
-   原始向量及其模长将永久丢失，且无法恢复（即使执行 ``DROP INDEX`` 后亦不可恢复）。
+   创建余弦 HNSW 索引默认使用 ``cosine_normalize = true``。
+   NeuG 可能会将索引属性中的每个现有值永久替换
+   为其 L2 归一化值。原始向量及其模长将
+   丢失且无法恢复，即使在 ``DROP INDEX`` 之后。
 
-   若需保留现有属性值，请显式设置 ``cosine_normalize = false``。在此模式下，您须自行确保所有现有及未来新增的向量均为合法的 L2 归一化向量。
+   为了保留现有的属性值，请显式设置
+   ``cosine_normalize = false``. 在该模式下，您需要负责确保
+   每个现有和未来的向量都是有效的 L2 归一化向量。
 
-   ``cosine_normalize`` 仅适用于余弦 HNSW 索引；对内积（IP）或 L2 HNSW 索引无任何影响，后者始终保留原始向量。NeuG 不支持也不建议对该选项用于 IP/L2 数据的归一化处理，因为这将导致模长信息丢失，并改变距离语义。
+   ``cosine_normalize`` 仅适用于余弦 HNSW 索引。它对保留原始向量的 IP 或 L2 HNSW 索引没有影响。NeuG 不支持
+   或建议使用此选项来归一化 IP/L2 数据，因为这样做
+   会丢弃模长信息并改变距离语义。
 
-主要特性包括：
+主要功能包括：
 
 - **可选的向量搜索扩展**
-  - 向量搜索功能通过专用的 `vector_search` 扩展提供。
-  - 用户可根据自身需求安装并启用该扩展。
+  - 向量搜索通过专用的 `vector_search` 扩展。
+  - 用户可以根据其需求安装并启用此扩展。
 
 - **原生向量数据类型支持**
-  - 向量以定长 `ARRAY` 列形式存储。
-  - 当前支持稠密 FP32 向量。
+  - 向量使用固定长度的 `ARRAY` 列。
+  - 目前支持稠密 FP32 向量。
 
-- **多种距离度量方式**
-  - L2 距离返回 zvec 所采用的平方欧氏距离；数值越小，表示向量越相似。
-  - 余弦距离衡量两个向量方向上的差异；数值越小，表示其方向越接近。
-  - 内积衡量向量的方向对齐程度与模长大小；数值越大，表示向量越相似。
+- **多种距离度量**
+  - L2 距离返回 zvec 使用的平方欧氏距离；值越
+    小表示向量越相似。
+  - 余弦距离衡量两个向量之间的方向差异；
+    值越小表示它们的方向越相似。
+  - 内积衡量向量的对齐程度和模长；值越
+    大表示向量越相似。
+
 
 - **基于 HNSW 的近似最近邻搜索**
-  - 通过 `HNSWIndex` 支持高效的 Top-K 近似最近邻搜索。
-  - 提供高性能的向量相似性检索能力。
+  - 通过 `HNSWIndex``。
+  - 提供高性能的向量相似性检索。
 
 - **在线索引维护**
-  - `HNSWIndex` 同时支持：
+  - `HNSWIndex`` 支持以下两种操作：
     - 批量索引构建
-    - 增量式索引更新
-  - 在导入或更新数据时，对应的 HNSW 索引将自动更新。
+    - 增量索引更新
+  - 当导入或更新数据时，相应的 HNSW 索引会自动更新。
+
+---
 
 ## 向量属性
 
@@ -60,17 +72,17 @@ NeuG 使用固定长度的 `ARRAY` 列来表示向量属性。
 
 ### 创建向量属性
 
-您可以通过在节点类型的模式中定义一个固定长度的数组属性来创建向量属性。
+您可以通过在节点类型模式中定义固定长度数组属性来创建向量属性。
 
-以下示例创建了一个节点类型，包含：
+以下示例创建一个具有以下内容的节点类型：
 
-- 主键列 `id`
-- FP32 向量列 `vec`
+- 一个主键列 `id`
+- 一个 FP32 向量列 `vec`
 - 向量维度 = 4
 
 ```cypher
-// 使用维度为 4 的定长 FLOAT 数组作为向量列
-// 主键与向量维度在 DDL 中一并声明
+// Fixed-length FLOAT array with dimension=4 as vector column
+// Primary key and vector dimension are declared together in DDL
 CREATE NODE TABLE vector_node (
     id INT64,
     vec FLOAT[4],
@@ -78,7 +90,29 @@ CREATE NODE TABLE vector_node (
 );
 ```
 
-若未指定默认值，则向量属性将被隐式初始化为 `[0.0, 0.0, 0.0, ...]`，即每个向量维度对应一个 FP32 零值。这可能导致包含默认向量的节点出现在向量相似性查询结果中。
+如果未指定默认值，向量属性将被隐式初始化为 `[0.0, 0.0, 0.0, ...]`，每个向量维度对应一个 FP32 零值。这
+可能导致包含默认向量的节点出现在向量相似性
+查询结果中。
+
+为了避免依赖隐式零向量，请显式声明一个适合应用程序的默认值。NeuG 支持 `repeat(unit, count)`
+用于高维 LIST 和 ARRAY 默认值，因此在编译查询时无需单独编写或展开重复值。
+
+自 v0.2.1 起，`repeat(unit, count)` 可用于向量属性默认值。
+
+第一个参数是要重复的 LIST 或 ARRAY 单元，第二个参数
+是其重复次数。有关约束和更多使用详情，请参阅
+DDL 文档中的[属性默认值](../cypher_manual/ddl_clause.md#property-default-values)。
+
+例如，此定义将每个省略的 `vec` 值初始化为
+四维向量 `[-1.0, -1.0, -1.0, -1.0]`:
+
+```cypher
+CREATE NODE TABLE vector_node_with_default (
+    id INT64,
+    vec FLOAT[4] DEFAULT repeat([-1.0], 4),
+    PRIMARY KEY (id)
+);
+```
 
 ### 删除向量属性
 
@@ -97,15 +131,26 @@ DROP TABLE vector_node;
 
 ### 修改向量属性
 
-与其他属性类似，向量属性也可通过 `ALTER TABLE` 语句添加到节点类型中。
+与其他属性类似，向量属性可以添加到节点类型
+通过 `ALTER TABLE`。
 
 示例：
 
 ```cypher
-// 添加向量列
+// Add vector column
 ALTER TABLE vector_node
 ADD IF NOT EXISTS vec2 FLOAT[4];
 ```
+
+已添加的向量属性也可以使用重复默认值。现有节点
+在添加该属性时会接收到展开的默认值：
+
+```cypher
+ALTER TABLE vector_node
+ADD IF NOT EXISTS vec2 FLOAT[4] DEFAULT repeat([-1.0, 0.0], 2);
+```
+
+---
 
 ## 加载向量数据
 
@@ -348,6 +393,72 @@ LIMIT 3;
 ```
 
 > 注意：未显式赋值的向量属性将使用隐式的全零向量（all-zero vector），因此可能出现在相似性搜索结果中。详情请参阅[创建向量属性](#create-vector-property)。
+
+#### Limit 和 Skip
+
+HNSW 索引扫描需要最近邻查询同时具备兼容的
+距离排序和由 `LIMIT`。对于 L2 和余弦距离使用升序
+排列，对于内积使用降序排列。
+
+`LIMIT` 可以是整数字面量、常量整数表达式或动态
+参数。有关范围约束和动态参数规则，请参阅通用
+[LIMIT 和 SKIP](../cypher_manual/query_clauses/limit_clause.md) 文档。
+以下查询符合 HNSW 索引扫描优化的条件：
+
+```cypher
+MATCH (n:vector_node)
+RETURN n.id,
+       vector_distance_l2(n.vec, $query_vector) AS distance
+ORDER BY distance ASC
+LIMIT $result_limit;
+```
+
+`SKIP ... LIMIT ...` 也具有有限的上限。NeuG 最多请求
+`skip + limit` 个来自 HNSW 的候选项，然后返回请求的窗口：
+
+```cypher
+MATCH (n:vector_node)
+RETURN n.id,
+       vector_distance_l2(n.vec, $query_vector) AS distance
+ORDER BY distance ASC
+SKIP $row_offset
+LIMIT $page_size;
+```
+
+例如，应用程序可以在执行时绑定所有三个参数：
+
+```python
+statement = """
+MATCH (n:vector_node)
+RETURN n.id,
+       vector_distance_l2(n.vec, $query_vector) AS distance
+ORDER BY distance ASC
+SKIP $row_offset
+LIMIT $page_size
+"""
+
+result = connection.execute(
+    statement,
+    parameters={
+        "query_vector": [0.1, 0.2, 0.3, 0.4],
+        "row_offset": 10,
+        "page_size": 10,
+    },
+)
+```
+
+一个 `ORDER BY ... SKIP` 查询如果没有 `LIMIT` 没有有限的上限，因此
+不符合 HNSW 索引扫描优化的条件。它仍然有效，并
+回退到扫描向量、计算每个距离、对完整
+结果进行排序，然后应用 `SKIP`:
+
+```cypher
+MATCH (n:vector_node)
+RETURN n.id,
+       vector_distance_l2(n.vec, $query_vector) AS distance
+ORDER BY distance ASC
+SKIP $row_offset;
+```
 
 ### 图 + 向量混合搜索
 

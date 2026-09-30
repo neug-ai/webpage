@@ -55,24 +55,28 @@ db.close()
 ```
 
 ### 服务模式
-基于网络的访问 - 适合多用户应用程序：
+基于网络的访问 - 非常适合多用户应用程序：
+
+> **注意：** 服务模式目前尚未在 Windows wheels 中提供 — `db.serve()` 抛出 `RuntimeError: HTTP server is not enabled in this build.`在 Windows 上，您仍然可以使用 `Session` 连接到运行在 Linux 或 macOS 上的远程 NeuG 服务。
 
 **启动服务：**
 ```python
 import neug
 
-# 以服务形式启动 NeuG
+# 将 NeuG 作为服务启动
 db = neug.Database("/path/to/database")
 service = db.serve(host="localhost", port=10000, blocking=False, thread_num=0)
 ```
 
-`thread_num` 控制服务线程的数量。
-默认值 `0` 会根据数据库的 `max_thread_num` 自动选择。在默认数据库线程配置下，`max_thread_num` 将依据硬件并发能力自动推导；若运行时无法检测到硬件并发数，则回退为 `1`。
-服务线程可并发执行 TP 查询，但每个查询仅使用一个执行上下文和一个线程。
+`thread_num` controls the maximum number of concurrently executing service
+queries. The default `0` follows the database `max_thread_num`. With the
+default database thread setting, `max_thread_num` is resolved from hardware
+concurrency and falls back to `1` if the runtime cannot detect it.
+Each concurrently executing TP query uses one service execution slot.
 
-嵌入式（AP）查询目前为单线程；利用 `max_thread_num` 实现查询内部并行化属于后续工作。
+Embedded (AP) queries are currently single-threaded; using `max_thread_num` for intra-query parallelism is future work.
 
-**从客户端连接：**
+**Connect from client:**
 ```python
 from neug import Session
 
@@ -257,7 +261,7 @@ semantic_results = conn.execute("""
     LIMIT 5
 """)
 
-# 查询精确关键词并使用 BM25 排序
+# 查询精确关键字并使用 BM25 排序
 keyword_results = conn.execute("""
     MATCH (p:Person)
     RETURN p.name, bm25(p.bio, 'graph databases') AS score
@@ -270,7 +274,9 @@ print(list(keyword_results))
 print(list(conn.execute("CALL SHOW_INDEXES() RETURN *;")))
 ```
 
-图结构与两种存储索引均基于同一份数据进行维护。插入、更新和删除操作均会在同一事务中同步更新这些索引。有关索引生命周期及恢复保障的详细信息，请参阅[存储索引](../../storage_index/index)。有关完整的搜索选项，请参阅[向量搜索](../../extensions/vector_search)和[全文搜索](../../extensions/fts_search)。
+> **注意：** HNSW 和 FTS 索引需要 `vector_search` 和 `fts` 扩展，目前 Windows wheels 中尚不可用。请参阅[扩展](../../extensions/index)。
+
+图结构和这两种存储索引均基于相同的数据进行维护。插入、更新和删除操作会作为同一事务的一部分来更新索引。有关索引生命周期和恢复保证，请参阅[存储索引](../../storage_index/index)。有关完整的搜索选项，请参阅[向量搜索](../../extensions/vector_search)和[全文搜索](../../extensions/fts_search)。
 
 ### 转换结果为 Apache Arrow
 

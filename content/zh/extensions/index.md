@@ -8,19 +8,19 @@
 
 ## 可用扩展
 
-以下扩展当前已支持，或计划在 NeuG 中支持：
+NeuG 目前支持或计划支持以下扩展：
 
-| 类别            | 扩展                             | 描述                                                                 | 起始版本   |
-| --------------- | -------------------------------- | -------------------------------------------------------------------- | ---------- |
-| 数据源          | [JSON](load_json.md)                | 从 JSON 文件格式导入与导出数据（自 v0.1.2 起内置）                   | v0.1       |
-| 数据源          | [PARQUET](load_parquet.md)          | 从 PARQUET 格式文件导入与导出数据                                    | v0.1.1     |
-| 文件系统        | [HTTP/HTTPS/S3/OSS](load_httpfs.md) | 基于 HTTP/HTTPS/S3/OSS 协议提供数据源                                | v0.1.2     |
-| 图算法          | [GDS](load_gds.md)               | 图数据科学算法（PageRank、BFS、SSSP、WCC、LCC、K-Core、标签传播、Louvain、Leiden） | v0.1.3     |
-| 图查询          | [模式匹配](pattern_match.md)        | 子图模式匹配，支持精确 DAF 匹配及采样 FaSTest 匹配                    | v0.2.0     |
-| 向量搜索        | [向量搜索](vector_search.md)      | 向量距离函数及基于 HNSW 的近似最近邻搜索                             | v0.2.0     |
-| 搜索            | [全文搜索](fts_search.md)         | 基于 SQLite FTS5 索引的字符串属性 BM25 排序全文搜索                  | v0.2.0     |
+| 类别 | 扩展 | 描述 | 起始版本 |
+| --- | --- | --- | --- |
+| 数据源 | [JSON](load_json.md) | 从 JSON 文件格式导入和导出数据（自 v0.1.2 起内置） | v0.1 |
+| 数据源 | [PARQUET](load_parquet.md) | 从 PARQUET 格式文件导入和导出数据 | v0.1.1 |
+| 文件系统 | [HTTP/HTTPS/S3/OSS](load_httpfs.md) | 提供基于 HTTP/HTTPS/S3/OSS 协议的数据源 | v0.1.2 |
+| 图算法 | [GDS](load_gds.md) | 图数据科学算法（PageRank、BFS、SSSP、WCC、LCC、K-Core、标签传播、Louvain、Leiden） | v0.1.3 |
+| 图查询 | [模式匹配](pattern_match.md) | 支持精确 DAF 匹配和采样 FaSTest 匹配的子图模式匹配 | v0.2.0 |
+| 向量搜索 | [向量搜索](vector_search.md) | 向量距离函数和基于 HNSW 的近似最近邻搜索 | v0.2.0 |
+| 搜索 | [全文搜索](fts_search.md) | 使用 SQLite FTS5 索引对字符串属性进行 BM25 排序的全文搜索 | v0.2.0 |
 
-如需在 NeuG 项目树外部（将 NeuG 作为子模块）开发自定义扩展，请参阅[开发树外扩展](develop_extension.md)。
+要在 NeuG 代码库之外（将 NeuG 作为子模块）编写自定义扩展，请参阅[开发扩展](../development/develop_extension.md)。
 
 ## 使用扩展
 
@@ -28,14 +28,16 @@
 
 ### 安装扩展
 
-`INSTALL` 命令从 NeuG 官方仓库下载官方扩展到你的本地机器。NeuG 会根据你当前的操作系统自动下载相应的平台特定动态库。
+`INSTALL`命令从 NeuG 官方仓库下载官方扩展至本地机器。NeuG 会根据当前操作系统自动下载相应的平台专属动态库。
 
-关于本地下载路径，请注意以下几点：
+> **注意：** 官方扩展目前仅发布 Linux 和 macOS 版本。扩展框架在 Windows 构建中已被禁用，因此 `INSTALL` 和 `LOAD`在 Windows 上不可用。内置 JSON 支持不受影响。
 
-- 默认情况下，扩展被下载到 `<python_wheel_install_home>/extension/<extension_name>`。
-- 你可以设置 `EXTENSION_HOME` 环境变量来指定自定义下载目录。设置后，扩展将被下载到 `$EXTENSION_HOME/extension/<extension_name>`。
+关于本地下载路径，请注意以下事项：
 
-NeuG 会对下载的内容自动执行校验和验证，以检测可能因网络中断导致的使扩展无法使用的问题。如果校验和验证失败，下载的文件将被自动删除并返回错误。
+- 默认情况下，扩展会被下载至 `<python_wheel_install_home>/extension/<extension_name>`。
+- 您可以设置 `EXTENSION_HOME`环境变量以指定自定义下载目录。设置后，扩展将被下载至 `$EXTENSION_HOME/extension/<extension_name>`。
+
+NeuG 会自动对下载内容执行校验和验证，以检测因网络中断可能导致扩展无法使用的问题。如果校验和验证失败，下载的文件将被自动删除并返回错误。
 
 ```cypher
 INSTALL <extension_name>;

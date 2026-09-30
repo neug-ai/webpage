@@ -46,13 +46,19 @@ Embedded mode is the only mode that supports `LOAD FROM` and `COPY` statements:
 
 For a persistent `COPY ... FROM`, NeuG prepares and validates the imported data
 in a private cloned view. If loading or validation fails, NeuG discards that
-view and keeps the previously published database unchanged. On success, NeuG
-creates and durably publishes a checkpoint containing the import before it
-replaces the current view and reports success. This pessimistic admission plus
-publish-after-checkpoint sequence preserves atomicity and durability even for a
-large import.
+view and keeps the previously published database unchanged. In auto-commit mode,
+on success NeuG creates and durably publishes a checkpoint containing the import
+before it replaces the current view and reports success. This pessimistic
+admission plus publish-after-checkpoint sequence preserves atomicity and
+durability even for a large import. Since v0.2.1, a persistent `COPY ... FROM`
+may instead run inside an Embedded read-write explicit transaction, where the
+checkpoint is deferred to `commit()` and may cover several COPY statements and
+interleaved ordinary writes at once; see
+[Explicit Transactions](explicit_transactions.mdx).
 
 ## Service mode (TP)
+
+> **Note:** Service mode requires the HTTP server component, which is not built on Windows yet. Run the service on a Linux or macOS host (or under WSL).
 
 Service mode is designed for concurrent application requests. It uses
 multi-version concurrency control (MVCC) so reads can continue on a consistent
@@ -87,9 +93,12 @@ runtime lifecycle boundary without necessarily rewriting every object.
 
 Persistent Embedded-mode `COPY ... FROM` uses a narrower private-COW checkpoint
 path. It publishes the prepared import atomically without destructively dumping
-or reopening the live graph. `LOAD FROM`, `COPY ... TO`, and `COPY TEMP` do not
-use this persistent publication path because they do not commit durable graph
-state.
+or reopening the live graph. In auto-commit mode this publication happens before
+the statement reports success; inside an explicit read-write transaction it is
+deferred to `commit()`, which may publish several COPY statements and
+interleaved writes as one checkpoint. `LOAD FROM`, `COPY ... TO`, and `COPY TEMP`
+do not use this persistent publication path because they do not commit durable
+graph state.
 
 ## On-disk layout
 
