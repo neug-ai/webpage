@@ -118,8 +118,6 @@ Four values are supported:
 - `dijkstra`: the priority-queue implementation with predicate and path-output support.
 - `bmssp`: the experimental adaptive backend described here.
 
-The old `implementation` option remains for compatibility but is deprecated. Supplying both `algo` and `implementation` is an error.
-
 ## Establishing Correctness First
 
 A shortest-path bug can look plausible: one missed relaxation may change only a few values. We therefore used four layers of evidence rather than relying on a handful of hand-written examples.
