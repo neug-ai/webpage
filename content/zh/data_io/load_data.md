@@ -76,7 +76,7 @@ RETURN *;
 
 ### Parquet
 
-Parquet 通过 PARQUET 扩展（自 v0.1.1 起可用）支持。在一次性安装和加载后，你可以直接使用 `LOAD FROM` 来读取 `.parquet` 文件：
+Parquet 通过 PARQUET 扩展提供支持（自 v0.1.1 起可用）。一次性安装和加载后，您可以使用 `LOAD FROM` 来直接读取 `.parquet` 文件：
 
 ```cypher
 INSTALL PARQUET;
@@ -86,7 +86,7 @@ LOAD FROM "person.parquet"
 RETURN *;
 ```
 
-有关格式特定选项（`buffered_stream`、`pre_buffer`、`enable_io_coalescing`、`parquet_batch_rows`）和示例，请参见[Parquet 扩展](../extensions/load_parquet)页面，包括如何通过 `COPY TO` 将查询结果导出到 Parquet。
+请参阅 [Parquet 扩展](../extensions/load_parquet) 页面，了解特定于格式的选项（`batch_size`, `buffered_stream`, `pre_buffer`, `enable_io_coalescing`, `batch_rows`）和示例，包括如何通过 `COPY TO`.
 
 ## 关系操作
 
@@ -137,7 +137,29 @@ RETURN name, CAST(age, 'DOUBLE') AS double_age;
 
 ### WHERE 过滤
 
-使用 `WHERE` 子句过滤行。可以使用 `AND`、`OR` 和 `NOT` 组合多个条件：
+仅返回其谓词计算结果为 `true` 的行。与
+`NULL` 的比较会产生未知结果；使用 `IS NULL` 或 `IS NOT NULL` 来测试
+缺失值。布尔表达式会保留该未知结果，除非另一个
+操作数能确定结果：`NULL AND false` 为 `false`，而
+`NULL OR true` 为 `true`。
+
+谓词可以包含算术运算、类型转换和参数。例如：
+
+```cypher
+LOAD FROM "person.jsonl"
+WHERE CAST(age, 'DOUBLE') + 1 > 30
+RETURN name;
+```
+
+每个文件读取器都会接收完整的谓词。如果其后端支持该表达式，它可以在 IO 期间进行过滤；否则，它会在返回请求的
+列之前，使用 NeuG 的查询表达式对解码后的数据计算谓词。当谓词使用从
+`RETURN` 中省略的列时，过滤仍然适用。参数使用每次查询执行时提供的值。
+
+此选择由读取器决定：更改文件格式不需要
+更改查询或丢弃不支持的过滤条件。解码数据过滤
+可能比原生下推读取更多的行。
+
+使用 `WHERE` 子句。多个条件可以使用 `AND`, `OR` 和 `NOT`:
 
 ```cypher
 LOAD FROM "person.csv" (delim=',')
@@ -174,13 +196,13 @@ LIMIT 10;
 
 ## 性能选项
 
-对于大型文件，以下选项可提升读取性能：
+对于大文件，以下选项可以提高读取性能：
 
-| 选项         | 类型   | 默认值        | 描述 |
-| ------------ | ------ | -------------- | ---- |
-| `parallel`   | bool   | `false` | 启用多线程并行读取（最多使用核心数）。对 Parquet 文件启用该选项时，行组将并发扫描，但**不保证**行的原始顺序。 |
+| 选项       | 类型  | 默认值        | 描述 |
+| ------------ | ----- | -------------- | ----------- |
+| `parallel`   | bool  | `false` | 启用使用多线程（最大核心数）的并行读取。为 Parquet 文件启用时，将并发扫描行组，且**不**保留行顺序。|
 
-> **注意：** 批量读取选项（`batch_read`、`batch_size`）当前仅在 [`COPY FROM`](import_data#performance-options) 中支持，`LOAD FROM` 尚不支持。
+> **注意：** 批量读取选项（`batch_read`, `batch_rows`）目前仅在 [`COPY FROM`](import_data#performance-options) 中受支持，而不在 `LOAD FROM`。
 
 示例：
 

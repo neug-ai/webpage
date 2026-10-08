@@ -1,10 +1,16 @@
 {
-  "current": "v0.2.0",
+  "current": "v0.2.1",
   "versions": [
     {
-      "version": "v0.2.0",
-      "label": "v0.2.0 (Latest)",
+      "version": "v0.2.1",
+      "label": "v0.2.1 (Latest)",
       "isLatest": true,
+      "releaseDate": "2026-09-30"
+    },
+    {
+      "version": "v0.2.0",
+      "label": "v0.2.0",
+      "isLatest": false,
       "releaseDate": "2026-09-03"
     },
     {

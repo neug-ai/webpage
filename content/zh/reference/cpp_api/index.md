@@ -12,10 +12,10 @@ C++ API 为以下功能提供了强大的能力：
 
 ## 核心类
 
-- **[NeugDB](neug_db)** - 数据库操作的主要入口点
+- **[NeugDB](neug_db)** - 数据库操作的主入口点
 - **[Connection](connection)** - 对数据库执行 Cypher 查询
 - **[NeugDBService](service)** - 适用于高吞吐量场景的 HTTP 服务
-- **[QueryResult](query_result)** - 支持迭代器访问的查询结果容器
+- **[QueryResult](query_result)** - 支持基于游标访问的查询结果容器
 
 ## 快速开始
 
@@ -65,8 +65,8 @@ if (!result.has_value()) {
 }
 ```
 
-## 线程安全性
+## 线程安全
 
-- `NeugDB`：连接/服务注册操作是同步的；生命周期变更要求所有连接处于空闲状态
-- `Connection`：**非线程安全**；每个线程应使用独立的连接
+- `NeugDB`：连接/服务注册已同步；生命周期变更要求连接处于空闲状态
+- `Connection`：非线程安全；每个线程使用一个连接
 - `QueryResult`：线程安全（创建后为只读）

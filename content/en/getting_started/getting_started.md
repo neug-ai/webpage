@@ -54,6 +54,8 @@ db.close()
 ### Service Mode
 Network-based access - ideal for multi-user applications:
 
+> **Note:** Service mode is not available in Windows wheels yet — `db.serve()` raises `RuntimeError: HTTP server is not enabled in this build.` On Windows, you can still use `Session` to connect to a remote NeuG service running on Linux or macOS.
+
 **Start the service:**
 ```python
 import neug
@@ -63,11 +65,11 @@ db = neug.Database("/path/to/database")
 service = db.serve(host="localhost", port=10000, blocking=False, thread_num=0)
 ```
 
-`thread_num` controls the number of service threads.
-The default `0` auto-selects from the database `max_thread_num`. With the
+`thread_num` controls the maximum number of concurrently executing service
+queries. The default `0` follows the database `max_thread_num`. With the
 default database thread setting, `max_thread_num` is resolved from hardware
 concurrency and falls back to `1` if the runtime cannot detect it.
-Service threads run TP queries concurrently, but each query uses one execution context and one thread.
+Each concurrently executing TP query uses one service execution slot.
 
 Embedded (AP) queries are currently single-threaded; using `max_thread_num` for intra-query parallelism is future work.
 
@@ -264,6 +266,8 @@ print(list(semantic_results))
 print(list(keyword_results))
 print(list(conn.execute("CALL SHOW_INDEXES() RETURN *;")))
 ```
+
+> **Note:** HNSW and FTS indexes require the `vector_search` and `fts` extensions, which are not available in Windows wheels yet. See [Extensions](../../extensions/index).
 
 The graph structure and both storage indexes are maintained over the same data. Inserts, updates, and deletes update the indexes as part of the same transaction. For index lifecycle and recovery guarantees, see [Storage Indexes](../../storage_index/index). For complete search options, see [Vector Search](../../extensions/vector_search) and [Full-Text Search](../../extensions/fts_search).
 

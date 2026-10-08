@@ -1,15 +1,18 @@
 # 列表函数
 
-自 v0.2.0 版本起，NeuG 提供了用于处理类列表（list-like）值的内置函数。这些函数为在 Cypher 查询中构建、组合及操作集合值提供了常见操作。
+NeuG 提供了用于处理类列表值的内置函数。这些函数在 Cypher 查询中提供了构造、组合和操作集合值的常用操作。
 
-当前支持的列表函数汇总如下：
+当前支持的列表函数总结如下。
 
-| 函数                              | 描述                                   | 示例                                 |
-| --------------------------------- | -------------------------------------- | ------------------------------------ |
-| `list_append(list_like, element)` | 将一个元素追加到列表或数组末尾         | `RETURN list_append([1, 2], 3)`      |
-| `list_concat(left, right)`        | 连接两个列表或数组                     | `RETURN list_concat([1, 2], [3, 4])` |
+| 函数                          | 描述                              | 示例                              | 版本      |
+| --------------------------------- | ---------------------------------------- | ------------------------------------ | ------------ |
+| `list_append(list_like, element)` | 将一个元素追加到列表或数组   | `RETURN list_append([1, 2], 3)`      | 自 v0.2.0 起 |
+| `list_concat(left, right)`        | 拼接两个列表或数组         | `RETURN list_concat([1, 2], [3, 4])` | 自 v0.2.0 起 |
+| `list_contains(list, element)`    | 测试列表是否包含某个元素 | `RETURN list_contains([1, 2], 2)`    | 自 v0.2.0 起 |
+| `list_has(list, element)`         | 别名，即 `list_contains`                 | `RETURN list_has([1, 2], 2)`         | 自 v0.2.0 起 |
+| `repeat(unit, count)`             | 重复整个列表或数组单元     | `RETURN repeat([1, 2], 2)`           | 自 v0.2.1 起 |
 
-各函数所接受的参数类型、返回类型、类型推断规则及其具体行为，将在下方对应章节中详细说明。
+各函数接受的参数类型、返回类型、类型推断规则及行为将在下文相应章节中详细说明。
 
 ## `list_append`
 
@@ -114,14 +117,30 @@ RETURN list_append([], 1);
 
 #### 追加 `NULL`
 
-当输入已提供明确的元素类型时，可直接追加 `NULL`：
+当输入已经提供了具体的元素类型时，`NULL` 可以直接追加：
 
 ```cypher
 RETURN list_append([1, 2], NULL);
 // [1, 2, NULL]
 ```
 
-在此示例中，现有列表将元素类型确定为 `INT64`，返回的列表则保留所追加的 `NULL` 值。
+在此示例中，现有列表将元素类型确定为 `INT64`，并且返回的列表保留了追加的 `NULL` 值。
+
+现有 `NULL` 元素也会被保留，并且新元素会追加
+在它们之后：
+
+```cypher
+RETURN list_append([NULL], NULL);
+// [NULL, NULL]
+```
+
+如果输入列表本身是 `NULL`，则结果是 `NULL`，无论追加的
+元素是什么：
+
+```cypher
+RETURN list_append(CAST(NULL, 'INT64[]'), 3);
+// NULL
+```
 
 #### 追加兼容类型
 
@@ -251,6 +270,33 @@ RETURN list_concat([], []);
 
 当一侧具有已知的元素类型时，该类型可用于推断未指定类型的空列表的类型。
 
+#### 连接包含 `NULL`
+
+`NULL` 列表内的元素按原始顺序保留。空
+列表不贡献任何元素：
+
+```cypher
+RETURN list_concat([], [NULL]);
+// [NULL]
+```
+
+```cypher
+RETURN list_concat([1, CAST(NULL, 'INT64')], [2]);
+// [1, NULL, 2]
+```
+
+如果任一输入列表本身为 `NULL`，则整个结果为 `NULL`:
+
+```cypher
+RETURN list_concat(CAST(NULL, 'INT64[]'), []);
+// NULL
+```
+
+```cypher
+RETURN list_concat([], CAST(NULL, 'INT64[]'));
+// NULL
+```
+
 #### 连接兼容的元素类型
 
 如果两个输入具有不同但兼容的元素类型，NeuG 会将它们提升为一个公共类型：
@@ -283,6 +329,86 @@ RETURN list_concat([[1, 2]], [[3, 4], [5, 6]]);
 ```cypher
 RETURN list_concat([1], 2);
 ```
+
+## `list_contains` 和 `list_has`
+
+`list_contains(list, element)` 和 `list_has(list, element)` 等价于
+[`IN` 运算符](list_op)。这两个函数均测试 `element` 是否出现在
+`list` 并且具有相同的行为。
+
+### 语法
+
+```cypher
+list_contains(list, element)
+list_has(list, element)
+```
+
+### 示例
+
+这些函数返回 `TRUE` 当元素存在于列表中时，以及 `FALSE`
+当元素不存在时：
+
+```cypher
+RETURN list_contains([1, 2, 3], 2);
+// TRUE
+
+RETURN list_has([1, 2, 3], 4);
+// FALSE
+```
+
+### NULL 值
+
+与 `IN` 运算符一样，`list_contains` 和 `list_has` 使用三值逻辑
+当列表、被查找元素或列表中的元素为 `NULL` 时：
+
+* 一个 `NULL` 列表会产生 `NULL`。
+* 空列表会产生 `FALSE`，包括当被查找元素为
+  `NULL`。
+* 确定匹配会产生 `TRUE`，即使另一个列表元素为 `NULL`。
+* 如果没有匹配但列表包含 `NULL`，则结果为 `NULL`。
+* 如果没有匹配且列表不包含 `NULL`，则结果为 `FALSE`.
+
+```cypher
+RETURN list_contains(NULL, 2);
+// NULL
+
+RETURN list_contains([], NULL);
+// FALSE
+
+RETURN list_has([1, NULL, 3], 1),
+       list_has([1, NULL, 3], 2);
+// TRUE, NULL
+```
+
+## `repeat`
+
+自 v0.2.1 起，`repeat` 重复整个 `LIST` 或 `ARRAY` 单元指定的
+次数。展开发生在执行引擎中，而不是在
+查询编译期间。
+
+```cypher
+repeat(unit, count)
+```
+
+`unit` 必须是 `LIST` 或 `ARRAY`，且 `count` 必须是非负整数。
+结果始终是一个 `LIST`。如果 `count` 为 `0`，则结果是一个空的
+`LIST`。结果大小为 `size(unit) * count`，且必须在范围
+`[0, 65,536)`.
+
+```cypher
+RETURN repeat([1, 2], 3);
+// [1, 2, 1, 2, 1, 2]
+
+RETURN repeat([1, 2], 0);
+// []
+
+RETURN CAST(repeat([1], 4), 'INT32[4]');
+// [1, 1, 1, 1]
+```
+
+将结果转换为一个 `ARRAY`，重复后的结果长度必须与
+声明的固定长度匹配。无效的参数类型、负数计数、超大
+结果以及不兼容的结果类型会产生错误。
 
 ## 类型推断与转换
 

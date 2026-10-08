@@ -2,68 +2,68 @@
 
 **全名：** `neug::NeugDBService`
 
-面向高吞吐量场景的 NeuG 图数据库 HTTP 服务。
+面向高吞吐场景的 NeuG 数据库 HTTP 服务。
 
-`NeugDBService` 为 NeuG 图数据库提供了一层 HTTP 接口，支持通过 HTTP 远程执行查询。它管理一个基于 BRPC 的 HTTP 服务器的生命周期，该服务器通过 RESTful 端点处理 Cypher 查询、服务状态请求以及模式查询。
-此组件是 Python 中 `Database.serve()` 功能的 C++ 实现，专为高吞吐量事务处理（TP）场景设计，适用于多个客户端需并发访问数据库的情形。
+`NeugDBService` 为 NeuG 图数据库提供 HTTP 接口层，支持通过 HTTP 执行远程查询。它管理基于 BRPC 的 HTTP 服务器的生命周期，该服务器通过 RESTful 端点处理 Cypher 查询、服务状态请求和模式查询。
+这是 Python 中 `Database.serve()` 功能的 C++ 等效实现，专为需要多个客户端并发访问数据库的高吞吐事务处理 (TP) 场景而设计。
 
-**使用示例：**
+> **平台说明：** HTTP 服务器组件不在 Windows 上构建（`BUILD_HTTP_SERVER` 在 Windows 构建中被禁用），因此 `NeugDBService` 在那里不可用。请在 Linux 或 macOS（或 WSL 下）上运行该服务。
+
+**使用示例：** 
 ```cpp
 #include <neug/main/neug_db.h>
 #include <neug/server/neug_db_service.h>
 int main() {
-  // 1. 打开数据库
+  // 1. Open the database
   neug::NeugDB db;
-  db.Open("/path/to/graph", 8);  // 使用 8 个线程
-  // 2. 创建并配置服务
+  db.Open("/path/to/graph", 8);  // 8 threads
+  // 2. Create and configure service
   neug::ServiceConfig config;
   config.query_port = 10000;
   config.host_str = "0.0.0.0";
-  config.thread_num = 0;  // 自动从数据库的 max_thread_num 中选取服务线程数。
-  config.auto_compaction = true;
-  // 3. 启动 HTTP 服务
+  // 3. Start HTTP service
   neug::NeugDBService service(db, config);
   std::string url = service.Start();
-  std::cout << "服务运行于: " << url << std::endl;
-  // 4. 阻塞等待退出信号（Ctrl+C）
+  std::cout << "Service running at: " << url << std::endl;
+  // 4. Block until shutdown signal (Ctrl+C)
   service.run_and_wait_for_exit();
-  // 5. 清理资源
+  // 5. Cleanup
   db.Close();
   return 0;
 }
 ```
 
 **HTTP 端点：**
-- `POST /cypher` — 执行 Cypher 查询
-- `GET /schema` — 获取图模式
-- `GET /status` — 检查服务状态
+- `POST /cypher` - 执行 Cypher 查询
+- `GET /schema` - 检索图模式
+- `GET /status` - 检查服务状态
+- `POST /transactions` - 开始显式 TP 事务会话
+- `POST /transactions/{id}/query|commit|rollback` - 操作会话
 
-**线程安全性：** 所有公有方法均为线程安全。服务内部使用 `TpExecutionSlotPool` 高效处理并发请求。
-
-**服务线程：** `ServiceConfig::thread_num` 控制服务线程数量。默认值 `0` 表示自动从数据库的 `max_thread_num` 中选取；若显式指定，则其值不得超过数据库的 `max_thread_num`。在数据库采用默认线程配置时，`max_thread_num` 将依据硬件并发能力自动推导；若运行时无法检测到硬件并发数，则回退为 `1`。
-服务线程可并发执行 TP 查询，但每个查询仅占用一个执行槽（execution slot）和一个线程。
-
-**自动压缩（Auto Compaction）：** `ServiceConfig::auto_compaction` 控制是否在服务运行期间启用后台自动压缩线程。默认值为 `true`。
+**线程安全：** 所有公共方法都是线程安全的。该服务内部使用一个 `TpExecutionSlotPool` 来高效处理并发请求。
 
 ### 构造函数与析构函数
 
 #### `NeugDBService(neug::NeugDB &db, const ServiceConfig &config=ServiceConfig())`
 
-围绕一个已存在的数据库实例构建服务。
+围绕现有数据库实例构建一个服务。
+
+构建前需要先关闭所有现有的嵌入式连接。
 
 - **参数：**
-  - `db`：将用于处理查询的 NeuG 数据库的引用
+  - `db`：引用将处理查询的 NeuG 数据库
   - `config`
 
-- **注意事项：**
-  - 在创建服务前，数据库应已打开并处于就绪状态。
-  - 构造过程会关闭所有已存在的嵌入式连接；此时不得有任何嵌入式连接正在使用。
+- **注意：**
+  - 在创建服务之前，数据库应已打开并准备就绪
+  - 最多只能有一个 `NeugDBService` 可以与一个 `NeugDB` 实例在任何给定时间相关联。当服务被析构时，该关联将被释放。
 
 #### `~NeugDBService()`
 
 确保正确清理的析构函数。
 
-如果 HTTP 处理器管理器正在运行，则自动停止它并释放所有相关资源。
+若 HTTP 处理程序管理器正在运行，则自动停止该管理器并释放所有关联资源。
+所有 `ExecutionSlotLease`从该服务获取的对象必须在服务销毁前被销毁。
 
 ### 公共方法
 
@@ -109,25 +109,25 @@ int main() {
 
 #### `AcquireExecutionSlot()`
 
-从内部 TP 执行槽（execution-slot）池中租用一个执行槽。
+从内部 TP 池租用一个执行槽。
 
-返回一个 `ExecutionSlotLease`，当该对象超出作用域时，会自动将执行槽归还至池中。在需要对租用生命周期进行细粒度控制的直接查询执行场景中，请使用此方法。
+返回一个 `ExecutionSlotLease`，当它超出作用域时会自动将执行槽释放回池中。
 
 **使用示例：**
 ```cpp
 neug::NeugDBService service(db, config);
 service.Start();
-// 租用一个执行槽并执行查询。
+// Lease an execution slot and execute a query.
 auto lease = service.AcquireExecutionSlot();
 auto result = lease->ExecuteTransactionalRequest(
     R"({"query": "MATCH (n) RETURN count(n)"})");
-// 当 lease 离开作用域时，ExecutionSlot 将自动被归还。
+// The ExecutionSlot is automatically returned when lease leaves scope.
 ```
 
 - **注意事项：**
-  - 若池中暂无可用执行槽，则该调用将阻塞
+  - 如果池中没有可用的执行槽，则会阻塞
 
-- **返回值：** 管理已租用执行槽的 `ExecutionSlotLease`
+- **返回：** `ExecutionSlotLease`，用于管理获取到的执行槽
 
 #### `IsRunning() const`
 
@@ -174,27 +174,22 @@ auto result = lease->ExecuteTransactionalRequest(
 
 **全名：** `neug::ExecutionSlot`
 
-**头文件：** `neug/main/execution_slot.h`
+用于高吞吐量查询执行的数据库执行槽。
 
-用于 AP 和 TP 查询执行的可复用执行上下文。
-
-`ExecutionSlot` 是一种与运行时无关的执行上下文。它拥有槽位（slot）本地的查询状态，并借用数据库快照存储、版本管理器、内存分配器以及可选的 WAL 写入器。嵌入式连接（embedded connection）各自持有一个 slot；服务模式（service mode）则通过 `TpExecutionSlotPool` 持有一组固定数量的 slot，该池同时也绑定仅用于 TP 的 WAL 写入器。该类本身不依赖 brpc 或 bthread。
-
-一个 `ExecutionSlot` **不得被并发使用**。它不绑定到某个具体的 pthread 或 bthread，因此一个请求可在协作式让出（cooperative yield）期间持续复用同一个 execution slot、allocator 和 WAL 写入器。
-
-`ExecutionSlot` 所有构造函数参数均为借用关系。连接（Connection）和 service pool 会在 `NeugDB` 销毁这些依赖项之前，先行释放其所持有的 slot。
+`ExecutionSlot` 是一个被动的核心执行上下文。它拥有槽本地查询状态，并借用数据库级别的事务、存储、分配器和 WAL 资源。该类本身没有 brpc 或 bthread 依赖：TP 槽调度和同步由 `TpExecutionSlotPool`，因此相同的执行核心也为嵌入式连接提供服务。
+嵌入式连接独占一个 `ExecutionSlot`。服务模式通过 `TpExecutionSlotPool` 拥有固定集合，并按请求租用它们。
 
 **使用示例：**
 ```cpp
-// 从 service 获取 execution slot
+// Lease execution slot from service
 auto lease = service.AcquireExecutionSlot();
-// 执行只读查询
+// Execute read query
 std::string query = R"({
   "query": "MATCH (n:Person) RETURN n.name LIMIT 10",
   "access_mode": "read"
 })";
 auto result = lease->ExecuteTransactionalRequest(query);
-// 执行带参数的写入查询
+// Execute write query with parameters
 std::string insert_query = R"({
   "query": "CREATE (n:Person {name: $name})",
   "access_mode": "insert",
@@ -205,24 +200,24 @@ auto write_result = lease->ExecuteTransactionalRequest(insert_query);
 
 **内部事务策略：**
 - ``SnapshotReadTransaction``：只读快照访问
-- ``MvccInsertTransaction``：新增顶点和边
-- ``SnapshotCowWriteTransaction``：事务执行中使用的带版本的写时复制（COW）更新
-- ``CurrentCowWriteTransaction``：AP 当前图（current graph）的私有 COW 更新
+- ``MvccInsertTransaction``：添加新顶点和边
+- ``SnapshotCowWriteTransaction``：版本化私有 COW 更新
 - ``InPlaceCompactionTransaction``：后台压缩操作
+这些是执行内部机制。 `Connection` 和 Session 公开逻辑上的只读/读写语义，并且不得公开或要求调用者选择这些策略之一。
 
-以上均为 `ExecutionSlot` 的实现策略。Connection 和 Session 层仍向用户暴露逻辑上的只读/读写事务语义；客户端无需也不应直接选择这些内部类型。
+**并发：** 执行槽不得并发使用。它不绑定到物理 pthread 或 bthread 工作线程，并且可以在协作式让出后在另一个物理工作线程上恢复，同时保留相同的分配器、缓存和 WAL 资源。
 
-**线程安全性：** Execution slot **不得被并发使用**。顺序调用可能在不同的物理工作线程（worker）上恢复执行，因为该 slot 是一个执行上下文，而非线程局部（thread-local）状态。
+**生命周期：** 所有借用的构造函数依赖项的生命周期必须长于 `ExecutionSlot` 以及从中创建的每个事务。 `Connection` 和 `TpExecutionSlotPool` 在 `NeugDB` 销毁这些共享依赖项之前释放其槽。
 
 ### 公共方法
 
-#### `ExecuteTransactionalRequest(const std::string &query)`
+#### `ExecuteTransactionalRequest(const std::string &request)`
 
-在执行槽（execution slot）内执行一条 Cypher 查询。
+在事务中执行串行化的 Cypher 请求。
 
-执行一个以 JSON 字符串形式指定的查询，该字符串包含 Cypher 查询语句、访问模式（access mode）以及可选的参数。这是高吞吐量服务场景下查询执行的主要方法。
+执行指定为 JSON 字符串的查询，该字符串包含 Cypher 查询、访问模式和可选参数。这是高吞吐量服务场景中查询执行的主要方法。
 
-**JSON 格式：**
+**JSON 格式：** 
 ```cpp
 {
   "query": "MATCH (n:Person) RETURN n.name",
@@ -235,22 +230,22 @@ auto write_result = lease->ExecuteTransactionalRequest(insert_query);
 }
 ```
 
-**访问模式（Access Modes）：**
-- `"read"` 或 `"r"`：只读查询（仅含 `MATCH`，不含任何修改操作）
-- `"insert"` 或 `"i"`：仅插入操作（如 `CREATE`）
-- `"update"` 或 `"u"`：更新/删除操作（如 `SET`、`DELETE`、`MERGE`）
-- `"schema"` 或 `"s"`：模式修改操作（如 `CREATE/DROP` 标签）
+**访问模式：**
+- `"read"` 或 `"r"`：只读查询（无变更的 MATCH）
+- `"insert"` 或 `"i"`：仅插入操作（CREATE）
+- `"update"` 或 `"u"`：更新/删除操作（SET、DELETE、MERGE）
+- `"schema"` 或 `"s"`: `Schema` 模式修改操作（CREATE/DROP 标签）
 
-**使用示例：**
+**使用示例：** 
 ```cpp
 auto lease = service.AcquireExecutionSlot();
-// 简单只读查询
+// Simple read query
 auto result = lease->ExecuteTransactionalRequest(
     R"({"query": "MATCH (n) RETURN count(n)"})");
 if (result.has_value()) {
-  // 处理结果
+  // Process result
 }
-// 带参数的查询
+// Parameterized query
 std::string query = R"({
   "query": "MATCH (n:Person {age: $age}) RETURN n",
   "access_mode": "read",
@@ -260,64 +255,88 @@ auto param_result = lease->ExecuteTransactionalRequest(query);
 ```
 
 - **参数：**
-  - `query`：包含查询语句、访问模式（`access_mode`）及参数的 JSON 字符串
+  - `request`：包含 query、access_mode 和 parameters 的 JSON 字符串
 
-- **返回值：**
-  成功时返回包含 `QueryResult` 的结果；失败时返回错误状态
+- **返回：** 成功时返回串行化的 QueryResponse，或错误状态
+
+
+---
 
 ## TpExecutionSlotPool
 
 **全名：** `neug::TpExecutionSlotPool`
 
-用于并发查询执行的数据库执行槽（execution slot）池。
+用于并发查询执行的数据库槽位池。
 
-`TpExecutionSlotPool` 拥有并调度一组固定数量的 `ExecutionSlot` 实例，专用于 TP（事务处理）类查询。每个对齐的条目均以内联方式存储其对应的执行槽，维持其内存分配器（allocator）的存活，并拥有其专属的 WAL（预写日志）写入器（WAL writer）。
-`TpExecutionSlotPool` 由 `NeugDBService` 内部使用。在绝大多数使用场景中，应通过 `NeugDBService::AcquireExecutionSlot()` 获取执行槽，而非直接访问该池。
+`TpExecutionSlotPool` 拥有并调度一组固定的 `ExecutionSlot` 实例用于 TP 查询执行。每个对齐的 Entry 借用一个稳定的、由数据库拥有的每槽位 WAL 写入器。
+`TpExecutionSlotPool` 在内部被 `NeugDBService`。对于大多数用例，请通过 `NeugDBService::AcquireExecutionSlot()` 而不是直接通过该池访问。
 
-**核心特性：**
-- 由服务托管的执行槽，支持显式的租用（lease）与释放（release）
-- 基于 bthread 同步机制的线程安全槽调度
-- 每个槽自动管理其专属 WAL（Write-Ahead Log）
-- 内存对齐的 TP 槽上下文，提升缓存效率
+**主要特性：**
+- 拥有用于查询执行的服务本地槽位
+- 使用 bthread 同步的线程安全租用/释放
+- 每个逻辑槽位拥有稳定的 WAL（预写日志）写入器
+- 4096 字节对齐的每槽位 Entry 存储
 
-**池大小：** 由 `NeugDBConfig::max_thread_num` 决定。每个查询在其整个执行期间独占租用一个执行槽及一个线程。
+**池大小：** 服务根据 ``ServiceConfig::thread_num`` and `NeugDBConfig::max_thread_num` 确定其并发度，然后将该值传递给池。每个 TP 查询在其执行期间租用一个槽位。
+
+### 构造函数与析构函数
+
+#### `TpExecutionSlotPool(...)`
+
+```cpp
+TpExecutionSlotPool(
+    GraphSnapshotStore &snapshot_store,
+    std::shared_ptr< IGraphPlanner > planner,
+    std::shared_ptr< execution::GlobalQueryCache > global_query_cache,
+    IVersionManager &version_manager,
+    CheckpointCoordinator &checkpoint_coordinator,
+    ExtensionManager &extension_manager,
+    const std::vector< std::shared_ptr< Allocator > > &allocators,
+    WalWriterSet &wal_writers,
+    const NeugDBConfig &config
+)
+```
+
+使用数据库所有的分配器构建一个池。
+
+此重载保留了原始的源码兼容行为。需要更小执行限制的服务代码应使用接受显式槽位数的重载。
+
+- **参数：**
+  - `snapshot_store`
+  - `planner`
+  - `global_query_cache`
+  - `version_manager`
+  - `checkpoint_coordinator`
+  - `extension_manager`
+  - `allocators`
+  - `wal_writers`
+  - `config`
 
 ### 公共方法
 
 #### `AcquireExecutionSlot()`
 
-从执行槽池中租用一个执行槽。
+从池中租用一个槽位。
 
-若当前无可用执行槽，则阻塞等待。
+如果没有可用的槽位，则阻塞。
 
-- **返回值：** 一个用于管理已租用执行槽的 `ExecutionSlotLease` 对象。当该租约对象超出作用域时，对应的执行槽将自动归还至池中。
+- **返回：** `ExecutionSlotLease` 用于管理已租用的槽位。当租用超出作用域时，槽位会被归还至池中。
 
 #### `getExecutedQueryNum() const`
 
-获取所有执行槽中已执行查询的总数。
+获取所有槽位中已执行查询的总数。
 
-调用方需持有锁。
+预期调用方持有锁。
 
-- **返回值：** 已执行查询的总数。
+- **返回：** 已执行查询的总数。
+
+
+---
 
 ## ExecutionSlotLease
 
 **全名：** `neug::ExecutionSlotLease`
 
-用于独占使用执行槽（execution slot）的仅可移动 RAII 租约。
+用于独占使用 TP 的仅移动 RAII 句柄 `ExecutionSlot`.
 
-`ExecutionSlotLease` 会在析构时自动将其执行槽归还给发放该租约的 `TpExecutionSlotPool`。嵌入式连接（embedded connections）不租用执行槽。
-
-租约的生命周期不得长于发放该租约的 `NeugDBService` 实例。
-
-**使用示例：**
-```cpp
-{
-  // 租用一个执行槽；若当前无可租用槽，则阻塞等待。
-  auto lease = service.AcquireExecutionSlot();
-  // 使用该执行槽执行查询
-  auto result = lease->ExecuteTransactionalRequest(query);
-} // 执行槽在此处自动释放
-```
-
-**线程安全性：** `ExecutionSlotLease` 是仅可移动（move-only）类型（不可拷贝），以确保执行槽的独占性。每个租约一次应仅被一个逻辑请求使用。
+`TpExecutionSlotPool` 注入一个 noexcept 释放操作，以便该句柄可以返回该槽位，而无需向 `ExecutionSlot`.

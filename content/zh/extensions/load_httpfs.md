@@ -1,6 +1,6 @@
-# HTTPFS 扩展
+# HTTPFS
 
-HTTPFS 扩展使 NeuG 能够访问存储在兼容 S3 的对象存储服务（如 AWS S3、阿里云 OSS、MinIO 等）以及通过 HTTP/HTTPS URL 存储的文件。加载 HTTPFS 扩展后，NeuG 可以在 `LOAD FROM`（读取）和 `COPY TO`（写入）查询中透明地解析 `s3://`、`oss://` 和 `http://`/`https://` 路径。
+HTTPFS 扩展使 NeuG 能够访问存储在 S3 兼容对象存储服务（AWS S3、阿里云 OSS、MinIO 等）上的文件以及通过 HTTP/HTTPS URL 访问的文件。加载 HTTPFS 扩展后，NeuG 可以解析 `s3://`, `oss://`，以及 `http://`/`https://` 路径，在 `LOAD FROM`（读取）和 `COPY TO`（写入）查询中。
 
 ## 安装扩展
 

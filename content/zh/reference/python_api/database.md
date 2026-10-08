@@ -12,20 +12,24 @@ Neug 数据库模块。
 class Database(object)
 ```
 
-NeuG 数据库的入口类。
+Neug 数据库的入口。
 
-该类用于打开数据库连接并管理数据库。用户应使用此类打开数据库连接，然后调用 `connect` 方法获取一个 `Connection` 对象，以与数据库进行交互。
+此类用于打开数据库连接并管理数据库。用户应使用此类来
+打开数据库连接，然后使用 `connect` 方法来获取一个 `Connection` 对象以与数据库进行交互。
 
-若将空字符串作为数据库路径传入，则数据库将以内存模式（in-memory mode）打开。
+通过将空字符串作为数据库路径传递，数据库将以内存模式打开。
 
-数据库可采用不同模式（只读或读写）及不同查询规划器（planner）打开。
+数据库可以使用不同的模式（只读或读写）和不同的规划器打开。
 
-当数据库以只读模式打开时，其他数据库实例（无论在同一进程内还是不同进程中）也可同时以只读模式打开同一数据库目录。
-当数据库以读写模式打开时，则不允许任何其他数据库实例（无论在同一进程内还是不同进程中）以只读或读写模式打开同一数据库目录。
+当数据库以只读模式打开时，其他数据库也可以在同一进程内或不同进程中以
+只读模式打开相同的数据库目录。
+当数据库以读写模式打开时，其他数据库不能在同一进程内或不同进程中以
+只读或读写模式打开相同的数据库目录。
 
-注意：即使以只读模式打开数据库，仍需提供一个可写的数据库数据目录：锁文件（lock file）在需要时按需创建；只读进程会在其自身的 `runtime/open-<epoch>/` 目录下创建临时工作文件。因此，只读模式无法在只读文件系统或只读挂载点上使用。
+请注意，以只读模式打开数据库仍然需要一个可写的数据目录：如果缺少锁文件，则会按需创建，并且只读进程会在其自己的
+`runtime/open-<epoch>/` 目录中。只读模式不能用于只读文件系统或挂载点。
 
-当数据库被关闭时，所有指向该数据库的连接将自动关闭。
+当数据库关闭时，所有到该数据库的连接都将自动关闭。
 
 ```python
 
@@ -33,15 +37,15 @@ NeuG 数据库的入口类。
     >>> db = Database("/tmp/test.db", mode="w")
     >>> conn = db.connect()
 
-    >>> # 使用该连接与数据库交互
+    >>> # Use the connection to interact with the database
     >>> conn.execute('CREATE NODE TABLE Person(id INT64, name STRING);')
     >>> conn.execute('CREATE REL TABLE KNOWS(FROM Person TO Person, weight DOUBLE);')
 
-    >>> # 从 CSV 文件导入数据
+    >>> # Import data from csv file.
     >>> conn.execute('COPY Person FROM "person.csv"')
     >>> conn.execute('COPY KNOWS FROM "knows.csv" (from="Person", to="Person");')
 
-    >>> res = conn.execute('MATCH(n) RETURN n.id;')
+    >>> res = conn.execute('MATCH(n) RETURN n.id')
     >>> for record in res:
     >>>     print(record)
 
@@ -49,7 +53,7 @@ NeuG 数据库的入口类。
 
 <a id="neug.database.Database.__init__"></a>
 
-### `__init__`
+### \_\_init\_\_
 
 ```python
 def __init__(db_path: str = None,
@@ -59,35 +63,42 @@ def __init__(db_path: str = None,
              buffer_strategy: str = "M_FULL")
 ```
 
-打开一个数据库。
+打开数据库。
 
 - **参数：**
-  - `db_path`（字符串）
-    数据库文件的路径，必填。若设为空字符串，则以内存模式打开数据库。
-    注意：在内存模式下，数据库不会持久化到磁盘，程序退出时所有数据都将丢失。此时，`db_path` 不应包含任何非法字符。
-  - `mode`（字符串）
-    打开数据库的模式，可选值为 `'r'`、`'read'`、`'readwrite'`、`'w'`、`'rw'` 或 `'write'`。默认为 `'read-write'`。
-  - `max_thread_num`（整数）
-    数据库查询并发能力；设为 `0` 时将自动选用硬件支持的最大并发线程数（若无法获取则回退为 `1`）；若设置值超过硬件并发数，系统将发出警告并限制为硬件并发数。
+  - `db_path` (str)
+    数据库文件的路径。必填。如果设置为空字符串，数据库将以内存模式打开。
+    请注意，在内存模式下，数据库不会持久化到磁盘，并且所有数据将在
+    程序退出时丢失。在这种情况下，db_path 不应包含任何非法字符。
+  - `mode` (str)
+    打开数据库的模式。只读：'r', 'read', 'read-only', 'read_only'。
+    读写：'w', 'rw', 'write', 'readwrite', 'read-write', 'read_write'。默认为 'read-write'。
+  - `max_thread_num` (int)
+    数据库查询容量；0 选择硬件并发数（回退为 1），而更高的输入会发出警告并截断至该值。
 
-    当前嵌入式（AP）查询为单线程；利用此参数实现查询内部并行化属于未来工作。
+    嵌入式（AP）查询当前为单线程；将此设置用于查询内并行是未来的工作。
 
-    在 TP 模式下，该参数用于设定槽位池大小并限制服务线程数量。查询将并发执行，每个查询占用一个槽位/线程。
-  - `checkpoint_on_close`（布尔值）
-    关闭数据库时是否自动创建检查点（checkpoint）。默认为 `True`。
-    若设为 `False`，则关闭数据库时不会自动创建检查点。
-  - `buffer_strategy`（字符串）
-    数据库所用的缓冲区策略，可选值为 `'InMemory'`（或 `'M_FULL'`）、`'SyncToFile'`（或 `'M_LAZY'`）或 `'HugePagePreferred'`（或 `'M_HUGE'`）。默认为 `'M_FULL'`。该设置控制图数据如何加载进内存，**不影响数据持久性**。
-    - `'InMemory'` / `'M_FULL'`：将整个数据库完全加载至内存中。
-    - `'SyncToFile'` / `'M_LAZY'`：按需加载数据库页，适用于无法全部装入内存的大型数据库。
-    - `'HugePagePreferred'` / `'M_HUGE'`：与 `'InMemory'` 类似，但在系统支持时优先使用大页（Huge Pages）。
+    在 TP 模式下，它是默认的服务执行槽容量。显式设置较小的
+    ``serve(thread_num=...)`` 会减少服务本地池。
+  - `checkpoint_on_close` (bool)
+    关闭数据库时是否自动创建检查点。默认为 True。
+    如果为 False，关闭数据库时不会自动创建检查点。
+  - `buffer_strategy` (str)
+    数据库使用的缓冲策略，可以是 'InMemory'（或 'M_FULL'）、'SyncToFile'（或 'M_LAZY'）
+    或 'HugePagePreferred'（或 'M_HUGE'）。默认为 'M_FULL'。此设置控制图数据如何
+    加载到内存中；它不影响持久性。
+    - 'InMemory' / 'M_FULL'：将数据库完全在内存中打开。
+    - 'SyncToFile' / 'M_LAZY'：按需加载数据库页，适用于无法完全放入内存的数据库。
+    - 'HugePagePreferred' / 'M_HUGE'：类似于 'InMemory'，但在可用时优先使用大页。
 
-- **异常：**
+- **引发：**
   - **RuntimeError**
-    若数据库文件不存在，或指定的 `mode` 无效，则抛出此异常。
+    如果数据库文件不存在或模式无效。
   - **ValueError**
-    若 `mode` 不是 `'r'`、`'read'`、`'w'`、`'rw'` 或 `'write'` 中的任一值，则抛出此异常。
-    若查询规划器（planner）不是 `'gopt'`，则抛出此异常。
+    如果模式不是 'r', 'read', 'w', 'rw', 'write' 之一。
+    如果规划器不是 'gopt'。
+
+<a id="neug.database.Database.version"></a>
 
 ### version
 
@@ -144,42 +155,50 @@ def serve(port: int = 10000,
 ```
 
 启动数据库服务器以处理远程连接（TP 模式）。
-该方法用于启动数据库服务器，以支持远程客户端连接。
-调用 `db.serve()` 后，数据库将切换至 TP 模式，并关闭所有已存在的本地数据库连接；此后，将禁止建立任何新的本地数据库连接。
-该方法会启动一个监听指定端口的服务器，客户端可通过该端口连接服务器并与数据库交互。用户可使用 `Session` 连接到该服务器。具体用法请参阅 `Session` 的文档。
+此方法用于启动数据库服务器以处理远程连接。
+在 db.serve() 将数据库切换到 TP 模式之前，必须关闭所有本地连接。
+切换后，不允许建立新的本地连接。
+它将启动一个监听特定端口的服务器，客户端可以连接到该服务器与数据库进行交互。
+用户可以使用 Session 连接到服务器。有关详细用法，请参阅 Session 的文档。
 
 - **参数：**
-  - `port`（int）
-    服务器监听的端口号。默认为 `10000`。
-  - `host`（str）
-    服务器监听的主机地址。默认为 `'localhost'`。
-  - `blocking`（bool）
-    启动数据库服务器后是否阻塞当前进程。
-  - `thread_num`（int）
-    服务线程数量。若设为 `0`，则自动选用最大线程数（`max_thread_num`）；显式指定的值不可超过该上限。
+  - `port` (int)
+    要监听的端口。默认值为 10000。
+  - `host` (str)
+    要监听的主机。默认值为 'localhost'。
+  - `blocking` (bool)
+    启动数据库服务器后是否阻塞进程。
+  - `thread_num` (int)
+    并发执行的服务查询的最大数量。0 表示遵循
+    max_thread_num；显式值会被限制在该范围内。
 
-    服务线程用于并发执行 TP 查询，但每个查询独占一个执行上下文和一个线程。
-  - `auto_compaction`（bool）
-    是否在服务期间启用后台自动压缩（compaction）。默认为 `True`。
-  - `explicit_transaction_timeout_ms`（int）
-    显式事务的绝对生命周期（毫秒）。默认为 `60000`。
+    每个并发执行的 TP 查询使用一个服务执行槽。
+  - `auto_compaction` (bool)
+    在服务时启用后台自动压缩。默认值为 `True`.
+  - `explicit_transaction_timeout_ms` (int)
+    显式事务的绝对生命周期（以毫秒为单位）。
+    默认值为 `60000`.
 
-- **返回值：**
-  - `uri`（str）
-    服务器的 URI，格式为 `'http://host:port'`。
+- **返回：**
+  - `uri` (str)
+    服务器的 URI，格式为 'http://host:port'.
 
-- **异常：**
+- **引发：**
   - **ValueError**
-    若 `thread_num` 为负数、大于可用 CPU 核心数，或大于数据库的 `max_thread_num`，则抛出此异常。
+    如果 `thread_num` 为负数或 `explicit_transaction_timeout_ms` 不为
+    正数。如果 `thread_num` 超过 `max_thread_num` 或 CPU 数量，则会被限制并给出警告，而不会被拒绝。
   - **RuntimeError**
-    若存在尚未关闭的本地数据库连接，则抛出此异常。
-    若数据库已处于服务状态（即已调用 `serve()`），则抛出此异常。
+    如果存在到本地数据库的打开连接。
+    如果数据库已经在提供服务。
 
-- **注意事项：**
-  - **启动服务器前，请确保已关闭所有本地数据库连接。**
-  - **服务器启动后，将禁止建立任何新的本地数据库连接。**
-  - **`thread_num` 控制服务端的服务线程数量；客户端侧的 `Session(..., num_threads=...)` 则控制该客户端所使用的 HTTP 连接池大小。**
-  - **`auto_compaction` 控制服务期间后台压缩（compaction）的行为。**
+- **注意：**
+  - **在启动服务器之前，请确保关闭所有连接。**
+  - **启动服务器后，将不允许建立到本地数据库的新连接。**
+  - **`thread_num` 限制服务器端并发查询执行；客户端**
+  - **`Session(num_threads=...)` 调整其 HTTP 池大小。**
+  - **服务模式在 Windows 上不可用：** 调用 `serve()` 会引发
+    `RuntimeError: HTTP server is not enabled in this build.`。请使用 Linux 或
+    macOS 主机（或 WSL）来运行服务。
 
 <a id="neug.database.Database.stop_serving"></a>
 
@@ -219,12 +238,17 @@ def async_connect() -> AsyncConnection
 ### close
 
 ```python
-def close()
+def close(log=True)
 ```
 
 关闭数据库及其所有连接。
 
-对于启用了 `checkpoint_on_close=True` 的读写数据库，此方法会在关闭前创建一个检查点（checkpoint）。如果检查点创建失败，`close()` 将抛出异常。具体而言，根据失败发生的时机，数据库可能仍保持打开状态以供再次尝试，也可能已经关闭。在成功关闭后再次调用此方法不会产生任何效果。
+对于具有 `checkpoint_on_close=True`”，此方法
+在释放数据库资源前会创建一个检查点。
+成功关闭后，该方法具有幂等性。在破坏性转储
+之前发生的检查点失败会引发异常，并使数据库
+保持打开状态，以便调用方更正问题并重试。在
+破坏性转储之后发生的失败会完成清理，然后引发异常。
 
 <a id="neug.database.Database.load_builtin_dataset"></a>
 

@@ -163,17 +163,17 @@ Reviewers: @who
 
 ### 安装技能
 
-我们以 Cursor 格式在 `.cursor/skills/` 提供代理技能。要为您的代理转换：
+我们在 `.agent/skills/` 以 Agent Skills Markdown 格式提供。要为您的代理进行转换：
 
 ```bash
 ./scripts/init_skills.sh <agent-shortcut>
 ```
 
-### 支持的代理
+### 支持的智能体
 
-| 快捷方式   | 代理               | 文档      |
+| 快捷方式   | 智能体               | 文档      |
 |------------|---------------------|----------------|
-| cursor     | Cursor（默认）    | [Cursor Skills](https://cursor.com/docs/context/skills)               |
+| cursor     | Cursor              | [Cursor Skills](https://cursor.com/docs/context/skills)               |
 | claude     | Claude Code         | [Claude Code Skills](https://code.claude.com/docs/en/skills)          |
 | codebuddy  | CodeBuddy           | [CodeBuddy Skills](https://www.codebuddy.ai/docs/ide/Features/Skills) |
 | codex      | Codex               | [Codex Skills](https://developers.openai.com/codex/skills/)           |
@@ -185,7 +185,7 @@ Reviewers: @who
 | roo        | RooCode             | [RooCode Skills](https://docs.roocode.com/features/skills)            |
 | windsurf   | Windsurf            | [Windsurf Skills](https://docs.windsurf.com/windsurf/cascade/skills)  |
 
-注意：不同代理在代理技能标准上可能有细微差异。您可以参考文档了解更多详情。
+注意：不同的智能体在智能体技能标准上可能存在细微差异。您可以参考文档了解更多详情。
 
 **示例：**
 ```bash

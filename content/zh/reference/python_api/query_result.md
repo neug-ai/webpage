@@ -12,14 +12,13 @@ Neug 结果模块。
 class QueryResult(object)
 ```
 
-QueryResult 表示 Cypher 查询的结果，可作为迭代器进行遍历。
+QueryResult 表示 Cypher 查询的结果。可作为迭代器进行访问。
 
-它提供了以下方法用于遍历查询结果：
-    - `hasNext()`：若尚有更多结果可供遍历，则返回 `True`。
-    - `getNext()`：以列表形式返回下一个结果。
-    - `length()`：返回结果的总数。
-    - `column_names()`：以字符串形式返回投影列的名称。
-    - `get_profile_metrics()`：返回结构化的 PROFILE 或 EXPLAIN 指标。
+它具有以下方法来遍历结果。
+    - `hasNext()`: 如果还有更多结果可供迭代，则返回 True。
+    - `getNext()`: 将下一个结果作为列表返回。
+    - `length()`: 返回结果总数。
+    - `column_names()`: 将投影的列名作为字符串返回。
 
 ```python
 
@@ -58,42 +57,83 @@ def column_names()
 
 <a id="neug.query_result.QueryResult.get_bolt_response"></a>
 
-### get_bolt_response
+### get\_bolt\_response
 
 ```python
 def get_bolt_response() -> str
 ```
 
-以 Bolt 响应格式获取结果。
-TODO(zhanglei,xiaoli)：确保该格式与 Neo4j Bolt 响应格式保持一致。
+获取 Bolt 响应格式的结果。
+TODO(zhanglei,xiaoli): 确保与 neo4j bolt 响应的格式一致性。
 
-- **返回值：**
+- **返回:**
   - **str**
-    以 Bolt 响应格式表示的结果。
+    Bolt 响应格式的结果。
 
-### get_profile_metrics
+<a id="neug.query_result.QueryResult.has_profile_result"></a>
+
+### has\_profile\_result
+
+```python
+def has_profile_result() -> bool
+```
+
+检查性能分析结果是否可用。
+
+- **返回：**
+  - **bool**
+    如果查询在 PROFILE 或 EXPLAIN 模式下执行，则为 True，
+    对于普通查询则为 False。
+
+<a id="neug.query_result.QueryResult.get_profile_text"></a>
+
+### get\_profile\_text
+
+```python
+def get_profile_text() -> str
+```
+
+获取人类可读的 PROFILE/EXPLAIN 文本输出。
+
+适用于 CLI 输出和调试。如果没有
+可用的 profile 结果，则返回空字符串。
+
+- **返回：**
+  - **str**
+    带有算子耗时和行数的格式化执行树。
+    如果没有可用的 profile 结果，则返回空字符串。
+
+<a id="neug.query_result.QueryResult.get_profile_metrics"></a>
+
+### get\_profile\_metrics
 
 ```python
 def get_profile_metrics() -> dict
 ```
 
-以 Python 字典形式返回详细的 PROFILE 或 EXPLAIN 指标：
+以 Python 字典形式返回详细的 PROFILE 或 EXPLAIN 指标。
+
+结果包含完整的执行计划指标，包括查询执行树中每个算子的计时
+和输出信息。
+如果没有可用的 profile 结果，则返回空字典。
 
 ```python
-{
-    "total_elapsed_ms": float,
-    "total_output_rows": int,
-    "operators": [
-        {
-            "operator_id": int,
-            "parent_id": int,
-            "operator_name": str,
-            "elapsed_ms": float,
-            "output_rows": int,
-            "child_ids": [int],
-        }
-    ],
-}
+
+    {
+        "total_elapsed_ms": float,
+        "total_output_rows": int,
+        "operators": [
+            {
+                "operator_id": int,
+                "parent_id": int,
+                "operator_name": str,
+                "elapsed_ms": float,
+                "output_rows": int,
+                "child_ids": [int],
+            }
+        ],
+    }
+
 ```
 
 <a id="neug.query_result.QueryResult.to_arrow"></a>
