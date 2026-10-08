@@ -156,9 +156,6 @@ RETURN node.id, distance;
 - `dijkstra`：支持谓词和路径输出的优先队列实现；
 - `bmssp`：本文的实验性自适应后端。
 
-旧参数 `implementation` 只为兼容已有调用保留，已标记弃用；`algo` 和
-`implementation` 同时出现时会报错。
-
 ## 先把正确性测扎实
 
 最短路的错误通常不明显：一个顶点少松弛一次，结果仍可能看起来“差不多”。因此测试不只
