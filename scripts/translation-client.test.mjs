@@ -133,21 +133,47 @@ test("fragment schema and terminology failures share the same bounded retry loop
   assert.equal(requests, 3);
 });
 
-test("standalone English articles may be omitted in Chinese without losing Markdown boundaries", async () => {
+test("inline code stays in complete text units so Chinese may omit articles naturally", async () => {
   const source = '```cypher\nRETURN 1;\n```\n\nThe `WITH` clause is optional.\n';
   const f = fixture();
   const client = f.make(async (_url, options) => {
     const batch = JSON.parse(JSON.parse(options.body).messages[1].content);
-    assert.deepEqual(Object.values(batch), ['\n\nThe ', ' clause is optional.\n']);
-    return success(JSON.stringify({ t0: '', t1: '子句是可选的。' }));
+    assert.deepEqual(Object.values(batch), ['The ⟦N0⟧ clause is optional.\n']);
+    return success(JSON.stringify({ t0: '⟦N0⟧ 子句是可选的。' }));
   });
-  assert.equal(await translateMarkdownSection(source, 'fts.md', client), '```cypher\nRETURN 1;\n```\n\n `WITH` 子句是可选的。\n');
+  assert.equal(await translateMarkdownSection(source, 'fts.md', client), '```cypher\nRETURN 1;\n```\n\n`WITH` 子句是可选的。\n');
   assert.equal(client.counters.requests, 1);
 
   const invalid = f.make(async () => success('{"t0":""}'));
   await assert.rejects(translateMarkdownSection('Meaningful documentation text', 'body.md', invalid), /empty or non-string fragment/);
   const missing = f.make(async () => success('{}'));
   await assert.rejects(translateMarkdownSection('The `WITH` clause', 'missing.md', missing), /changed fragment keys/);
+});
+
+test("the failing C++ Returns sentence translates as one unit with natural Chinese code order", async () => {
+  const f = fixture();
+  const client = f.make(async (_url, options) => {
+    const batch = JSON.parse(JSON.parse(options.body).messages[1].content);
+    assert.deepEqual(batch, { t0: '- **Returns:** ⟦N0⟧ if database opened successfully, ⟦N1⟧ otherwise' });
+    return success(JSON.stringify({ t0: '- **返回值：** 数据库成功打开时返回 ⟦N0⟧，否则返回 ⟦N1⟧' }));
+  });
+  assert.equal(await translateMarkdownSection('- **Returns:** `true` if database opened successfully, `false` otherwise', 'reference/cpp_api/neug_db.md', client),
+    '- **返回值：** 数据库成功打开时返回 `true`，否则返回 `false`');
+  assert.equal(client.counters.requests, 1);
+});
+
+test("protected tokens cannot be dropped, duplicated, invented, or moved into another text unit", async () => {
+  for (const response of [
+    { t0: '丢失', t1: '保留 ⟦N1⟧' },
+    { t0: '重复 ⟦N0⟧ ⟦N0⟧', t1: '保留 ⟦N1⟧' },
+    { t0: '新增 ⟦N0⟧ ⟦N9⟧', t1: '保留 ⟦N1⟧' },
+    { t0: '移动 ⟦N1⟧', t1: '移动 ⟦N0⟧' },
+  ]) {
+    const f = fixture({ TRANSLATION_MAX_ATTEMPTS: '1' });
+    const client = f.make(async () => success(JSON.stringify(response)));
+    await assert.rejects(translateMarkdownSection('Use `true`.\n\nUse `false`.', 'tokens.md', client), /protected Markdown tokens/);
+    assert.equal(fs.existsSync(path.join(f.home, 'cache')), false);
+  }
 });
 
 test("validation repair receives precise safe feedback without leaking the rejected answer into logs", async () => {

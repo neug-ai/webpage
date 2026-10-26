@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const scripts = path.dirname(fileURLToPath(import.meta.url));
@@ -89,6 +89,46 @@ test("failed CLI run preserves cursor and plan, then resumes completed work acro
     assert.equal(JSON.parse(fs.readFileSync(path.join(home, "last-sync.json"), "utf8")).commit, "new");
     assert.equal(fs.existsSync(path.join(home, ".neug-sync-plan.json")), false);
     assert.doesNotMatch(first.output + second.output, /private-resume-test-key/);
+  } finally {
+    server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("real-model smoke mode preserves published state and saves review output without synchronizing", async () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "webpage-translation-smoke-"));
+  const { server, url } = await listen(async (request, response) => {
+    const chunks = []; for await (const chunk of request) chunks.push(chunk);
+    const batch = JSON.parse(JSON.parse(Buffer.concat(chunks).toString()).messages[1].content);
+    for (const [key, value] of Object.entries(batch)) if (value.includes('otherwise')) {
+      const tokens = [...value.matchAll(/⟦N\d+⟧/g)].map(match => match[0]);
+      batch[key] = `- **返回值：** 成功时返回 ${tokens[0]}，否则返回 ${tokens[1]}`;
+    }
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(batch) } }] }));
+  });
+  try {
+    fs.mkdirSync(path.join(home, 'scripts'));
+    for (const file of ['translate-neug-docs.mjs', 'translation-smoke.mjs']) fs.copyFileSync(path.join(scripts, file), path.join(home, 'scripts', file));
+    fs.cpSync(path.join(scripts, 'lib'), path.join(home, 'scripts', 'lib'), { recursive: true });
+    const source = path.join(home, 'source');
+    fs.mkdirSync(path.join(source, 'doc/source/extensions'), { recursive: true });
+    fs.mkdirSync(path.join(source, 'doc/source/reference/cpp_api'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'doc/source/extensions/fts_search.md'), '# FTS\n\n## Intro\n\nIntro\n\n## Create an FTS Index\n\nThe `WITH` clause is optional.\n\n## More\n\nMore\n\n### Index Options\n\nSee [options](../options).\n');
+    fs.writeFileSync(path.join(source, 'doc/source/reference/cpp_api/neug_db.md'), '# API\n\n## Database\n\nDB\n\n#### `Open(...)`\n\n- **Returns:** `true` if database opened successfully, `false` otherwise\n');
+    const git = args => execFileSync('git', ['-C', source, ...args], { encoding: 'utf8' }).trim();
+    git(['init', '-q']); git(['add', 'doc']);
+    git(['-c', 'user.name=Smoke Test', '-c', 'user.email=smoke@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', 'fixture']);
+    fs.writeFileSync(path.join(home, 'last-sync.json'), '{"commit":"published"}\n');
+    const result = await run(path.join(home, 'scripts/translation-smoke.mjs'), home, {
+      OPENAI_API_KEY: 'test', OPENAI_BASE_URL: url, NEUG_SOURCE_DIR: source, NEUG_SOURCE_SHA: git(['rev-parse', 'HEAD']),
+    });
+    assert.equal(result.code, 0, result.output);
+    assert.equal(fs.readFileSync(path.join(home, 'last-sync.json'), 'utf8'), '{"commit":"published"}\n');
+    assert.equal(fs.existsSync(path.join(home, 'content')), false);
+    const report = fs.readFileSync(path.join(home, '.cache/neug-translations/smoke.md'), 'utf8');
+    assert.match(report, /否则返回 `false`/);
+    assert.equal((result.output.match(/Translation smoke passed:/g) || []).length, 3);
   } finally {
     server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
     fs.rmSync(home, { recursive: true, force: true });

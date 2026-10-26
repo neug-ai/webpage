@@ -131,41 +131,90 @@ export function splitProtectedMarkdown(content) {
 export function createMarkdownTranslationPlan(content, maxFragmentChars = 2400) {
   if (!Number.isSafeInteger(maxFragmentChars) || maxFragmentChars < 2) fail("maxFragmentChars must be an integer of at least 2");
   let fragmentIndex = 0;
-  const fragments = {};
-  const parts = splitProtectedMarkdown(content).flatMap((part) => {
-    if (part.protected || !/[A-Za-z]/.test(part.value)) return [part];
-    const pieces = [];
+  const fragments = {}, tokens = {}, parts = [];
+  let prefix = "⟦N";
+  while (content.includes(prefix)) prefix += "N";
+  const tokenPattern = new RegExp(`${prefix}\\d+⟧`, "g");
+  const restoreTokens = value => value.replace(tokenPattern, token => tokens[token]);
+  let context = "";
+  function flushContext() {
+    // Paragraphs retain complete sentences around inline code and links. Fenced
+    // code is never sent to the model and remains a separate immutable part.
+    for (const paragraph of context.split(/(\n[\t ]*\n)/)) {
+      if (!paragraph) continue;
+      if (!/[A-Za-z]/.test(paragraph.replace(tokenPattern, ""))) {
+        parts.push({ protected: true, value: restoreTokens(paragraph) });
+        continue;
+      }
+      appendFragment(paragraph);
+    }
+    context = "";
+  }
+  function appendFragment(value) {
+    const tokenRanges = [...value.matchAll(tokenPattern)].map(match => [match.index, match.index + match[0].length]);
     let start = 0;
-    while (start < part.value.length) {
-      let end = Math.min(start + maxFragmentChars, part.value.length);
-      if (end < part.value.length) {
-        const boundary = part.value.lastIndexOf("\n", end - 1);
+    while (start < value.length) {
+      let end = Math.min(start + maxFragmentChars, value.length);
+      if (end < value.length) {
+        const boundary = value.lastIndexOf("\n", end - 1);
         if (boundary > start + maxFragmentChars / 2) end = boundary + 1;
         else {
-          const space = part.value.lastIndexOf(" ", end - 1);
+          const space = value.lastIndexOf(" ", end - 1);
           if (space > start + maxFragmentChars / 2) end = space + 1;
         }
-        if (/[\uD800-\uDBFF]/.test(part.value[end - 1])) end -= 1;
+        if (/[\uD800-\uDBFF]/.test(value[end - 1])) end -= 1;
+        const crossing = tokenRanges.find(([left, right]) => left < end && end < right);
+        if (crossing) end = crossing[0];
       }
-      const value = part.value.slice(start, end);
+      if (end <= start) fail("maxFragmentChars is too small for a protected Markdown token");
+      const fragment = value.slice(start, end);
       const key = `t${fragmentIndex++}`;
-      fragments[key] = value;
-      pieces.push({ ...part, value, key });
+      fragments[key] = fragment;
+      parts.push({ protected: false, value: fragment, key });
       start = end;
     }
-    return pieces;
-  });
-  return { parts, fragments };
+  }
+  for (const part of splitProtectedMarkdown(content)) {
+    if (!part.protected) { context += part.value; continue; }
+    if (/^(?:```|~~~|\s*(?:import|export)\s)/.test(part.value)) {
+      flushContext();
+      parts.push(part);
+      continue;
+    }
+    const token = `${prefix}${Object.keys(tokens).length}⟧`;
+    // Leave the closing label bracket visible to the model: [label]⟦N0⟧.
+    if (part.value.startsWith("](")) {
+      context += "]";
+      tokens[token] = part.value.slice(1);
+    } else tokens[token] = part.value;
+    context += token;
+  }
+  flushContext();
+  return { parts, fragments, tokens, tokenPattern };
+}
+
+export function validateMarkdownTokens(plan, source, translated) {
+  const expected = [...source.matchAll(plan.tokenPattern)].map(match => match[0]);
+  const actual = [...translated.matchAll(plan.tokenPattern)].map(match => match[0]);
+  if (!arraysEqual([...expected].sort(), [...actual].sort())) throw new TranslationValidationError("protected Markdown tokens were missing, duplicated or invented");
+  const markup = token => /^<\/?[A-Za-z]/.test(plan.tokens[token]);
+  if (!arraysEqual(expected.filter(markup), actual.filter(markup))) throw new TranslationValidationError("protected HTML tag order changed");
+  for (const token of expected) {
+    if (plan.tokens[token].startsWith("(") && translated[translated.indexOf(token) - 1] !== "]") {
+      throw new TranslationValidationError("protected link destination detached from its label");
+    }
+  }
 }
 
 export function restoreMarkdownTranslation(plan, translated) {
   return plan.parts
     .map((part) => {
       if (!part.key) return part.value;
-      // Structural whitespace belongs to Markdown, not the model. In particular,
-      // omitting an English article must not consume the gap after a code fence.
+      validateMarkdownTokens(plan, part.value, translated[part.key]);
+      // Structural whitespace belongs to Markdown, not the model.
       const [, leading, body, trailing] = part.value.match(/^(\s*)([\s\S]*?)(\s*)$/);
-      return body ? `${leading}${translated[part.key].trim()}${trailing}` : part.value;
+      const value = body ? `${leading}${translated[part.key].trim()}${trailing}` : part.value;
+      return value.replace(plan.tokenPattern, token => plan.tokens[token]);
     })
     .join("");
 }
@@ -212,11 +261,8 @@ export async function translateMarkdownSection(section, relativePath, client = t
         throw new TranslationValidationError(`translation changed fragment keys; expected ${expectedKeys.join(",")}; missing ${missing.join(",") || "none"}`);
       }
       for (const key of expectedKeys) {
-        // Articles can disappear naturally in Chinese when split next to inline
-        // code (e.g. "The `WITH` clause"). All keys and all other text remain
-        // mandatory; restoration retains the source whitespace independently.
-        const optionalArticle = /^(?:the|an?)$/i.test(batch[key].trim());
-        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim() && !optionalArticle)) throw new TranslationValidationError(`translation returned an empty or non-string fragment at ${key}`);
+        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim())) throw new TranslationValidationError(`translation returned an empty or non-string fragment at ${key}`);
+        validateMarkdownTokens(plan, batch[key], values[key]);
         try { validateDatabaseTerminology(batch[key], values[key]); }
         catch (error) { throw new TranslationValidationError(`${key}: ${error.message}`); }
       }

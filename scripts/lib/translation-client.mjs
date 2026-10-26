@@ -42,7 +42,7 @@ export function translationConfig(env = process.env) {
 function systemMessage(kind) {
   return `${kind === "meta"
     ? "Translate the string values in this TypeScript metadata object from English to Simplified Chinese. Keep every key, object shape, punctuation mark, and non-string expression unchanged. Return only valid TypeScript."
-    : "Translate every string value in this JSON object from English to Simplified Chinese. Keep every key and the JSON object shape unchanged. Preserve Markdown punctuation and whitespace boundaries in each value. Return only valid JSON."}
+    : "Translate every complete text unit in this JSON object from English to natural Simplified Chinese. Keep every key and the JSON object shape unchanged; no value may be empty. Tokens such as ⟦N0⟧ stand for protected inline code, URLs or markup. Preserve every token exactly once in its original JSON value. You may reposition inline-code tokens within the value to express natural Chinese word order. Preserve HTML tag order and keep a link destination token directly after its closing label bracket, as in [label]⟦N0⟧. Preserve Markdown syntax and whitespace boundaries. Return only valid JSON."}
 
 ${databaseTerminologyGuide}`;
 }
@@ -113,7 +113,7 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
             method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify(repair ? { ...payload, ...(responseFormat ? { response_format: responseFormat } : {}), messages: [...payload.messages,
               { role: "assistant", content: repair.answer },
-              { role: "user", content: `Your previous response failed validation: ${repair.reason}. Correct it and return the complete response only. Keep all original keys with string values, including punctuation-only fragments. Empty strings are allowed only for standalone English articles (a, an, the) that have no Chinese equivalent. Follow the terminology guide. Do not omit, merge or add keys.` },
+              { role: "user", content: `Your previous response failed validation: ${repair.reason}. Correct it and return the complete response only. Keep all original keys with non-empty string values. Preserve every protected token exactly once in its original value. Follow the terminology guide. Do not omit, merge or add keys.` },
             ] } : payload), signal: AbortSignal.timeout(config.timeoutMs), redirect: "error",
           });
           requestId = (response.headers.get("x-request-id") || response.headers.get("x-dashscope-request-id") || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);

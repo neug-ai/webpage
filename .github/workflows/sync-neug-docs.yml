@@ -20,6 +20,11 @@ on:
         description: "Official release timestamp (optional, ISO 8601)"
         required: false
         default: ""
+      smoke_only:
+        description: "Only translate the three previously failing sections; do not sync, commit or create a PR"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: write
@@ -96,9 +101,15 @@ jobs:
             neug-translations-v2-${{ runner.os }}-${{ hashFiles('scripts/translate-neug-docs.mjs', 'scripts/lib/translation-client.mjs', 'scripts/lib/database-terminology.mjs') }}-
             neug-translations-v2-${{ runner.os }}-
 
-      - name: Incrementally sync and translate docs
-        run: npm run sync:docs
+      - name: Translate regression sections or incrementally sync docs
+        run: |
+          if [[ "$TRANSLATION_SMOKE_ONLY" == "true" ]]; then
+            node scripts/translation-smoke.mjs
+          else
+            npm run sync:docs
+          fi
         env:
+          TRANSLATION_SMOKE_ONLY: ${{ inputs.smoke_only || false }}
           NEUG_SOURCE_DIR: .temp-source-repo
           NEUG_SOURCE_SHA: ${{ steps.source.outputs.sha }}
           NEUG_VERSION: ${{ steps.source.outputs.version }}
@@ -123,7 +134,18 @@ jobs:
           npm run typecheck
           npm run validate:content
 
+      - name: Save public smoke translations for review
+        if: always() && inputs.smoke_only == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: translation-smoke-${{ github.run_id }}
+          path: .cache/neug-translations/smoke.md
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Commit synchronized content
+        if: inputs.smoke_only != true
         id: commit
         shell: bash
         env:
