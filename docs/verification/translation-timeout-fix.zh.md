@@ -2,6 +2,8 @@
 
 2026-10-26（Asia/Shanghai）。基于 webpage `e5bc4d09ed65ba16f2683dc279f73ec567f464e4`。按用户要求仅修复、离线验证并保存本地分支；不提 PR、不推送 GitHub、不重新同步、不部署，等待 NeuG 后续版本。
 
+本文记录的是此前的本地验收阶段，不代表后续同步状态。用户随后确认 NeuG main 已完成版本 bump 并授权同步；实际同步结果以对应 Actions 与 PR 为准。
+
 ## 原故障与模型因素
 
 [运行 40246596390](https://github.com/neug-ai/webpage/actions/runs/40246596390) 的英语同步完成，但在 53 个翻译候选中的第 17 个 `data_io/index.md` 发生片段翻译超时。旧请求固定 120 秒，片段最终失败会阻止整批提交和游标推进；已完成翻译没有跨 runner 检查点。

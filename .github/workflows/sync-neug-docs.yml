@@ -16,6 +16,10 @@ on:
         description: "alibaba/neug ref or commit to sync"
         required: false
         default: "main"
+      released_at:
+        description: "Official release timestamp (optional, ISO 8601)"
+        required: false
+        default: ""
 
 permissions:
   actions: write
@@ -97,7 +101,7 @@ jobs:
           NEUG_SOURCE_DIR: .temp-source-repo
           NEUG_SOURCE_SHA: ${{ steps.source.outputs.sha }}
           NEUG_VERSION: ${{ steps.source.outputs.version }}
-          NEUG_RELEASED_AT: ${{ github.event.client_payload.released_at }}
+          NEUG_RELEASED_AT: ${{ github.event.client_payload.released_at || inputs.released_at }}
           OPENAI_API_KEY: ${{ secrets.DASHSCOPE_API_KEY || secrets.QWEN_API_KEY }}
           OPENAI_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1' }}
           OPENAI_MODEL: ${{ vars.QWEN_MODEL || 'qwen-plus' }}
