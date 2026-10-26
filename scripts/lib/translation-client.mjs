@@ -55,6 +55,9 @@ class TranslationFailure extends Error {
   }
 }
 
+/** Only caller-authored, non-content validation messages may enter diagnostics. */
+export class TranslationValidationError extends Error {}
+
 /** One retry layer covers transport, provider output and semantic validation. */
 export function createTranslationClient({ env = process.env, cacheDirectory, fetcher = fetch, sleep = pause, logger = console.log, now = Date.now } = {}) {
   const config = translationConfig(env);
@@ -84,6 +87,7 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
       }
       if (!apiKey) throw new Error("OPENAI_API_KEY, DASHSCOPE_API_KEY or QWEN_API_KEY is required for uncached translations");
       let lastError;
+      let repair;
       for (let attempt = 1; attempt <= config.attempts; attempt += 1) {
         const started = now();
         let requestId;
@@ -92,7 +96,10 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
           counters.requests += 1;
           const response = await fetcher(config.endpoint, {
             method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify(payload), signal: AbortSignal.timeout(config.timeoutMs), redirect: "error",
+            body: JSON.stringify(repair ? { ...payload, messages: [...payload.messages,
+              { role: "assistant", content: repair.answer },
+              { role: "user", content: `Your previous response failed validation: ${repair.reason}. Correct it and return the complete response only. Keep all original keys and string values, including punctuation-only fragments. Follow the terminology guide. Do not omit, merge or add keys.` },
+            ] } : payload), signal: AbortSignal.timeout(config.timeoutMs), redirect: "error",
           });
           requestId = (response.headers.get("x-request-id") || response.headers.get("x-dashscope-request-id") || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
           if (!response.ok) {
@@ -112,7 +119,11 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
           if (choice?.finish_reason === "content_filter") throw new TranslationFailure("Translation blocked by provider content filter", false);
           if (typeof choice?.message?.content !== "string" || !choice.message.content.trim()) throw new TranslationFailure("Translation API returned empty answer content");
           const translated = choice.message.content.trim().replace(/^```(?:markdown|md|mdx|typescript|ts|json)?\s*/i, "").replace(/\s*```$/, "").trim();
-          validate(translated);
+          try { validate(translated); }
+          catch (error) {
+            if (error instanceof TranslationValidationError) repair = { answer: translated, reason: error.message };
+            throw error;
+          }
           if (cachePath) {
             const temporary = `${cachePath}.${randomUUID()}.tmp`;
             try {
@@ -130,6 +141,7 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
           const timedOut = ["TimeoutError", "AbortError"].includes(error.name);
           const message = timedOut ? `Translation request timed out after ${config.timeoutMs}ms`
             : error instanceof TranslationFailure ? error.message
+            : error instanceof TranslationValidationError ? `Translation validation failed: ${error.message}`
             : error instanceof TypeError ? "Translation network request failed" : "Translation output/cache validation failed";
           lastError = message;
           log("translation.failure", { context, model: config.model, attempt, elapsedMs: now() - started, requestId, reason: message });

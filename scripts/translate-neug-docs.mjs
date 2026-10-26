@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { validateDatabaseTerminology } from "./lib/database-terminology.mjs";
-import { createTranslationClient } from "./lib/translation-client.mjs";
+import { createTranslationClient, TranslationValidationError } from "./lib/translation-client.mjs";
 
 export { validateDatabaseTerminology } from "./lib/database-terminology.mjs";
 
@@ -166,9 +166,11 @@ export function restoreMarkdownTranslation(plan, translated) {
 
 export async function translateMeta(content, relativePath, client = translationClient) {
   const validate = (response) => {
-    const translated = restoreMetaControlValues(content, response);
-    validateDatabaseTerminology(content, translated);
-    if (!arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) fail("translated metadata changed its keys");
+    try {
+      const translated = restoreMetaControlValues(content, response);
+      validateDatabaseTerminology(content, translated);
+      if (!arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) fail("translated metadata changed its keys");
+    } catch (error) { throw new TranslationValidationError(error.message); }
   };
   const response = await client.translate(content, "meta", { context: relativePath, validate });
   return `${restoreMetaControlValues(content, response).trim()}\n`;
@@ -198,11 +200,12 @@ export async function translateMarkdownSection(section, relativePath, client = t
     const batch = batches[i], expectedKeys = Object.keys(batch).sort();
     const validate = (response) => {
       let values;
-      try { values = JSON.parse(response); } catch { fail("translation returned invalid fragment JSON"); }
-      if (!values || typeof values !== "object" || Array.isArray(values) || !arraysEqual(expectedKeys, Object.keys(values).sort())) fail("translation changed fragment keys");
+      try { values = JSON.parse(response); } catch { throw new TranslationValidationError("translation returned invalid fragment JSON"); }
+      if (!values || typeof values !== "object" || Array.isArray(values) || !arraysEqual(expectedKeys, Object.keys(values).sort())) throw new TranslationValidationError(`translation changed fragment keys; expected ${expectedKeys.join(",")}`);
       for (const key of expectedKeys) {
-        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim())) fail("translation returned an empty or non-string fragment");
-        validateDatabaseTerminology(batch[key], values[key]);
+        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim())) throw new TranslationValidationError(`translation returned an empty or non-string fragment at ${key}`);
+        try { validateDatabaseTerminology(batch[key], values[key]); }
+        catch (error) { throw new TranslationValidationError(`${key}: ${error.message}`); }
       }
     };
     const response = await client.translate(JSON.stringify(batch), "fragments", { context: `${relativePath} batch ${i + 1}/${batches.length}`, validate });
@@ -222,12 +225,12 @@ export async function translateDocument(newEnglish, oldEnglish, existingChinese,
   }
 
   const translatedSections = [];
-  for (const section of newSections) {
+  for (const [sectionIndex, section] of newSections.entries()) {
     if (cachedTranslations.has(section)) {
       translatedSections.push(cachedTranslations.get(section));
       continue;
     }
-    translatedSections.push(await translateMarkdownSection(section, relativePath, client));
+    translatedSections.push(await translateMarkdownSection(section, `${relativePath} section ${sectionIndex + 1}/${newSections.length}`, client));
   }
 
   if (translatedSections.length !== newSections.length) fail(`${relativePath}: section count changed during translation`);

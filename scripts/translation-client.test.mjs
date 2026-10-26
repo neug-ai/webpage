@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { createTranslationClient, translationConfig } from "./lib/translation-client.mjs";
+import { createTranslationClient, translationConfig, TranslationValidationError } from "./lib/translation-client.mjs";
 import { batchTranslationFragments, createMarkdownTranslationPlan, restoreMarkdownTranslation, splitProtectedMarkdown, translateDocument, translateMarkdownSection, translateMeta } from "./translate-neug-docs.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -131,6 +131,24 @@ test("fragment schema and terminology failures share the same bounded retry loop
   });
   assert.equal(await translateMarkdownSection("Schema changes", "schema.md", client), "模式变更");
   assert.equal(requests, 3);
+});
+
+test("validation repair receives precise safe feedback without leaking the rejected answer into logs", async () => {
+  const f = fixture(); const requests = [];
+  const client = f.make(async (_url, options) => {
+    requests.push(JSON.parse(options.body));
+    return success(requests.length === 1 ? "private-rejected-answer" : "corrected");
+  });
+  const validate = answer => { if (answer !== "corrected") throw new TranslationValidationError("missing fragment key t0"); };
+  assert.equal(await client.translate("original-input", "fragments", { validate }), "corrected");
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].messages[2].role, "assistant");
+  assert.equal(requests[1].messages[2].content, "private-rejected-answer");
+  assert.match(requests[1].messages[3].content, /missing fragment key t0/);
+  assert.doesNotMatch(f.logs.join("\n"), /private-rejected-answer|original-input/);
+  const cached = f.make(() => { throw Error("must reuse corrected validated result"); });
+  assert.equal(await cached.translate("original-input", "fragments", { validate }), "corrected");
+  assert.equal(cached.counters.hits, 1);
 });
 
 test("metadata schema validation retries and preserves Nextra controls", async () => {

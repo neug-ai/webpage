@@ -94,6 +94,7 @@ jobs:
           key: neug-translations-v2-${{ runner.os }}-${{ hashFiles('scripts/translate-neug-docs.mjs', 'scripts/lib/translation-client.mjs', 'scripts/lib/database-terminology.mjs') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             neug-translations-v2-${{ runner.os }}-${{ hashFiles('scripts/translate-neug-docs.mjs', 'scripts/lib/translation-client.mjs', 'scripts/lib/database-terminology.mjs') }}-
+            neug-translations-v2-${{ runner.os }}-
 
       - name: Incrementally sync and translate docs
         run: npm run sync:docs
