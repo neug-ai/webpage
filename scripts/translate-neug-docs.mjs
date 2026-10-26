@@ -160,7 +160,13 @@ export function createMarkdownTranslationPlan(content, maxFragmentChars = 2400) 
 
 export function restoreMarkdownTranslation(plan, translated) {
   return plan.parts
-    .map((part) => part.key ? translated[part.key] : part.value)
+    .map((part) => {
+      if (!part.key) return part.value;
+      // Structural whitespace belongs to Markdown, not the model. In particular,
+      // omitting an English article must not consume the gap after a code fence.
+      const [, leading, body, trailing] = part.value.match(/^(\s*)([\s\S]*?)(\s*)$/);
+      return body ? `${leading}${translated[part.key].trim()}${trailing}` : part.value;
+    })
     .join("");
 }
 
@@ -203,7 +209,11 @@ export async function translateMarkdownSection(section, relativePath, client = t
       try { values = JSON.parse(response); } catch { throw new TranslationValidationError("translation returned invalid fragment JSON"); }
       if (!values || typeof values !== "object" || Array.isArray(values) || !arraysEqual(expectedKeys, Object.keys(values).sort())) throw new TranslationValidationError(`translation changed fragment keys; expected ${expectedKeys.join(",")}`);
       for (const key of expectedKeys) {
-        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim())) throw new TranslationValidationError(`translation returned an empty or non-string fragment at ${key}`);
+        // Articles can disappear naturally in Chinese when split next to inline
+        // code (e.g. "The `WITH` clause"). All keys and all other text remain
+        // mandatory; restoration retains the source whitespace independently.
+        const optionalArticle = /^(?:the|an?)$/i.test(batch[key].trim());
+        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim() && !optionalArticle)) throw new TranslationValidationError(`translation returned an empty or non-string fragment at ${key}`);
         try { validateDatabaseTerminology(batch[key], values[key]); }
         catch (error) { throw new TranslationValidationError(`${key}: ${error.message}`); }
       }

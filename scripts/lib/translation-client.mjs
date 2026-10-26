@@ -98,7 +98,7 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
             method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify(repair ? { ...payload, messages: [...payload.messages,
               { role: "assistant", content: repair.answer },
-              { role: "user", content: `Your previous response failed validation: ${repair.reason}. Correct it and return the complete response only. Keep all original keys and string values, including punctuation-only fragments. Follow the terminology guide. Do not omit, merge or add keys.` },
+              { role: "user", content: `Your previous response failed validation: ${repair.reason}. Correct it and return the complete response only. Keep all original keys with string values, including punctuation-only fragments. Empty strings are allowed only for standalone English articles (a, an, the) that have no Chinese equivalent. Follow the terminology guide. Do not omit, merge or add keys.` },
             ] } : payload), signal: AbortSignal.timeout(config.timeoutMs), redirect: "error",
           });
           requestId = (response.headers.get("x-request-id") || response.headers.get("x-dashscope-request-id") || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);

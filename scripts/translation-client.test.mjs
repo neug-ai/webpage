@@ -133,6 +133,23 @@ test("fragment schema and terminology failures share the same bounded retry loop
   assert.equal(requests, 3);
 });
 
+test("standalone English articles may be omitted in Chinese without losing Markdown boundaries", async () => {
+  const source = '```cypher\nRETURN 1;\n```\n\nThe `WITH` clause is optional.\n';
+  const f = fixture();
+  const client = f.make(async (_url, options) => {
+    const batch = JSON.parse(JSON.parse(options.body).messages[1].content);
+    assert.deepEqual(Object.values(batch), ['\n\nThe ', ' clause is optional.\n']);
+    return success(JSON.stringify({ t0: '', t1: '子句是可选的。' }));
+  });
+  assert.equal(await translateMarkdownSection(source, 'fts.md', client), '```cypher\nRETURN 1;\n```\n\n `WITH` 子句是可选的。\n');
+  assert.equal(client.counters.requests, 1);
+
+  const invalid = f.make(async () => success('{"t0":""}'));
+  await assert.rejects(translateMarkdownSection('Meaningful documentation text', 'body.md', invalid), /empty or non-string fragment/);
+  const missing = f.make(async () => success('{}'));
+  await assert.rejects(translateMarkdownSection('The `WITH` clause', 'missing.md', missing), /changed fragment keys/);
+});
+
 test("validation repair receives precise safe feedback without leaking the rejected answer into logs", async () => {
   const f = fixture(); const requests = [];
   const client = f.make(async (_url, options) => {
