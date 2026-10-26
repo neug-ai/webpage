@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import { databaseTerminologyGuide, validateDatabaseTerminology } from "./lib/database-terminology.mjs";
+import { validateDatabaseTerminology } from "./lib/database-terminology.mjs";
+import { createTranslationClient } from "./lib/translation-client.mjs";
 
 export { validateDatabaseTerminology } from "./lib/database-terminology.mjs";
 
@@ -14,9 +15,7 @@ const statePath = path.join(root, "last-sync.json");
 const planPath = path.join(root, ".neug-sync-plan.json");
 const preservedRoots = new Set(["blog"]);
 const documentExtensions = new Set([".md", ".mdx"]);
-const apiKey = process.env.OPENAI_API_KEY || "";
-const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
-const model = process.env.OPENAI_MODEL || "qwen-plus";
+const translationClient = createTranslationClient({ cacheDirectory: path.resolve(root, process.env.NEUG_TRANSLATION_CACHE_DIR || ".cache/neug-translations/v2") });
 function fail(message) {
   throw new Error(message);
 }
@@ -111,7 +110,7 @@ export function restoreMetaControlValues(source, translated) {
 }
 
 export function splitProtectedMarkdown(content) {
-  const protectedPattern = /```[\s\S]*?```|~~~[\s\S]*?~~~|^\s*(?:import|export)\s.+$|<\/?[A-Za-z][^>]*>|`[^`\n]+`|https?:\/\/[^\s)>'"]+/gm;
+  const protectedPattern = /```[\s\S]*?```|~~~[\s\S]*?~~~|^\s*(?:import|export)\s.+$|<\/?[A-Za-z][^>]*>|`[^`\n]+`|\]\((?:\\.|[^)\\\n])*\)|https?:\/\/[^\s)>'"]+/gm;
   const parts = [];
   let cursor = 0;
 
@@ -129,15 +128,32 @@ export function splitProtectedMarkdown(content) {
   return parts;
 }
 
-export function createMarkdownTranslationPlan(content) {
+export function createMarkdownTranslationPlan(content, maxFragmentChars = 2400) {
+  if (!Number.isSafeInteger(maxFragmentChars) || maxFragmentChars < 2) fail("maxFragmentChars must be an integer of at least 2");
   let fragmentIndex = 0;
   const fragments = {};
-  const parts = splitProtectedMarkdown(content).map((part) => {
-    if (part.protected || !/[A-Za-z]/.test(part.value)) return part;
-    const key = `t${fragmentIndex}`;
-    fragmentIndex += 1;
-    fragments[key] = part.value;
-    return { ...part, key };
+  const parts = splitProtectedMarkdown(content).flatMap((part) => {
+    if (part.protected || !/[A-Za-z]/.test(part.value)) return [part];
+    const pieces = [];
+    let start = 0;
+    while (start < part.value.length) {
+      let end = Math.min(start + maxFragmentChars, part.value.length);
+      if (end < part.value.length) {
+        const boundary = part.value.lastIndexOf("\n", end - 1);
+        if (boundary > start + maxFragmentChars / 2) end = boundary + 1;
+        else {
+          const space = part.value.lastIndexOf(" ", end - 1);
+          if (space > start + maxFragmentChars / 2) end = space + 1;
+        }
+        if (/[\uD800-\uDBFF]/.test(part.value[end - 1])) end -= 1;
+      }
+      const value = part.value.slice(start, end);
+      const key = `t${fragmentIndex++}`;
+      fragments[key] = value;
+      pieces.push({ ...part, value, key });
+      start = end;
+    }
+    return pieces;
   });
   return { parts, fragments };
 }
@@ -148,94 +164,54 @@ export function restoreMarkdownTranslation(plan, translated) {
     .join("");
 }
 
-function stripCodeFence(content) {
-  return content.trim().replace(/^```(?:markdown|md|mdx|typescript|ts|json)?\s*/i, "").replace(/\s*```$/, "").trim();
-}
-
-async function requestTranslation(content, kind, maxAttempts = 3) {
-  if (!apiKey) fail("QWEN_API_KEY is required when English documentation has translatable changes");
-
-  const system = `${kind === "meta"
-    ? "Translate the string values in this TypeScript metadata object from English to Simplified Chinese. Keep every key, object shape, punctuation mark, and non-string expression unchanged. Return only valid TypeScript."
-    : "Translate every string value in this JSON object from English to Simplified Chinese. Keep every key and the JSON object shape unchanged. Preserve Markdown punctuation in each value. Return only valid JSON."}
-
-${databaseTerminologyGuide}`;
-  const endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
-
-  let lastError;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content },
-          ],
-          temperature: 0.1,
-          max_tokens: 8192,
-        }),
-        signal: AbortSignal.timeout(120_000),
-      });
-      if (!response.ok) fail(`translation API returned ${response.status}: ${await response.text()}`);
-      const data = await response.json();
-      const translated = data?.choices?.[0]?.message?.content;
-      if (!translated) fail("translation API returned an empty response");
-      return stripCodeFence(translated);
-    } catch (error) {
-      lastError = error;
-      if (attempt < maxAttempts) await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
-    }
-  }
-  fail(`translation failed after ${maxAttempts} attempts: ${lastError?.message || lastError}`);
-}
-
-async function translateMeta(content, relativePath) {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const translated = restoreMetaControlValues(content, await requestTranslation(content, "meta", 1));
+export async function translateMeta(content, relativePath, client = translationClient) {
+  const validate = (response) => {
+    const translated = restoreMetaControlValues(content, response);
     validateDatabaseTerminology(content, translated);
-    if (arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) {
-      return `${translated.trim()}\n`;
-    }
-  }
-  fail(`${relativePath}: translated metadata changed its keys after 3 attempts`);
+    if (!arraysEqual(extractMetaKeys(content), extractMetaKeys(translated))) fail("translated metadata changed its keys");
+  };
+  const response = await client.translate(content, "meta", { context: relativePath, validate });
+  return `${restoreMetaControlValues(content, response).trim()}\n`;
 }
 
-async function translateMarkdownSection(section, relativePath) {
-  const plan = createMarkdownTranslationPlan(section);
-  const expectedKeys = Object.keys(plan.fragments).sort();
-  if (expectedKeys.length === 0) return section;
+export function batchTranslationFragments(fragments, maxChars = 6000) {
+  const batches = [];
+  let batch = {};
+  for (const [key, value] of Object.entries(fragments)) {
+    if (JSON.stringify({ [key]: value }).length > maxChars) fail("translation fragment exceeds batch limit");
+    if (Object.keys(batch).length && JSON.stringify({ ...batch, [key]: value }).length > maxChars) {
+      batches.push(batch);
+      batch = {};
+    }
+    batch[key] = value;
+  }
+  if (Object.keys(batch).length) batches.push(batch);
+  return batches;
+}
 
-  let lastError;
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      const response = await requestTranslation(JSON.stringify(plan.fragments), "fragments", 1);
-      const translated = JSON.parse(response);
-      const translatedKeys = Object.keys(translated).sort();
-      if (!arraysEqual(expectedKeys, translatedKeys)) {
-        throw new Error("translation changed fragment keys");
-      }
-      if (!expectedKeys.every((key) => typeof translated[key] === "string")) {
-        throw new Error("translation returned a non-string fragment");
-      }
+export async function translateMarkdownSection(section, relativePath, client = translationClient) {
+  const maxChars = client.config.maxBatchChars;
+  const plan = createMarkdownTranslationPlan(section, Math.min(2400, Math.floor((maxChars - 32) / 6)));
+  const batches = batchTranslationFragments(plan.fragments, maxChars);
+  const translated = {};
+  for (let i = 0; i < batches.length; i += 1) {
+    const batch = batches[i], expectedKeys = Object.keys(batch).sort();
+    const validate = (response) => {
+      let values;
+      try { values = JSON.parse(response); } catch { fail("translation returned invalid fragment JSON"); }
+      if (!values || typeof values !== "object" || Array.isArray(values) || !arraysEqual(expectedKeys, Object.keys(values).sort())) fail("translation changed fragment keys");
       for (const key of expectedKeys) {
-        validateDatabaseTerminology(plan.fragments[key], translated[key]);
+        if (typeof values[key] !== "string" || (!values[key].trim() && batch[key].trim())) fail("translation returned an empty or non-string fragment");
+        validateDatabaseTerminology(batch[key], values[key]);
       }
-
-      return restoreMarkdownTranslation(plan, translated);
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 2_000));
-    }
+    };
+    const response = await client.translate(JSON.stringify(batch), "fragments", { context: `${relativePath} batch ${i + 1}/${batches.length}`, validate });
+    Object.assign(translated, JSON.parse(response));
   }
-
-  fail(`${relativePath}: fragment translation failed after 3 attempts: ${lastError?.message || lastError}`);
+  return restoreMarkdownTranslation(plan, translated);
 }
 
-async function translateDocument(newEnglish, oldEnglish, existingChinese, relativePath) {
+export async function translateDocument(newEnglish, oldEnglish, existingChinese, relativePath, client = translationClient) {
   const oldSections = segmentByHeadings(oldEnglish);
   const newSections = segmentByHeadings(newEnglish);
   const chineseSections = segmentByHeadings(existingChinese);
@@ -251,7 +227,7 @@ async function translateDocument(newEnglish, oldEnglish, existingChinese, relati
       translatedSections.push(cachedTranslations.get(section));
       continue;
     }
-    translatedSections.push(await translateMarkdownSection(section, relativePath));
+    translatedSections.push(await translateMarkdownSection(section, relativePath, client));
   }
 
   if (translatedSections.length !== newSections.length) fail(`${relativePath}: section count changed during translation`);
@@ -340,7 +316,7 @@ async function main() {
   console.log(stateChanged ? `Sync state advanced to ${plan.sourceCommit.slice(0, 8)}.` : "No source changes detected.");
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href) {
   main().catch((error) => {
     console.error(`Error: ${error.message}`);
     process.exit(1);

@@ -12,6 +12,7 @@ test("protected Markdown is excluded from translation and restored byte-for-byte
   const source = `## Usage
 
 Run \`session.run(query)\` and see [the API](https://neug.io/docs/reference/java_api/session).
+See [formats](../extensions/load_parquet "Formats") and [local](#local-anchor).
 
 \`\`\`java
 try (Session session = driver.session()) {
@@ -28,6 +29,7 @@ try (Session session = driver.session()) {
   assert.doesNotMatch(submittedText, /https:\/\/neug\.io/);
   assert.doesNotMatch(submittedText, /try \(Session session/);
   assert.doesNotMatch(submittedText, /<\/?Callout/);
+  assert.doesNotMatch(submittedText, /\.\.\/extensions\/load_parquet|#local-anchor/);
 
   const translated = Object.fromEntries(
     Object.keys(plan.fragments).map((key) => [key, `译文-${key}`]),
@@ -38,6 +40,8 @@ try (Session session = driver.session()) {
   assert.match(restored, /https:\/\/neug\.io\/docs\/reference\/java_api\/session/);
   assert.match(restored, /```java[\s\S]*session\.run\("RETURN 1"\);[\s\S]*```/);
   assert.match(restored, /<Callout type="info">[\s\S]*<\/Callout>/);
+  assert.ok(restored.includes('](../extensions/load_parquet "Formats")'));
+  assert.ok(restored.includes("](#local-anchor)"));
 });
 
 test("Nextra metadata control values are restored after translation", () => {

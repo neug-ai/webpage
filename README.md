@@ -70,6 +70,18 @@ npm run sync:docs
 
 The command modifies tracked content in place. Review the diff and run the validation commands before committing.
 
+Translation requests explicitly disable Qwen thinking mode (Qwen 3.7 otherwise enables it by default). `OPENAI_ENABLE_THINKING=auto|false|true` controls this locally; auto disables it for Qwen on Alibaba Cloud and omits the provider-specific parameter for other endpoints. See [Model Studio thinking modes](https://www.alibabacloud.com/help/en/model-studio/deep-thinking).
+
+`TRANSLATION_TIMEOUT_MS` defaults to 180000, `TRANSLATION_MAX_ATTEMPTS` to 3, and `TRANSLATION_BATCH_CHARS` to 6000. Markdown fragments are bounded before batching; code, links and framework control values remain protected. Authentication/configuration HTTP errors fail immediately; timeouts, rate limits, transient server errors and invalid translations share one bounded retry loop. Logs contain file/batch, model, elapsed time, request ID and available token counts, not credentials or source/response bodies.
+
+Validated batches are atomically checkpointed under `.cache/neug-translations/v2` (override with `NEUG_TRANSLATION_CACHE_DIR`). Cache identity includes the endpoint, model, thinking configuration, prompt/terminology and exact submitted content. Cached output is revalidated before reuse. The workflow restores checkpoints and saves completed batches even after translation failure, so retries can reuse completed work without moving the sync cursor early. Only completion of all translations advances `last-sync.json`; a cache is not a successful-sync marker. Do not restore untrusted caches into a privileged workflow.
+
+Run the offline regression checks without model credentials or a documentation synchronization:
+
+```sh
+node --test scripts/translate-neug-docs.test.mjs scripts/translation-client.test.mjs scripts/translation-resume.test.mjs
+```
+
 ## Synchronizing blog posts from neug-ai/wiki
 
 The canonical English source for an automatically published post is:
