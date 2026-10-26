@@ -207,7 +207,10 @@ export async function translateMarkdownSection(section, relativePath, client = t
     const validate = (response) => {
       let values;
       try { values = JSON.parse(response); } catch { throw new TranslationValidationError("translation returned invalid fragment JSON"); }
-      if (!values || typeof values !== "object" || Array.isArray(values) || !arraysEqual(expectedKeys, Object.keys(values).sort())) throw new TranslationValidationError(`translation changed fragment keys; expected ${expectedKeys.join(",")}`);
+      if (!values || typeof values !== "object" || Array.isArray(values) || !arraysEqual(expectedKeys, Object.keys(values).sort())) {
+        const missing = expectedKeys.filter(key => !values || !Object.hasOwn(values, key));
+        throw new TranslationValidationError(`translation changed fragment keys; expected ${expectedKeys.join(",")}; missing ${missing.join(",") || "none"}`);
+      }
       for (const key of expectedKeys) {
         // Articles can disappear naturally in Chinese when split next to inline
         // code (e.g. "The `WITH` clause"). All keys and all other text remain

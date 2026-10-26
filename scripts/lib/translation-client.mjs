@@ -58,6 +58,20 @@ class TranslationFailure extends Error {
 /** Only caller-authored, non-content validation messages may enter diagnostics. */
 export class TranslationValidationError extends Error {}
 
+function repairResponseFormat(config, content, kind) {
+  // Only opt documented models into the provider's strict schema mode.
+  // https://www.alibabacloud.com/help/en/model-studio/qwen-structured-output
+  if (kind !== "fragments" || !/^qwen3\.7-(?:plus|max|flash)(?:-|$)/i.test(config.model)
+    || !/(?:^|\.)aliyuncs\.com$/.test(new URL(config.endpoint).hostname)) return undefined;
+  let fragments;
+  try { fragments = JSON.parse(content); } catch { return undefined; }
+  if (!fragments || typeof fragments !== "object" || Array.isArray(fragments)) return undefined;
+  const keys = Object.keys(fragments);
+  return { type: "json_schema", json_schema: { name: "translation_fragments", strict: true,
+    schema: { type: "object", properties: Object.fromEntries(keys.map(key => [key, { type: "string" }])),
+      required: keys, additionalProperties: false } } };
+}
+
 /** One retry layer covers transport, provider output and semantic validation. */
 export function createTranslationClient({ env = process.env, cacheDirectory, fetcher = fetch, sleep = pause, logger = console.log, now = Date.now } = {}) {
   const config = translationConfig(env);
@@ -94,9 +108,10 @@ export function createTranslationClient({ env = process.env, cacheDirectory, fet
         log("translation.request", { context, model: config.model, attempt, timeoutMs: config.timeoutMs, inputChars: content.length, thinking: config.thinking ?? "provider-default" });
         try {
           counters.requests += 1;
+          const responseFormat = repair && repairResponseFormat(config, content, kind);
           const response = await fetcher(config.endpoint, {
             method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify(repair ? { ...payload, messages: [...payload.messages,
+            body: JSON.stringify(repair ? { ...payload, ...(responseFormat ? { response_format: responseFormat } : {}), messages: [...payload.messages,
               { role: "assistant", content: repair.answer },
               { role: "user", content: `Your previous response failed validation: ${repair.reason}. Correct it and return the complete response only. Keep all original keys with string values, including punctuation-only fragments. Empty strings are allowed only for standalone English articles (a, an, the) that have no Chinese equivalent. Follow the terminology guide. Do not omit, merge or add keys.` },
             ] } : payload), signal: AbortSignal.timeout(config.timeoutMs), redirect: "error",

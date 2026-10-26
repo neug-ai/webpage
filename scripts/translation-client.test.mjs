@@ -168,6 +168,24 @@ test("validation repair receives precise safe feedback without leaking the rejec
   assert.equal(cached.counters.hits, 1);
 });
 
+test("Qwen 3.7 repairs missing keys with a strict schema; unrelated providers are not opted in", async () => {
+  for (const base of ['https://dashscope.aliyuncs.com/compatible-mode/v1', 'https://other.example/v1']) {
+    const f = fixture({ OPENAI_BASE_URL: base }); const requests = [];
+    const client = f.make(async (_url, options) => {
+      requests.push(JSON.parse(options.body));
+      return success(requests.length === 1 ? '{}' : '{"t0":"译文"}');
+    });
+    await translateMarkdownSection('Documentation', 'schema-repair.md', client);
+    assert.equal(requests[0].response_format, undefined);
+    if (base.includes('aliyuncs.com')) {
+      assert.deepEqual(requests[1].response_format, { type: 'json_schema', json_schema: {
+        name: 'translation_fragments', strict: true,
+        schema: { type: 'object', properties: { t0: { type: 'string' } }, required: ['t0'], additionalProperties: false },
+      } });
+    } else assert.equal(requests[1].response_format, undefined);
+  }
+});
+
 test("metadata schema validation retries and preserves Nextra controls", async () => {
   const f = fixture(); let requests = 0;
   const source = 'export default { docs: { title: "Documentation", type: "doc" } };';
