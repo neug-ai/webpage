@@ -4,7 +4,7 @@
 
 ## 数据类型汇总表
 
-下表展示了 NeuG 支持的所有数据类型及其与 Neo4j 的差异。`System Default Value`（系统默认值）列表示用户未在模式中显式定义默认值，且原始数据中未提供相应数据字段（或提供为 `Null` 值）时，系统在数据导入过程中自动分配的值。此机制可避免产生 `Null` 值，确保数据一致性，并为后续查询和计算提供稳定的默认值。
+下表展示了 NeuG 支持的所有数据类型及其与 Neo4j 的差异。`System Default Value` 列表示在用户未在模式中显式定义默认值，且原始数据中未提供对应数据字段（或提供的值为 `Null`）时，系统在数据导入期间自动分配的值。此机制可防止出现 `Null` 值，确保数据一致性，并为后续查询和计算提供稳定的默认值。
 
 | 类别 | 类型 | 系统默认值 | NeuG 示例 | Neo4j 示例 |
 |----------|------|---------------------|--------------|---------------|
@@ -19,9 +19,10 @@
 | 字符串 | VARCHAR | `''`（空字符串） | `RETURN 'Hello World'` | `RETURN 'Hello World'` |
 | 时间类型 | DATE | `1970-01-01` | `RETURN date('2022-06-06')` | `RETURN date('2022-06-06')` |
 | 时间类型 | DATETIME | `1970-01-01 00:00:00` | `RETURN timestamp('2022-06-06 12:00:00')` | `RETURN datetime('2022-06-06T12:00:00')` |
-| 时间类型 | INTERVAL | `0 year 0 month 0 day`（零时间间隔） | `RETURN interval('1 year 2 month 3 day')` | `RETURN duration('P1Y2M3D')` |
+| 时间类型 | INTERVAL | `0 year 0 month 0 day`（零间隔） | `RETURN interval('1 year 2 month 3 day')` | `RETURN duration('P1Y2M3D')` |
 | 复合类型 | LIST | `[]`（空列表） | `RETURN [1, 2, 3]` | `RETURN [1, 2, 3]` |
-| 复合类型 | ARRAY | 固定大小的子元素默认值，例如 `INT32[3]` 的默认值为 `[0, 0, 0]` | 模式中的 `readings INT32[3]` | 不支持作为独立的固定大小类型 |
+| 复合类型 | ARRAY | 固定大小的子元素默认值，例如 `INT32[3]` 的 `[0, 0, 0]` | 模式中的 `readings INT32[3]` | 不作为独立的固定大小类型支持 |
+| 复合类型 | STRUCT | 按字段的默认值 | 模式中的 `address STRUCT(city STRING, zip INT64)` | `MAP`（可变；参见 [STRUCT](#struct)） |
 | 模式类型 | NODE | `{}`（空节点） | `{_ID: 0, _LABEL: Person, id: 1, name: marko, age: 29}` | `(:Person {name: 'Alice', age: 30})` |
 | 模式类型 | REL | `{}`（空边） | `{_ID: 2, _LABEL: KNOWS, _SRC_LABEL: Person, _DST_LABEL: Person, _SRC_ID: 0, _DST_ID: 2, weight: 1.0}` | `[:KNOWS {weight: 1.0}]` |
 | 模式类型 | REPEATED PATH | `[]`（空路径） | `{_ID: 0, _LABEL: Person}, {_ID: 4294967298, _LABEL: CREATED, _SRC_LABEL: Person, _DST_LABEL: Person, _SRC_ID: 0, _DST_ID: 2}, {_ID: 2, _LABEL: Person}, {_ID: 4297064449, _LABEL: CREATED, _SRC_LABEL: Person, _DST_LABEL: Software, _SRC_ID: 2, _DST_ID: 72057594037927937}, {_ID: 72057594037927937, _LABEL: Software}` | `(:Person {name: "Kiefer", id: 4, age: 1992})-[:FOLLOWS]->(:Person {name: "Jack", id: 3, age: 1979})-[:FOLLOWS]->(:Person {name: "Kevin", id: 5, age: 1997})` |
@@ -93,9 +94,36 @@
 
 #### INTERVAL
 - **描述**：INTERVAL 类型表示持续时间或时间间隔，由以下字段组成：`year`、`month`、`day`、`hour`、`minute`、`second`、`millisecond` 和 `microsecond`。INTERVAL 类型支持两种主要格式来指定值：
-    - 基于日期的组成部分（year、month、day）：使用自然语言格式指定。示例：`1 year 2 month 3 day`。
-    - 基于时间的组成部分（hour、minute、second、millisecond、microsecond）：使用自然语言格式指定。示例：`12 hour 12 minute 2 second` - 表示 12 小时 12 分钟 2 秒。
+    - 基于日期的分量（年、月、日）：使用自然语言格式指定。示例：`1 year 2 month 3 day`。
+    - 基于时间的分量（小时、分钟、秒、毫秒、微秒）：使用自然语言格式指定。示例：`12 hour 12 minute 2 second` - 表示 12 小时、12 分钟和 2 秒。
 - **查询示例**：`RETURN interval('1 year 2 month 3 day 12 hour 12 minute 2 second') AS interval_value;`
+
+NeuG 在比较 `INTERVAL` 值时使用固定基数归一化：
+
+- 1 年 = 12 个月
+- 1 个月 = 30 天
+- 1 天 = 24 小时
+- 1 小时 = 60 分钟
+- 1 分钟 = 60 秒
+- 1 秒 = 1,000 毫秒
+- 1 毫秒 = 1,000 微秒
+
+例如，1 年 = 12 * 30 * 24 小时：
+
+```cypher
+RETURN interval('1 year') = interval('8640 hours') AS same_interval;
+// true
+```
+
+固定归一化确保 `INTERVAL` 类型内的计算保持一致，
+但涉及 `DATE` 和 `INTERVAL` 的计算可能会为原本等效的间隔产生不同的
+结果：
+
+```cypher
+RETURN date('2024-02-01') + interval('1 month'),
+       date('2024-02-01') + interval('30 days');
+// 2024-03-01, 2024-03-02
+```
 
 ### 复合类型
 
@@ -185,6 +213,35 @@ CREATE (m:Matrix {id: 1, grid: [[1, 2], [3, 4], [5, 6]]});
 - `RETURN`、等值过滤、从零开始的索引、`SET`、`MERGE`、`collect()` 和 `UNWIND` 均支持数组值属性
 - `CAST` 不会在 `LIST` 和 `ARRAY` 之间进行转换；数组属性值的类型由感知模式的编译器上下文决定
 - 尚不支持将现有数组属性设置为 `NULL`
+
+#### STRUCT
+- **描述**：一组固定且名称唯一的字段，每个字段都有其声明的类型
+- **语法**：`STRUCT(field_name FIELD_TYPE, ...)`
+- **查询示例**：`CREATE NODE TABLE Person(id INT64, address STRUCT(city STRING, zip INT64), PRIMARY KEY(id));`
+
+**与 Neo4j 的 `MAP` 比较**：NeuG 的 `STRUCT` 是一种*固定*复合类型：字段名称、顺序以及每个字段的类型均在模式中声明，并且对于每个值都相同。Neo4j 的 `MAP` 是*可变*的：每个映射值可以携带任意的一组键和异构值，且无需模式声明。NeuG 不支持用于属性的可变映射类型；当您需要命名记录时，请使用 `STRUCT`，但需注意字段集由模式固定这一权衡。
+
+结构体字面量使用 `{field: value}` 语法。其字段名称和顺序必须与声明的类型匹配。兼容的子值会被转换为声明的字段类型。
+
+```cypher
+CREATE NODE TABLE Person(
+    id INT64,
+    address STRUCT(city STRING, zip INT32),
+    PRIMARY KEY(id)
+);
+
+CREATE (p:Person {id: 1, address: {city: 'Hangzhou', zip: 310000}});
+MATCH (p:Person) RETURN p.address.city;
+```
+
+当字段名称和顺序相同时，`CAST` 可以在兼容的结构体类型之间进行转换：
+
+```cypher
+MATCH (p:Person)
+RETURN CAST(p.address, 'STRUCT(city STRING, zip INT64)');
+```
+
+结构体字段名称必须唯一。类似 `STRUCT(value INT64, value STRING)` 这样的声明将被拒绝。
 
 ### 图类型
 

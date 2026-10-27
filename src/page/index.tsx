@@ -94,7 +94,7 @@ function Homepage({ locale }: { locale: HomeLocale }) {
             </div>
             <div className="np-compatibility">
               <strong>{copy.quick.compatibility}</strong>
-              <dl>{copy.quick.groups.map(([term, value], index) => <div key={term}><dt>{term}</dt><dd>{value}{index === 2 && <><br /><span>{copy.quick.roadmap}</span></>}</dd></div>)}</dl>
+              <dl>{copy.quick.groups.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
             </div>
           </div>
         </section>

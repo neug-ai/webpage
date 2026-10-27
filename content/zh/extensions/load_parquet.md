@@ -1,9 +1,11 @@
-# Parquet 扩展
+# Parquet
 
-Apache Parquet 是一种列式存储格式，在数据工程和分析工作负载中被广泛使用。NeuG 通过扩展框架支持 Parquet 文件的导入和导出功能。
+Apache Parquet 是一种列式存储格式，广泛应用于数据工程和分析工作负载。NeuG 通过扩展框架支持 Parquet 文件的导入和导出功能。
 
 - **导入**：使用 `LOAD FROM` 语法加载外部 Parquet 文件
-- **导出**：使用 `COPY TO` 语法将查询结果导出到 Parquet 文件
+- **导出**：使用 `COPY TO` 语法将查询结果导出为 Parquet 文件
+
+该扩展通过 NeuG 现有的流、模式、`DataChunk` 和查询导出接口，使用 Carquet 进行导入和导出。请参阅源代码树中的 [Carquet 后端说明](https://github.com/alibaba/neug/blob/main/extension/parquet/carquet_parquet_backend.md)。
 
 ## 安装扩展
 
@@ -23,14 +25,17 @@ LOAD PARQUET;
 
 ### Parquet 格式选项
 
-以下选项用于控制 Parquet 文件的读取方式：
+以下选项控制 Parquet 文件的读取方式：
 
-| 选项                     | 类型   | 默认值  | 描述                                                                                                                                 |
-| ------------------------ | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `buffered_stream`        | bool   | `true`  | 启用缓冲 I/O 流以提升顺序读取性能。缓冲区大小（单位：字节）由通用选项 `batch_size` 控制（默认为 1 MiB）。                             |
-| `pre_buffer`             | bool   | `false` | 在解码前预先缓冲列数据。建议在高延迟文件系统（例如 S3）上启用。                                                                      |
-| `enable_io_coalescing`   | bool   | `true`  | 启用 Arrow I/O 的读取合并（即“空洞填充缓存”），以减少读取非连续字节范围时的 I/O 开销。设为 `true` 时采用惰性合并；设为 `false` 时采用急切合并。 |
-| `parquet_batch_rows`     | int64  | `65536` | 将 Parquet 行组转换为内存中批次时，每个 Arrow 记录批次所含的行数。                                                                     |
+| 选项                   | 类型  | 默认值 | 描述                                                                                                                                 |
+| ------------------------ | ----- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `buffered_stream`        | bool  | `true`  | 启用缓冲 I/O 流以提高顺序读取性能。缓冲区大小（以字节为单位）由下面的 `batch_size` 控制。         |
+| `batch_size`             | int64 | `1048576` (1 MiB) | 缓冲流的 I/O 批次大小，单位为**字节**。只有 Parquet 阅读器会使用此选项。 |
+| `pre_buffer`             | bool  | `false` | 在解码之前预缓冲列数据。推荐用于 S3 等高延迟文件系统。                                                |
+| `enable_io_coalescing`   | bool  | `true`  | 惰性合并非连续字节范围。将此设置为 `false` 会在解码之前预缓冲选定的列数据。 |
+| `batch_rows`             | int64 | `65536` | 每个内存数据块中返回的最大行数。`PARQUET_BATCH_ROWS` 仍作为已弃用的别名被接受。 |
+
+NeuG 目前未捆绑 Brotli 编解码器。无法加载经 Brotli 压缩的 Parquet 文件，且导出时不支持 `compression='brotli'`。如果互操作性要求证明引入额外依赖是合理的，后续可以添加对 Brotli 的支持。
 
 ### 查询示例
 
@@ -43,12 +48,12 @@ LOAD FROM "person.parquet"
 RETURN *;
 ```
 
-#### 指定批次大小
+#### 指定批处理大小
 
-通过调整每批次读取的行数来调节内存使用：
+通过调整每批读取的行数来优化内存使用：
 
 ```cypher
-LOAD FROM "person.parquet" (parquet_batch_rows=8192)
+LOAD FROM "person.parquet" (batch_rows=8192)
 RETURN *;
 ```
 
@@ -79,7 +84,24 @@ LOAD FROM "person.parquet"
 RETURN fName AS name, age AS years;
 ```
 
-> **注意：** `LOAD FROM` 支持的所有关系操作 — 包括类型转换、WHERE 过滤、聚合、排序和限制 — 在 Parquet 文件上同样适用。完整的操作列表请参见 [LOAD FROM 参考文档](../data_io/load_data)。
+> **注意：**`LOAD FROM` 支持的所有关系运算（包括类型转换、WHERE 过滤、聚合、排序和限制）在处理 Parquet 文件时工作方式相同。完整操作列表请参阅 [LOAD FROM 参考](../data_io/load_data)。
+
+读取器会解码请求的输出列以及 `WHERE` 使用的任何附加列，包括嵌套表达式中的引用。它在评估完整谓词后移除仅用于过滤的列。标量统计信息可以保守地剪枝行组；谓词中不支持的部分会在解码后评估，绝不会导致跳过匹配的行。
+
+### 支持的数据类型
+
+`LOAD FROM` 将 Parquet 值映射到 NeuG 类型的方式如下：
+
+| Parquet 值 | NeuG 表示 |
+| -------------- | ------------------- |
+| 布尔值、有符号/无符号整数、float 和 double | 对应的标量类型；窄整数拓宽为 INT32/UINT32 |
+| UTF-8 字符串，包括大字符串 | VARCHAR |
+| 日期和时间戳 | DATE 和毫秒级 TIMESTAMP，并进行单位和溢出检查 |
+| LIST 和 LARGE_LIST | LIST，保留 NULL 列表、空列表和 NULL 元素 |
+| 带有 Arrow 模式元数据的固定大小列表 | ARRAY，使用记录的长度 |
+| 相互嵌套的支持的列表和数组 | 嵌套的 LIST/ARRAY 值 |
+
+可以检查 MAP 模式，但不支持 MAP 和通用 STRUCT 值列。INTERVAL 值保留其文本存储形式，以便下游转换。不支持的模式或无效的布局会报告错误。
 
 ## 导出到 Parquet
 
@@ -149,21 +171,21 @@ COPY (
 
 ### 支持的数据类型
 
-Parquet 导出支持所有 NeuG 数据类型：
+Parquet 导出支持所有 NeuG 数据类型，其 Parquet 表示形式如下：
 
-**基本类型：**
-- INT32, INT64, UINT32, UINT64
-- FLOAT, DOUBLE, BOOLEAN
-- STRING, DATE, TIMESTAMP, INTERVAL
+| NeuG 类型 | Parquet 表示形式 |
+| --------- | ---------------------- |
+| INT32、INT64、UINT32、UINT64 | INT32/INT64，并在需要时使用无符号逻辑注解 |
+| FLOAT、DOUBLE、BOOL | FLOAT、DOUBLE、BOOLEAN |
+| STRING | UTF-8 BYTE_ARRAY |
+| DATE | 自 Unix 纪元以来的天数 DATE；毫秒级载荷会被归一化为其所属的 UTC 日 |
+| TIMESTAMP | UTC TIMESTAMP（毫秒），与 NeuG 的内部单位一致 |
+| List<T\>（可变长度）和固定 ARRAY | 标准 LIST，保留任意层级的空列表和 NULL；固定数组会根据模式维度进行验证 |
+| Struct | 带有命名字段的嵌套组 |
+| INTERVAL | 字符串值 |
+| Vertex、Edge、Path | JSON 字符串（见下方说明） |
 
-**复杂类型：**
-- **List<T>**: 变长数组（例如，`list<string>`、`list<int64>`）
-- **Struct**: 具有命名字段的嵌套结构
-- **Vertex**: 图顶点导出为 JSON 字符串（由于混合类型模式冲突）
-- **Edge**: 图边导出为 JSON 字符串（由于混合类型模式冲突）
-- **Path**: 图路径导出为 JSON 字符串（由于混合类型模式冲突）
-
-> **关于 Vertex/Edge/Path 导出的说明：** 这些图类型被导出为 JSON 字符串而不是 Parquet StructArray。此设计选择是必要的，因为 Parquet StructArray 要求所有行具有相同的模式，但混合类型的顶点/边（例如，person 与 organisation）具有不同的属性，这将导致模式冲突和稀疏数据。
+> **关于 Vertex/Edge/Path 导出的说明：**这些图类型以 JSON 字符串而非 Parquet StructArray 的形式导出。之所以做出这一设计选择，是因为 Parquet StructArray 要求所有行具有相同的模式，而混合类型的顶点/边（例如 person 与 organisation）具有不同的属性，这会导致模式冲突和数据稀疏。
 
 ### 导出顶点和边数据
 

@@ -64,41 +64,44 @@ constructor(options = {}) {
 }
 ```
 
-打开一个数据库。
+打开数据库。
 
 - **参数：**
-  - `options`（Object）
+  - `options`（对象）
     数据库配置选项。
-  - `options.databasePath`（string | null）
-    数据库文件路径。默认值为 `null`。若设为空字符串 (`''`) 或 `null`，则以内存模式打开数据库。
-    注意：在内存模式下，数据库不会持久化到磁盘，程序退出时所有数据将丢失。
-    **注意**：`null` 不可与只读模式组合使用；而 `''`（空字符串）可以。
-  - `options.mode`（string）
-    打开数据库的模式。支持的取值包括：`'r'`、`'read'`、`'read-only'`、`'read_only'`、`'w'`、`'rw'`、`'write'`、`'readwrite'`、`'read-write'`、`'read_write'`。默认值为 `'read-write'`。
-  - `options.maxThreadNum`（number）
-    数据库查询并发能力；`0` 表示自动选择硬件并发数（回退至 `1`），更大的数值将触发警告并被截断至该上限。
+  - `options.databasePath`（字符串 | null）
+    数据库文件的路径。默认为 `null`。如果设置为空字符串（`''`）或 `null`，数据库将以内存模式打开。
+    请注意，在内存模式下，数据库不会持久化到磁盘，程序退出时所有数据都将丢失。
+    **注意**：`null` 不能与只读模式结合使用；`''`（空字符串）可以。
+  - `options.mode`（字符串）
+    打开数据库的模式。支持的值：'r'、'read'、'read-only'、'read_only'、'w'、'rw'、'write'、'readwrite'、'read-write'、'read_write'。默认为 'read-write'。
+  - `options.maxThreadNum`（数字）
+    数据库查询容量；`0` 选择硬件并发数（回退为 `1`），而更高的输入会发出警告并钳制到该值。
 
-    当前嵌入式（AP）查询为单线程；利用此设置实现查询内部并行化属于未来工作方向。
+    嵌入式（AP）查询当前是单线程的；将此设置用于查询内并行性是未来的工作。
 
-    在 TP 模式下，该参数用于设定槽位池大小并限制服务线程数量。查询将并发执行，每个查询占用一个槽位/线程。
-  - `options.checkpointOnClose`（boolean）
-    关闭数据库时是否自动创建检查点（checkpoint）。默认值为 `true`。
-    若设为 `false`，则关闭数据库时不会自动创建检查点。
-  - `options.bufferStrategy`（string）
-    数据库所用的缓冲区策略，可选值为 `'InMemory'`（或 `'M_FULL'`）、`'SyncToFile'`（或 `'M_LAZY'`）或 `'HugePagePreferred'`（或 `'M_HUGE'`）。默认值为 `'M_FULL'`。
-    - `'InMemory'` / `'M_FULL'`：数据库将完全加载至内存中，且变更内容仅在创建检查点后才写入磁盘。
-    - `'SyncToFile'` / `'M_LAZY'`：数据库按需加载至内存，适用于无法全部载入内存的大型数据库；同样地，变更内容也仅在创建检查点后才写入磁盘。
-    - `'HugePagePreferred'` / `'M_HUGE'`：类似于 `'InMemory'`，但会尝试使用大页（huge pages）进行内存分配，可能提升大型数据库的性能。
+    在 TP 模式下，它是默认的服务执行槽容量。显式设置较小的服务并发数会减少服务本地池。
+  - `options.checkpointOnClose`（布尔值）
+    是否在关闭数据库时自动创建检查点。默认为 true。
+    如果为 false，则关闭数据库时不会自动创建检查点。
+  - `options.bufferStrategy`（字符串）
+    数据库使用的缓冲策略，可以是 'InMemory'（或 'M_FULL'）、'SyncToFile'（或 'M_LAZY'）
+    或 'HugePagePreferred'（或 'M_HUGE'）。默认为 'M_FULL'。
+    - 'InMemory' / 'M_FULL'：数据库将完全在内存中打开，更改直到创建检查点后才会持久化到磁盘。
+    - 'SyncToFile' / 'M_LAZY'：数据库将按需加载到内存中，适用于无法装入内存的大型数据库。此外，更改直到创建检查点后才会持久化到磁盘。
+    - 'HugePagePreferred' / 'M_HUGE'：与 'InMemory' 类似，但会尝试使用大页进行内存分配，这可能会提高大型数据库的性能。
 
-- **异常抛出：**
-  - **Error**（ERR_INVALID_PATH）
-    若数据库路径包含非法字符。
-  - **Error**（ERR_INVALID_ARGUMENT）
-    若指定的 `mode` 不在支持的模式列表中；
-    若 `maxThreadNum` 超过 CPU 核心数；
-    若以只读模式打开内存数据库（即 `databasePath` 为 `null`）。
-  - **Error**（ERR_CONFIG_INVALID）
-    若 `maxThreadNum` 为负数。
+- **抛出：**
+  - **Error** (ERR_INVALID_PATH)
+    如果数据库路径包含非法字符。
+  - **Error** (ERR_INVALID_ARGUMENT)
+    如果模式不是受支持的模式之一。
+    如果 maxThreadNum 超过 CPU 核心数。
+    如果在只读模式下打开内存模式。
+  - **Error** (ERR_CONFIG_INVALID)
+    如果 maxThreadNum 为负数。
+
+<a id="neug.database.Database.version"></a>
 
 ### 版本
 

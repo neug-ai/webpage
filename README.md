@@ -61,7 +61,6 @@ For a controlled rerun, use the **Sync NeuG Documentation** workflow in GitHub A
 ```bash
 NEUG_SOURCE_DIR=/path/to/neug \
 NEUG_SOURCE_SHA=<full-commit-sha> \
-NEUG_VERSION=v0.2.0 \
 OPENAI_API_KEY=<dashscope-api-key> \
 OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1 \
 OPENAI_MODEL=qwen3.7-plus \
@@ -69,6 +68,10 @@ npm run sync:docs
 ```
 
 The command modifies tracked content in place. Review the diff and run the validation commands before committing.
+
+Automatic translation requires the repository secret `DASHSCOPE_API_KEY` or `QWEN_API_KEY`. The version is read from the checked-out source unless explicitly provided.
+
+If translation or validation fails, the workflow does not advance the sync state or publish partial updates. Rerun it to resume completed translation work.
 
 ## Synchronizing blog posts from neug-ai/wiki
 

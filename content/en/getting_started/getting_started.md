@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you through creating your first graph database, querying relationships, adding the indexes introduced in NeuG v0.2, and exploring both embedded and service modes. Examples are in **Python**.
+This guide walks you through creating your first graph database, querying relationships, adding storage indexes, and exploring both embedded and service modes. Examples are in **Python**.
 
 > **Using another language?** See the [Node.js API reference](../../reference/nodejs_api/index), [Java API reference](../../reference/java_api/index), or [C++ API reference](../../reference/cpp_api/index) for equivalent examples in those languages.
 
@@ -63,11 +63,11 @@ db = neug.Database("/path/to/database")
 service = db.serve(host="localhost", port=10000, blocking=False, thread_num=0)
 ```
 
-`thread_num` controls the number of service threads.
-The default `0` auto-selects from the database `max_thread_num`. With the
+`thread_num` controls the maximum number of concurrently executing service
+queries. The default `0` follows the database `max_thread_num`. With the
 default database thread setting, `max_thread_num` is resolved from hardware
 concurrency and falls back to `1` if the runtime cannot detect it.
-Service threads run TP queries concurrently, but each query uses one execution context and one thread.
+Each concurrently executing TP query uses one service execution slot.
 
 Embedded (AP) queries are currently single-threaded; using `max_thread_num` for intra-query parallelism is future work.
 
@@ -219,9 +219,9 @@ for record in result:
     # Bob Smith knows Alice Johnson who works at TechCorp
 ```
 
-### Indexing the Same Data (NeuG v0.2+)
+### Indexing the Same Data
 
-NeuG v0.2 introduces storage indexes, HNSW vector search, and BM25 full-text search. These capabilities are not available in NeuG v0.1.x. The following examples add semantic and keyword indexes to the same `Person` nodes used by the graph queries above.
+NeuG provides storage indexes, HNSW vector search, and BM25 full-text search. The following examples add semantic and keyword indexes to the same `Person` nodes used by the graph queries above.
 
 ```python
 # Load the index extensions

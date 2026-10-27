@@ -69,20 +69,19 @@ public class Example {
 在使用 Java SDK 之前，启动一个暴露查询端点的 NeuG HTTP 服务器。
 你可以使用 C++ 二进制文件或 Python API 来启动服务器。
 
-### 选项 A：使用 Python 启动
+### 选项 A：从 Python 启动
 
-如果你已经安装了 `neug` Python 包，可以直接从 Python 启动服务器：
+如果已安装 `neug` Python 包，您可以直接从 Python 启动服务器：
 
 ```python
 from neug import Database
 
 db = Database("/path/to/graph", mode="rw")
-
-# 阻塞式运行，直至进程被终止（Ctrl+C 或 SIGTERM）
+# Blocks until the process is killed (Ctrl+C or SIGTERM)
 db.serve(port=10000, host="0.0.0.0", blocking=True, thread_num=0)
 ```
 
-如需非阻塞式运行（例如在更大的脚本中）：
+要以非阻塞方式运行（例如在较大的脚本中）：
 
 ```python
 import time
@@ -90,7 +89,7 @@ from neug import Database
 
 db = Database("/path/to/graph", mode="rw")
 uri = db.serve(port=10000, host="0.0.0.0", blocking=False, thread_num=0)
-print("服务器已启动，地址为：", uri)
+print("Server started at:", uri)
 
 try:
     while True:
@@ -99,8 +98,13 @@ except KeyboardInterrupt:
     db.stop_serving()
 ```
 
-`thread_num` 用于设置服务线程数。默认值 `0` 表示由数据库的 `max_thread_num` 自动选择。若显式指定该值，则其必须小于或等于数据库的 `max_thread_num`。在数据库使用默认线程配置时，`max_thread_num` 将依据硬件并发能力自动推导；若运行时无法检测到硬件并发能力，则回退为 `1`。
-服务线程可并发执行 TP 查询，但每个查询仅使用一个执行上下文和一个线程。
+`thread_num` 设置并发执行的服务查询的最大数量。
+默认值 `0` 遵循数据库 `max_thread_num`。如果显式设置，它
+必须小于或等于
+数据库 `max_thread_num`。使用默认数据库线程设置时，
+`max_thread_num` 根据硬件并发数确定，如果
+运行时无法检测到该值，则回退到 `1`。
+每个并发执行的 TP 查询占用一个服务执行槽位。
 
 ### 选项 B：使用 C++ 二进制文件启动
 
@@ -127,12 +131,12 @@ cmake --build build --target rt_server -j$(nproc)
 常用选项：
 
 - `--data-path`：NeuG 数据目录的路径
-- `--http-port`：Java 客户端使用的 HTTP 端口，默认为 `10000`
+- `--http-port`：Java 客户端的 HTTP 端口，默认为 `10000`
 - `--host`：绑定地址，默认为 `127.0.0.1`
-- `--thread-num`：数据库的 `max_thread_num` 和服务端的 `thread_num`。默认值为 `0`：NeuG 首先解析数据库线程数，再基于该数据库 `max_thread_num` 解析服务端线程数。在默认数据库线程配置下，数据库线程数由硬件并发数决定；若运行时无法检测到硬件并发数，则回退为 `1`。服务端线程用于并发执行 TP 查询，但每个查询仅使用一个执行上下文和一个线程。
+- `--thread-num`：数据库 `max_thread_num` 和服务 `thread_num`。默认值为 `0`：NeuG 首先确定数据库线程数，然后根据所得的数据库 `max_thread_num` 确定服务并发度。在默认数据库线程设置下，数据库线程数根据硬件并发度确定，如果运行时无法检测到硬件并发度，则回退到 `1`。每个并发执行的 TP 查询占用一个服务执行槽位。
 
-> **注意：** 在调用 `db.serve()` 之前，请确保所有本地连接均已关闭。
-> 服务器启动后，除非调用 `db.stop_serving()`，否则不允许建立新的本地连接。
+> **注意：** 在调用 `db.serve()` 之前，请确保所有本地连接已关闭。
+> 服务器运行后，在调用 `db.stop_serving()` 之前不允许建立新的本地连接。
 
 ### 从 Java 连接
 

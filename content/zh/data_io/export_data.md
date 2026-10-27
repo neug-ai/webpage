@@ -1,6 +1,6 @@
 # 导出数据
 
-`COPY TO` 命令支持将查询结果直接导出为多种文件格式。目前，CSV 导出已完全支持，随着开发的进展，其他格式可通过 [扩展](../extensions/index) 框架获得。
+`COPY TO` 命令可将查询结果直接导出为 CSV、JSON 或 JSONL 文件。通过 [扩展](../extensions/index) 框架，还支持其他格式。
 
 ## 导出至 CSV
 
@@ -37,9 +37,9 @@ e
 {"_SRC":"0:0","_DST":"0:2","_SRC_LABEL":"Person","_DST_LABEL":"Person","_LABEL":"KNOWS","weight":1.0}
 ```
 
-## 复制为 JSON
+## 复制到 JSON
 
-自 NeuG v0.1.2 起，JSON 导出已成为内置功能。您可以将查询结果导出为 JSON 或 JSONL 格式：
+内置 JSON 导出功能。您可以将查询结果导出为 JSON 或 JSONL 格式：
 
 ```cypher
 COPY (MATCH (p:Person) RETURN p.*) TO 'person.json';
@@ -47,10 +47,23 @@ COPY (MATCH (p:Person) RETURN p.*) TO 'person.jsonl';
 ```
 
 输出格式由文件扩展名决定：
-- `.json` — JSON 数组格式（所有行包含在单个数组中）
+- `.json` — JSON 数组格式（所有行位于单个数组中）
 - `.jsonl` — JSON Lines 格式（每行一个 JSON 对象）
 
-> **版本说明：** 自 v0.1.2 版本起，我们将 JSON 支持设为内置功能，因此使用前无需再安装 JSON 扩展。对于 NeuG v0.1.2 之前的版本，JSON 导出通过 JSON 扩展提供，使用前需执行 `INSTALL json; LOAD json;`。
+JSON 输出如下所示：
+
+```json
+[{"id": 1, "name": "marko", "age": 29},{"id": 2, "name": "vadas", "age": 27}]
+```
+
+等效的 JSONL 输出每行包含一个对象：
+
+```jsonl
+{"id": 1, "name": "marko", "age": 29}
+{"id": 2, "name": "vadas", "age": 27}
+```
+
+上述常见的 `BATCH_SIZE` 选项也适用于 JSON 和 JSONL 导出。
 
 ## 其他导出格式
 

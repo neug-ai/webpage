@@ -1,15 +1,18 @@
 # 列表函数
 
-自 v0.2.0 版本起，NeuG 提供了用于处理类列表（list-like）值的内置函数。这些函数为在 Cypher 查询中构建、组合及操作集合值提供了常见操作。
+NeuG 提供了用于处理类列表值的内置函数。这些函数为在 Cypher 查询中构造、组合和操作集合值提供了常见操作。
 
-当前支持的列表函数汇总如下：
+当前支持的列表函数总结如下。
 
-| 函数                              | 描述                                   | 示例                                 |
-| --------------------------------- | -------------------------------------- | ------------------------------------ |
-| `list_append(list_like, element)` | 将一个元素追加到列表或数组末尾         | `RETURN list_append([1, 2], 3)`      |
-| `list_concat(left, right)`        | 连接两个列表或数组                     | `RETURN list_concat([1, 2], [3, 4])` |
+| 函数 | 描述 | 示例 |
+| --------------------------------- | ---------------------------------------- | ------------------------------------ |
+| `list_append(list_like, element)` | 向列表或数组追加一个元素 | `RETURN list_append([1, 2], 3)` |
+| `list_concat(left, right)` | 连接两个列表或数组 | `RETURN list_concat([1, 2], [3, 4])` |
+| `list_contains(list, element)` | 测试列表是否包含某个元素 | `RETURN list_contains([1, 2], 2)` |
+| `list_has(list, element)` | `list_contains` 的别名 | `RETURN list_has([1, 2], 2)` |
+| `repeat(unit, count)` | 重复整个列表或数组单元 | `RETURN repeat([1, 2], 2)` |
 
-各函数所接受的参数类型、返回类型、类型推断规则及其具体行为，将在下方对应章节中详细说明。
+每个函数所接受的参数类型、返回类型、类型推断规则和行为将在下面的相应部分中进行描述。
 
 ## `list_append`
 
@@ -114,14 +117,28 @@ RETURN list_append([], 1);
 
 #### 追加 `NULL`
 
-当输入已提供明确的元素类型时，可直接追加 `NULL`：
+当输入已提供具体的元素类型时，可以直接追加 `NULL`：
 
 ```cypher
 RETURN list_append([1, 2], NULL);
 // [1, 2, NULL]
 ```
 
-在此示例中，现有列表将元素类型确定为 `INT64`，返回的列表则保留所追加的 `NULL` 值。
+在此示例中，现有列表将元素类型确定为 `INT64`，返回的列表保留追加的 `NULL` 值。
+
+现有的 `NULL` 元素也会被保留，新元素会追加到它们之后：
+
+```cypher
+RETURN list_append([NULL], NULL);
+// [NULL, NULL]
+```
+
+如果输入列表本身为 `NULL`，则无论追加什么元素，结果都是 `NULL`：
+
+```cypher
+RETURN list_append(CAST(NULL, 'INT64[]'), 3);
+// NULL
+```
 
 #### 追加兼容类型
 
@@ -251,6 +268,32 @@ RETURN list_concat([], []);
 
 当一侧具有已知的元素类型时，该类型可用于推断未指定类型的空列表的类型。
 
+#### 连接包含 `NULL` 的列表
+
+列表中的 `NULL` 元素会保持其原始顺序。空列表不会贡献任何元素：
+
+```cypher
+RETURN list_concat([], [NULL]);
+// [NULL]
+```
+
+```cypher
+RETURN list_concat([1, CAST(NULL, 'INT64')], [2]);
+// [1, NULL, 2]
+```
+
+如果任一输入列表本身为 `NULL`，则整个结果为 `NULL`：
+
+```cypher
+RETURN list_concat(CAST(NULL, 'INT64[]'), []);
+// NULL
+```
+
+```cypher
+RETURN list_concat([], CAST(NULL, 'INT64[]'));
+// NULL
+```
+
 #### 连接兼容的元素类型
 
 如果两个输入具有不同但兼容的元素类型，NeuG 会将它们提升为一个公共类型：
@@ -283,6 +326,74 @@ RETURN list_concat([[1, 2]], [[3, 4], [5, 6]]);
 ```cypher
 RETURN list_concat([1], 2);
 ```
+
+## `list_contains` 和 `list_has`
+
+`list_contains(list, element)` 和 `list_has(list, element)` 等价于 [`IN` 运算符](list_op)。这两个函数都测试 `element` 是否出现在 `list` 中，并且行为完全相同。
+
+### 语法
+
+```cypher
+list_contains(list, element)
+list_has(list, element)
+```
+
+### 示例
+
+当元素出现在列表中时，函数返回 `TRUE`；否则返回 `FALSE`：
+
+```cypher
+RETURN list_contains([1, 2, 3], 2);
+// TRUE
+
+RETURN list_has([1, 2, 3], 4);
+// FALSE
+```
+
+### NULL 值
+
+与 `IN` 运算符类似，当列表、被搜索的元素或列表中的某个元素为 `NULL` 时，`list_contains` 和 `list_has` 会使用三值逻辑：
+
+* `NULL` 列表会产生 `NULL`。
+* 空列表会产生 `FALSE`，即使被搜索的元素是 `NULL` 也是如此。
+* 如果存在确定匹配，则产生 `TRUE`，即使列表中的另一个元素是 `NULL`。
+* 如果没有匹配但列表包含 `NULL`，则结果为 `NULL`。
+* 如果没有匹配且列表不包含任何 `NULL`，则结果为 `FALSE`。
+
+```cypher
+RETURN list_contains(NULL, 2);
+// NULL
+
+RETURN list_contains([], NULL);
+// FALSE
+
+RETURN list_has([1, NULL, 3], 1),
+       list_has([1, NULL, 3], 2);
+// TRUE, NULL
+```
+
+## `repeat`
+
+`repeat` 将整个 `LIST` 或 `ARRAY` 单元重复指定的次数。展开操作发生在执行引擎中，而非查询编译期间。
+
+```cypher
+repeat(unit, count)
+```
+
+`unit` 必须是 `LIST` 或 `ARRAY`，且 `count` 必须是非负整数。结果始终为 `LIST`。如果 `count` 为 `0`，则结果为空 `LIST`。结果大小为 `size(unit) * count`，且必须在 `[0, 65,536)` 范围内。
+
+```cypher
+RETURN repeat([1, 2], 3);
+// [1, 2, 1, 2, 1, 2]
+
+RETURN repeat([1, 2], 0);
+// []
+
+RETURN CAST(repeat([1], 4), 'INT32[4]');
+// [1, 1, 1, 1]
+```
+
+将结果转换为 `ARRAY` 时，重复结果的长度必须与声明的固定长度匹配。无效的参数类型、负数计数、结果过大以及结果类型不兼容都会产生错误。
 
 ## 类型推断与转换
 

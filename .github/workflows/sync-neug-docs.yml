@@ -16,6 +16,10 @@ on:
         description: "alibaba/neug ref or commit to sync"
         required: false
         default: "main"
+      released_at:
+        description: "Official release timestamp (optional, ISO 8601)"
+        required: false
+        default: ""
 
 permissions:
   actions: write
@@ -82,16 +86,37 @@ jobs:
             echo "branch=automation/neug-docs-${SAFE_VERSION}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Restore completed translation batches
+        id: translation-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/neug-translations/v2
+          key: neug-translations-v2-${{ runner.os }}-${{ hashFiles('scripts/translate-neug-docs.mjs', 'scripts/lib/translation-client.mjs', 'scripts/lib/database-terminology.mjs') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            neug-translations-v2-${{ runner.os }}-${{ hashFiles('scripts/translate-neug-docs.mjs', 'scripts/lib/translation-client.mjs', 'scripts/lib/database-terminology.mjs') }}-
+            neug-translations-v2-${{ runner.os }}-
+
       - name: Incrementally sync and translate docs
         run: npm run sync:docs
         env:
           NEUG_SOURCE_DIR: .temp-source-repo
           NEUG_SOURCE_SHA: ${{ steps.source.outputs.sha }}
           NEUG_VERSION: ${{ steps.source.outputs.version }}
-          NEUG_RELEASED_AT: ${{ github.event.client_payload.released_at }}
+          NEUG_RELEASED_AT: ${{ github.event.client_payload.released_at || inputs.released_at }}
           OPENAI_API_KEY: ${{ secrets.DASHSCOPE_API_KEY || secrets.QWEN_API_KEY }}
           OPENAI_BASE_URL: ${{ vars.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1' }}
           OPENAI_MODEL: ${{ vars.QWEN_MODEL || 'qwen-plus' }}
+          OPENAI_ENABLE_THINKING: 'false'
+          TRANSLATION_TIMEOUT_MS: ${{ vars.TRANSLATION_TIMEOUT_MS || '180000' }}
+          TRANSLATION_MAX_ATTEMPTS: '3'
+          TRANSLATION_BATCH_CHARS: '6000'
+
+      - name: Preserve completed translation batches even after failure
+        if: always() && steps.translation-cache.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/neug-translations/v2
+          key: ${{ steps.translation-cache.outputs.cache-primary-key }}
 
       - name: Validate synchronized content
         run: |
