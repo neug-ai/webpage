@@ -61,7 +61,6 @@ For a controlled rerun, use the **Sync NeuG Documentation** workflow in GitHub A
 ```bash
 NEUG_SOURCE_DIR=/path/to/neug \
 NEUG_SOURCE_SHA=<full-commit-sha> \
-NEUG_VERSION=v0.2.0 \
 OPENAI_API_KEY=<dashscope-api-key> \
 OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1 \
 OPENAI_MODEL=qwen3.7-plus \
@@ -70,17 +69,9 @@ npm run sync:docs
 
 The command modifies tracked content in place. Review the diff and run the validation commands before committing.
 
-Translation requests explicitly disable Qwen thinking mode (Qwen 3.7 otherwise enables it by default). `OPENAI_ENABLE_THINKING=auto|false|true` controls this locally; auto disables it for Qwen on Alibaba Cloud and omits the provider-specific parameter for other endpoints. See [Model Studio thinking modes](https://www.alibabacloud.com/help/en/model-studio/deep-thinking).
+Automatic translation requires the repository secret `DASHSCOPE_API_KEY` or `QWEN_API_KEY`. The version is read from the checked-out source unless explicitly provided.
 
-`TRANSLATION_TIMEOUT_MS` defaults to 180000, `TRANSLATION_MAX_ATTEMPTS` to 3, and `TRANSLATION_BATCH_CHARS` to 6000. Markdown text is grouped by paragraph before bounded batching. Inline code, URLs and markup use validated opaque tokens so Chinese word order can change without altering protected bytes; fenced code stays outside the model. Missing, duplicate or invented tokens, detached links, changed HTML tag order and empty text units fail validation. Authentication/configuration HTTP errors fail immediately; timeouts, rate limits, transient server errors and invalid translations share one bounded retry loop. Logs contain file/batch, model, elapsed time, request ID and available token counts, not credentials or source/response bodies.
-
-Validated batches are atomically checkpointed under `.cache/neug-translations/v2` (override with `NEUG_TRANSLATION_CACHE_DIR`). Cache identity includes the endpoint, model, thinking configuration, prompt/terminology and exact submitted content. Cached output is revalidated before reuse. The workflow restores checkpoints and saves completed batches even after translation failure, so retries can reuse completed work without moving the sync cursor early. Only completion of all translations advances `last-sync.json`; a cache is not a successful-sync marker. Do not restore untrusted caches into a privileged workflow.
-
-Run the offline regression checks without model credentials or a documentation synchronization:
-
-```sh
-node --test scripts/translate-neug-docs.test.mjs scripts/translation-client.test.mjs scripts/translation-resume.test.mjs
-```
+If translation or validation fails, the workflow does not advance the sync state or publish partial updates. Rerun it to resume completed translation work.
 
 ## Synchronizing blog posts from neug-ai/wiki
 
