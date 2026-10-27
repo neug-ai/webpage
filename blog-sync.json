@@ -92,6 +92,21 @@
         "zh/exp3-l-f1.png",
         "zh/exp3-s-f1.png"
       ]
+    },
+    "release-v0.3.0-windows": {
+      "siteSlug": "release-v0-3-0-windows",
+      "commit": "42f5d0cbd04af78d302d67155f5bb36a1051ee5c",
+      "sourceHash": "cf0517923e04374fd847c91ddc56b2e50f1d74af8fc91851979bdd49e40925da",
+      "chineseSourceFile": "mother.md",
+      "chineseSourceHash": "fbcb9bc633ab79712167b15b86c23b5690a0e2da0eb415fb9f56984113772cec",
+      "fingerprint": "da212dc0c2cee0ff9eb0eeada7a675ba2f122aea273e357434891ab63b716238",
+      "syncSchemaVersion": "3",
+      "date": "2026-10-27",
+      "syncedAt": "2026-10-27T02:53:01.724Z",
+      "assets": [
+        "banner_en.png",
+        "banner_zh.png"
+      ]
     }
   }
 }
