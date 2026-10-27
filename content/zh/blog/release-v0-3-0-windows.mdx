@@ -1,0 +1,296 @@
+---
+title: NeuG v0.3.0：原生支持 Windows，`pip install` 即用
+description: NeuG v0.3.0 正式发布。这个版本的核心主题是：NeuG 原生支持 Windows 了。
+date: '2026-10-27'
+author: NeuG Team
+category: release
+tags:
+  - NeuG
+  - release
+  - v0.3.0
+  - vector search
+  - full-text search
+  - Cypher
+  - graph database
+  - GDS
+translationKey: release-v0-3-0-windows
+draft: false
+aliases: []
+cover: /images/blog/release-v0-3-0-windows/banner_zh.png
+locale: zh
+---
+![文章封面](/images/blog/release-v0-3-0-windows/banner_zh.png)
+
+NeuG v0.3.0 正式发布。这个版本的核心主题是：**NeuG 原生支持 Windows 了**。
+
+这意味着 Windows 用户不用再绕道 WSL、开虚拟机或者自己编译——在 Windows 上一条 `pip install` 就能装好，嵌入式模式和 HTTP service 模式都能跑，扩展生态也一起跟上了。
+
+下面聊聊这次 Windows 支持到底带来了什么，以及怎么在你的 Windows 机器上 5 分钟跑通一个图数据库。
+
+---
+
+## 以前在 Windows 上用 NeuG，有多麻烦？
+
+在 v0.3.0 之前，Windows 用户想用 NeuG，基本只有三条路：
+
+- **装 WSL2**：在 Windows 里跑一个 Linux 子系统，再把 NeuG 装进去。能用，但多了一层环境，路径、文件、网络都得跨系统打通。
+- **开虚拟机**：更重，纯粹为了一个数据库跑一整套 Linux。
+- **自己编译**：MSVC 工具链下手动配依赖，坑多、耗时长。
+
+对很多在 Windows 上做开发、或者企业桌面环境的用户来说，这几条路都是实打实的门槛。
+
+**v0.3.0 之后，这些都不需要了。** 我们发布了 Windows 的预编译包（x86_64 和 arm64 都有），直接：
+
+```powershell
+pip install --only-binary=:all: neug
+```
+
+装完就能用，和在 Linux / macOS 上的体验一致。
+
+---
+
+## Windows 上你能得到什么
+
+不是"能编译就行"的降级支持，而是和主力平台一样完整的能力：
+
+- **平台与架构**：Windows 的 **x86_64 与 arm64** 都有预编译包，两种芯片的 Windows 机器都能直接装；Linux / macOS 的 x86_64 / arm64 同样覆盖。
+- **嵌入式模式**：数据存本地目录，程序里直接 `Database(...)` 打开，不用起 server、不用配端口。这是最推荐的桌面试用方式。
+- **HTTP service 模式**：需要以服务形式对外提供查询时也支持（这一版为 Windows 换了新的传输层）。
+- **扩展生态**：全文检索 **FTS**、图算法 **GDS**、远程/S3 读写 **httpfs**、**Parquet** 读写、**pattern matching** 子图匹配、向量检索 **vector_search**，都能在 Windows 上构建并加载。
+
+---
+
+## 5 分钟上手：在 Windows 上建图、查询、全文检索
+
+下面用一个完整的例子走一遍。全程在 PowerShell 里操作，示例代码会自己生成数据，你不用额外下载数据集。
+
+### 第一步：准备 Python 环境
+
+本文用 **64 位 Windows** + **Python 3.11（64 位）** 作为示例环境来演示。NeuG 的预编译包实际覆盖 Linux / macOS / Windows 上的 x86_64 与 arm64，Python 支持 3.8 及以上（暂不包含 32 位与 Alpine/musl 环境）。
+
+### 第二步：建目录、装 NeuG
+
+把示例放在用户目录下的 `neug-demo` 文件夹里，并建一个隔离的虚拟环境：
+
+```powershell
+$demoDir = Join-Path $env:USERPROFILE 'neug-demo'
+New-Item -ItemType Directory -Path $demoDir -Force | Out-Null
+Set-Location $demoDir
+py -3.11 -m venv .venv
+$python = Join-Path $demoDir '.venv\Scripts\python.exe'
+```
+
+然后安装并验证：
+
+```powershell
+& $python -m pip install --upgrade pip
+& $python -m pip install --only-binary=:all: neug
+& $python -c "from neug import Database; print('NeuG is ready')"
+```
+
+看到 `NeuG is ready`，就说明装好了。如果这一步报 `No matching distribution found`，回头检查一下 Python 版本和架构是否符合第一步的要求。
+
+### 第三步：建一个社交图，跑 CRUD 和全文检索
+
+在 `neug-demo` 目录里新建一个 **`windows_demo.py`**，粘贴下面的代码。它会造三个人、两条"认识"关系（`Alice → Bob → Carol`），每人带一段简介（`bio`）；先演示导入 CSV、查询关系、改属性，再在**同一份数据**上用 FTS 扩展做全文检索，最后落盘、以只读模式重新打开：
+
+```python
+import csv
+from contextlib import closing
+from datetime import datetime
+from pathlib import Path
+
+from neug import Database
+
+
+# 每次运行都建一个新目录，保留上一次的数据。
+run_dir = (
+    Path(__file__).resolve().parent
+    / "windows-demo"
+    / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+)
+run_dir.mkdir(parents=True, exist_ok=False)
+db_path = run_dir / "graph"
+csv_path = run_dir / "people.csv"
+
+with csv_path.open("w", encoding="utf-8", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerow(["id", "name", "age", "bio"])
+    writer.writerows([
+        (1, "Alice", 30, "likes graph database and query optimization"),
+        (2, "Bob", 32, "likes graph query tutorial"),
+        (3, "Carol", 25, "likes cooking and baking"),
+    ])
+
+# closing 保证连接和数据库在各自代码块结束时关闭。
+with closing(Database(str(db_path), mode="w", max_thread_num=2)) as db:
+    with closing(db.connect()) as conn:
+        conn.execute(
+            "CREATE NODE TABLE Person("
+            "id INT64, name STRING, age INT64, bio STRING, PRIMARY KEY(id));"
+        )
+        conn.execute("CREATE REL TABLE Knows(FROM Person TO Person);")
+
+        # as_posix() 把 Windows 路径转成 C:/... 供 Cypher 使用。
+        conn.execute(
+            f"COPY Person FROM '{csv_path.as_posix()}' "
+            "(HEADER TRUE, DELIMITER=',');"
+        )
+        for source, target in [(1, 2), (2, 3)]:
+            conn.execute(
+                f"MATCH (a:Person {{id: {source}}}), "
+                f"(b:Person {{id: {target}}}) CREATE (a)-[:Knows]->(b);"
+            )
+
+        print("Relationships:")
+        for row in conn.execute(
+            "MATCH (a:Person)-[:Knows]->(b:Person) "
+            "RETURN a.name, b.name ORDER BY a.name;"
+        ):
+            print(f"{row[0]} -> {row[1]}")
+
+        conn.execute("MATCH (p:Person {id: 2}) SET p.age = 34;")
+
+        # 同一份数据，再对 bio 建全文索引做检索。
+        # INSTALL 只需执行一次：从官方扩展仓库下载当前平台的 fts 扩展包。
+        conn.execute("INSTALL fts;")
+        conn.execute("LOAD fts;")
+        print("FTS extension loaded.")
+        conn.execute("CREATE INDEX person_bio_fts ON Person USING FTS (bio);")
+        rows = list(
+            conn.execute(
+                "MATCH (p:Person) "
+                "RETURN p.id, p.name, p.bio, bm25(p.bio, 'graph') AS score "
+                "ORDER BY score ASC LIMIT 5;"
+            )
+        )
+        print("Search: graph")
+        # 按 id 排序输出，保证结果稳定。
+        for _, name, bio, _score in sorted(rows, key=lambda row: row[0]):
+            print(f"{name}: {bio}")
+        print(f"Matches: {len(rows)}")
+
+        conn.execute("CHECKPOINT;")
+
+# 数据库已关闭。以只读模式重新打开同一个目录。
+with closing(Database(str(db_path), mode="r", max_thread_num=2)) as db:
+    with closing(db.connect()) as conn:
+        print("People after reopening:")
+        for row in conn.execute(
+            "MATCH (p:Person) RETURN p.name, p.age ORDER BY p.id;"
+        ):
+            print(f"{row[0]}: {row[1]}")
+        result = conn.execute("MATCH (:Person)-[r:Knows]->(:Person) RETURN count(r);")
+        print(f"Relationship count: {next(iter(result))[0]}")
+
+print(f"Database directory: {db_path}")
+```
+
+这里有个 **Windows 专属的小细节**值得留意：Cypher 语句里的文件路径要用 `as_posix()` 转成 `C:/...` 这种正斜杠形式，直接塞 Windows 的反斜杠路径会出问题。
+
+运行：
+
+```powershell
+& $python .\windows_demo.py
+```
+
+除了数据库日志，你会看到：
+
+```text
+Relationships:
+Alice -> Bob
+Bob -> Carol
+FTS extension loaded.
+Search: graph
+Alice: likes graph database and query optimization
+Bob: likes graph query tutorial
+Matches: 2
+People after reopening:
+Alice: 30
+Bob: 34
+Carol: 25
+Relationship count: 2
+Database directory: C:\Users\<username>\neug-demo\windows-demo\<timestamp>\graph
+```
+
+Bob 的年龄从 32 改成了 34，`CHECKPOINT` 之后数据落盘，重新以只读模式打开依然读得到——这就是一次完整的建图、写入、更新、持久化、重开。全文检索用的是**同一份数据**：`CREATE INDEX ... USING FTS (bio)` 在每个人的简介上建全文索引，`bm25` 搜 `graph`，Alice 和 Bob 命中、爱烹饪的 Carol 没命中。整个全文检索能力，在 Windows 上和在 Linux 上用法完全一致。
+
+其余扩展（**GDS**、**httpfs**、**Parquet**、**pattern matching**、**vector_search** 等）在 Windows 上同样是和 Linux / macOS 一致的使用体验，这里不再展开——装好之后可以直接试起来。
+
+> 提示：扩展和 Python wheel 是分开分发的。`INSTALL fts` 一次性从官方扩展仓库下载当前平台的扩展包（v0.3.0 起 Windows x86_64 / arm64 都有），`LOAD fts` 只是在当前会话里激活它。更多图查询示例可以继续看 TinySNB tutorial。
+
+---
+
+## 顺带一提
+
+Windows 支持是这一版的主角，但背后和其他改动同样值得一说。
+
+### 一个新特性：STRUCT 属性类型
+
+这一版给属性系统加了一个一等公民——**命名字段的结构体**。以前一个"地址"要么拆成 `city`、`zip` 好几个属性，要么塞进一个 JSON 字符串。现在可以直接：
+
+```sql
+CREATE NODE TABLE person(
+  id INT64,
+  address STRUCT(city STRING, zip INT64),
+  PRIMARY KEY(id));
+CREATE (:person {id: 1, address: {city: 'hz', zip: 310000}});
+MATCH (p:person) RETURN p.address.city;
+```
+
+支持嵌套 struct、`LIST`/`ARRAY` 字段，以及 `LIST<STRUCT>` 属性。查询时还做了**字段级投影下推**——`n.address.city` 只会读 `city` 这个子列，不会把整个结构体取出来。目前有两个限制：struct 不能作主键，也不能建索引。（[#973](https://github.com/alibaba/neug/pull/973)）
+
+### 另一个新函数：`TIME_BUCKET`
+
+时序聚合里常用的**时间分桶**函数，支持 `DATE` / `TIMESTAMP`，语义对齐 DuckDB（以周一、月初为锚点；可选第三个参数指定 origin 或偏移）：
+
+```sql
+RETURN time_bucket(INTERVAL('1 day'), TIMESTAMP('2024-03-20 00:00:00'));
+RETURN time_bucket(INTERVAL('2 months'), DATE('2024-03-20'), DATE('2024-01-01'));
+```
+
+按天 / 按周 / 按月统计不用再自己写日期换算。（[#1130](https://github.com/alibaba/neug/pull/1130)）
+
+### Windows 支持背后：一次彻底的"依赖瘦身"
+
+能在 Windows 上跑起来，不是简单打个包就完事的。为了让 NeuG 在更多平台（包括后续的移动端、嵌入式）上都能编译运行，这一版做了一系列减法：
+
+- **传输层解耦**（[#1118](https://github.com/alibaba/neug/pull/1118)）：把 TP service 运行时和 HTTP 层拆开，Windows 上得以用 `httplib` 替代原本不便移植的 brpc（[#1126](https://github.com/alibaba/neug/pull/1126)）。
+- **Parquet 去 Arrow**（[#1066](https://github.com/alibaba/neug/pull/1066), [#1128](https://github.com/alibaba/neug/pull/1128)）：生产环境的 Parquet 读写切到自研的 **Carquet** 实现，并彻底移除了 Arrow C++ / Apache Parquet C++ 依赖。这也是 Parquet 扩展能在 Windows 上跟着跑起来的前提。
+- **存储层去 OpenSSL**（[#1122](https://github.com/alibaba/neug/pull/1122)）：存储校验和从 OpenSSL 的 MD5 换成内部实现，磁盘格式保持不变。
+- **`NEUG_LITE` 构建模式**（[#1133](https://github.com/alibaba/neug/pull/1133)）：面向移动端/嵌入式，构建时不带核心 OpenSSL 依赖、不带运行时扩展管理、不带 HTTP server。
+- **扩展跨平台化**（[#1136](https://github.com/alibaba/neug/pull/1136)）：修 MSVC 符号导出、补 `fnmatch`/`gmtime_r` 等 shim、把 GCC 的 `__atomic` 内建换成 `std::atomic_ref`，让扩展在 Windows x64/arm64 上可编译、可加载。`vector_search` 也在 ZVec 完成 MSVC 移植后跟上，六个扩展全部就位（[#1141](https://github.com/alibaba/neug/pull/1141)）；扩展包由发布流水线构建并上传 OSS，Windows 用户 `INSTALL` 即可取到（[#1140](https://github.com/alibaba/neug/pull/1140)）。
+
+### 一些健壮性与稳定性修复
+
+- **确定性查询计划**（[#1134](https://github.com/alibaba/neug/pull/1134)）：用有序的 map/set 稳定优化器的计划枚举，让等代价的候选计划在各平台上排序一致。
+- **反序列化加固**（[#1120](https://github.com/alibaba/neug/pull/1120)）：`Bitset::Deserialize` 在分配内存前先校验 size 字段，避免未检查的归档数据直接驱动内存分配。
+
+完整 release notes 见 [GitHub Release](https://github.com/alibaba/neug/releases/tag/v0.3.0)。
+
+---
+
+## 上手试试
+
+Windows（也适用于 Linux / macOS）：
+
+```powershell
+pip install --only-binary=:all: neug
+```
+
+```python
+from contextlib import closing
+from neug import Database
+
+with closing(Database("my_graph", mode="w")) as db:
+    with closing(db.connect()) as conn:
+        conn.execute("CREATE NODE TABLE Person(id INT64, name STRING, PRIMARY KEY(id));")
+        conn.execute("CREATE (:Person {id: 1, name: 'Alice'});")
+        for row in conn.execute("MATCH (p:Person) RETURN p.name;"):
+            print(row[0])
+```
+
+如果你一直在等 NeuG 的 Windows 原生支持，现在可以直接在桌面环境试起来了——建图、查询、全文检索，一条 `pip install` 之后就是熟悉的 Cypher。也欢迎把使用中遇到的问题反馈到 issue。
+
+GitHub: https://github.com/alibaba/neug
+NeuG v0.3.0 release note: https://github.com/alibaba/neug/releases/tag/v0.3.0

@@ -1,0 +1,310 @@
+---
+title: 'NeuG v0.3.0: Native Windows Support, Ready via `pip install`'
+description: >-
+  If you develop on Windows, getting NeuG running used to mean picking one of
+  three unappealing paths: install WSL2 and run a Linux subsystem, spin up a
+  virtual machine, or hand-compile the whole thing against the MSVC toolchain.
+  None of t...
+date: '2026-10-27'
+author: NeuG Team
+category: release
+tags:
+  - NeuG
+  - release
+  - v0.3.0
+  - vector search
+  - full-text search
+  - Cypher
+  - graph database
+  - GDS
+translationKey: release-v0-3-0-windows
+draft: false
+aliases: []
+cover: /images/blog/release-v0-3-0-windows/banner_en.png
+locale: en
+---
+![Article cover](/images/blog/release-v0-3-0-windows/banner_en.png)
+
+If you develop on Windows, getting NeuG running used to mean picking one of three unappealing paths: install WSL2 and run a Linux subsystem, spin up a virtual machine, or hand-compile the whole thing against the MSVC toolchain. None of them were light. This release removes all three — **NeuG v0.3.0 supports Windows natively**, and a single `pip install` gets you a working graph database on your desktop.
+
+NeuG v0.3.0 is out. The theme of this release: **NeuG now runs natively on Windows**.
+
+No WSL, no VM, no local build. One `pip install` on Windows gets you embedded mode and HTTP service mode, with the extension ecosystem along for the ride.
+
+Here's what the Windows support actually brings, and how to get a graph database running on your Windows machine in five minutes.
+
+---
+
+## How Awkward Was Windows Before?
+
+Before v0.3.0, Windows users had basically three options:
+
+- **WSL2**: run a Linux subsystem inside Windows and install NeuG into it. Workable, but it adds a whole extra environment — paths, files, and networking all have to cross the OS boundary.
+- **A virtual machine**: heavier still, running an entire Linux just for one database.
+- **Build from source**: manually wiring dependencies under MSVC — many pitfalls, long hours.
+
+For developers on Windows, or enterprise desktop environments, these were real barriers.
+
+**As of v0.3.0, none of that is needed.** We ship prebuilt Windows packages (both x86_64 and arm64):
+
+```powershell
+pip install --only-binary=:all: neug
+```
+
+Install and go — the same experience as on Linux / macOS.
+
+---
+
+## What You Get on Windows
+
+This isn't a "it compiles, good enough" port. It's the full capability set of our primary platforms:
+
+- **Platforms & architectures**: prebuilt packages for Windows on both **x86_64 and arm64** — either chip works out of the box; Linux / macOS x86_64 / arm64 are covered too.
+- **Embedded mode**: data lives in a local directory; open it straight from your program with `Database(...)`. No server to start, no ports to configure. The recommended way to try it on a desktop.
+- **HTTP service mode**: also supported when you want to serve queries over the network (this release gives Windows a new transport layer).
+- **Extension ecosystem**: full-text search (**FTS**), graph algorithms (**GDS**), remote/S3 I/O (**httpfs**), **Parquet**, **pattern matching**, and vector search (**vector_search**) all build and load on Windows.
+
+---
+
+## Five-Minute Quick Start: Build, Query, and Full-Text Search on Windows
+
+We'll walk through a complete example. Everything runs in PowerShell, and the sample generates its own data — no dataset download required.
+
+### Step 1: Prepare Python
+
+This walkthrough uses **64-bit Windows** + **Python 3.11 (64-bit)** as the example environment. NeuG's prebuilt packages actually cover x86_64 and arm64 on Linux / macOS / Windows, and Python 3.8+ (32-bit and Alpine/musl are not covered).
+
+### Step 2: Create a Directory and Install NeuG
+
+Put the example in a `neug-demo` folder under your home directory and create an isolated virtual environment:
+
+```powershell
+$demoDir = Join-Path $env:USERPROFILE 'neug-demo'
+New-Item -ItemType Directory -Path $demoDir -Force | Out-Null
+Set-Location $demoDir
+py -3.11 -m venv .venv
+$python = Join-Path $demoDir '.venv\Scripts\python.exe'
+```
+
+Then install and verify:
+
+```powershell
+& $python -m pip install --upgrade pip
+& $python -m pip install --only-binary=:all: neug
+& $python -c "from neug import Database; print('NeuG is ready')"
+```
+
+Seeing `NeuG is ready` means you're set. If you hit `No matching distribution found`, double-check that your Python version and architecture match Step 1.
+
+### Step 3: Build a Social Graph, Run CRUD and Full-Text Search
+
+Create **`windows_demo.py`** in the `neug-demo` directory and paste the code below. It creates three people and two "knows" relationships (`Alice → Bob → Carol`), each with a short bio (`bio`); it first demonstrates CSV import, relationship queries, and property updates, then runs full-text search with the FTS extension on **the same data**, and finally checkpoints and reopens in read-only mode:
+
+```python
+import csv
+from contextlib import closing
+from datetime import datetime
+from pathlib import Path
+
+from neug import Database
+
+
+# Create a new directory for each run, preserving data from previous runs.
+run_dir = (
+    Path(__file__).resolve().parent
+    / "windows-demo"
+    / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+)
+run_dir.mkdir(parents=True, exist_ok=False)
+db_path = run_dir / "graph"
+csv_path = run_dir / "people.csv"
+
+with csv_path.open("w", encoding="utf-8", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerow(["id", "name", "age", "bio"])
+    writer.writerows([
+        (1, "Alice", 30, "likes graph database and query optimization"),
+        (2, "Bob", 32, "likes graph query tutorial"),
+        (3, "Carol", 25, "likes cooking and baking"),
+    ])
+
+# closing ensures that the connection and database close when their blocks end.
+with closing(Database(str(db_path), mode="w", max_thread_num=2)) as db:
+    with closing(db.connect()) as conn:
+        conn.execute(
+            "CREATE NODE TABLE Person("
+            "id INT64, name STRING, age INT64, bio STRING, PRIMARY KEY(id));"
+        )
+        conn.execute("CREATE REL TABLE Knows(FROM Person TO Person);")
+
+        # as_posix() converts the Windows path to C:/... for use in Cypher.
+        conn.execute(
+            f"COPY Person FROM '{csv_path.as_posix()}' "
+            "(HEADER TRUE, DELIMITER=',');"
+        )
+        for source, target in [(1, 2), (2, 3)]:
+            conn.execute(
+                f"MATCH (a:Person {{id: {source}}}), "
+                f"(b:Person {{id: {target}}}) CREATE (a)-[:Knows]->(b);"
+            )
+
+        print("Relationships:")
+        for row in conn.execute(
+            "MATCH (a:Person)-[:Knows]->(b:Person) "
+            "RETURN a.name, b.name ORDER BY a.name;"
+        ):
+            print(f"{row[0]} -> {row[1]}")
+
+        conn.execute("MATCH (p:Person {id: 2}) SET p.age = 34;")
+
+        # Same data: build a full-text index on bio and search it.
+        # INSTALL runs once: it downloads the fts extension package for this platform.
+        conn.execute("INSTALL fts;")
+        conn.execute("LOAD fts;")
+        print("FTS extension loaded.")
+        conn.execute("CREATE INDEX person_bio_fts ON Person USING FTS (bio);")
+        rows = list(
+            conn.execute(
+                "MATCH (p:Person) "
+                "RETURN p.id, p.name, p.bio, bm25(p.bio, 'graph') AS score "
+                "ORDER BY score ASC LIMIT 5;"
+            )
+        )
+        print("Search: graph")
+        # Display matches by id for consistent output.
+        for _, name, bio, _score in sorted(rows, key=lambda row: row[0]):
+            print(f"{name}: {bio}")
+        print(f"Matches: {len(rows)}")
+
+        conn.execute("CHECKPOINT;")
+
+# The database is now closed. Reopen the same directory in read-only mode.
+with closing(Database(str(db_path), mode="r", max_thread_num=2)) as db:
+    with closing(db.connect()) as conn:
+        print("People after reopening:")
+        for row in conn.execute(
+            "MATCH (p:Person) RETURN p.name, p.age ORDER BY p.id;"
+        ):
+            print(f"{row[0]}: {row[1]}")
+        result = conn.execute("MATCH (:Person)-[r:Knows]->(:Person) RETURN count(r);")
+        print(f"Relationship count: {next(iter(result))[0]}")
+
+print(f"Database directory: {db_path}")
+```
+
+One **Windows-specific detail** worth noting: file paths inside Cypher statements must be converted with `as_posix()` to the `C:/...` forward-slash form. Feeding Windows backslash paths directly will misbehave.
+
+Run it:
+
+```powershell
+& $python .\windows_demo.py
+```
+
+Along with the database logs, you should see:
+
+```text
+Relationships:
+Alice -> Bob
+Bob -> Carol
+FTS extension loaded.
+Search: graph
+Alice: likes graph database and query optimization
+Bob: likes graph query tutorial
+Matches: 2
+People after reopening:
+Alice: 30
+Bob: 34
+Carol: 25
+Relationship count: 2
+Database directory: C:\Users\<username>\neug-demo\windows-demo\<timestamp>\graph
+```
+
+Bob's age changed from 32 to 34, `CHECKPOINT` persisted the data to disk, and reopening in read-only mode still reads it — a complete create, write, update, persist, and reopen cycle. Full-text search runs on **the same data**: `CREATE INDEX ... USING FTS (bio)` builds a full-text index over each person's bio, and `bm25` searches for `graph` — Alice and Bob hit, while Carol (who likes cooking) doesn't. The full-text search experience on Windows is identical to Linux.
+
+The remaining extensions (**GDS**, **httpfs**, **Parquet**, **pattern matching**, **vector_search**, etc.) offer the same experience on Windows as on Linux / macOS; we won't elaborate here — once installed, feel free to try them yourself.
+
+> Tip: extensions are distributed separately from the Python wheel. `INSTALL fts` downloads the extension package for your platform from the official extension repository — once; `LOAD fts` simply activates it for the current session (Windows x86_64 / arm64 packages are published as of v0.3.0). For more graph query examples, see the TinySNB tutorial.
+
+---
+
+## Also Worth Noting
+
+Windows support is the headline, but a few other changes deserve a mention.
+
+### A new feature: the STRUCT property type
+
+This release adds a first-class citizen to the property system — **named-field structs**. Previously an "address" had to be split into separate `city` / `zip` properties or crammed into a JSON string. Now you can write:
+
+```sql
+CREATE NODE TABLE person(
+  id INT64,
+  address STRUCT(city STRING, zip INT64),
+  PRIMARY KEY(id));
+CREATE (:person {id: 1, address: {city: 'hz', zip: 310000}});
+MATCH (p:person) RETURN p.address.city;
+```
+
+Nested structs, `LIST`/`ARRAY` fields, and `LIST<STRUCT>` properties are supported. Queries get **field-level projection pushdown** — `n.address.city` reads only the `city` child column instead of materializing the whole struct. Two current limitations: structs can't be a primary key, and indexes can't be created on them. ([#973](https://github.com/alibaba/neug/pull/973))
+
+### Another new function: `TIME_BUCKET`
+
+A **time-bucketing** function for time-series aggregation over `DATE` / `TIMESTAMP` values, with semantics aligned to DuckDB (Monday / month-start anchors; an optional third argument sets the origin or offset):
+
+```sql
+RETURN time_bucket(INTERVAL('1 day'), TIMESTAMP('2024-03-20 00:00:00'));
+RETURN time_bucket(INTERVAL('2 months'), DATE('2024-03-20'), DATE('2024-01-01'));
+```
+
+Daily / weekly / monthly rollups no longer need hand-written date arithmetic. ([#1130](https://github.com/alibaba/neug/pull/1130))
+
+### Behind Windows support: a thorough dependency diet
+
+Running on Windows wasn't just a matter of cutting a package. To make NeuG compile and run on more platforms (including upcoming mobile/embedded targets), this release did a lot of subtraction:
+
+- **Transport decoupling** ([#1118](https://github.com/alibaba/neug/pull/1118)): separated the TP service runtime from the HTTP layer, letting Windows use `httplib` in place of the hard-to-port brpc ([#1126](https://github.com/alibaba/neug/pull/1126)).
+- **Parquet without Arrow** ([#1066](https://github.com/alibaba/neug/pull/1066), [#1128](https://github.com/alibaba/neug/pull/1128)): production Parquet read/write moved to the in-house **Carquet** implementation, and Arrow C++ / Apache Parquet C++ dependencies were removed entirely. This is also what lets the Parquet extension run on Windows.
+- **Storage without OpenSSL** ([#1122](https://github.com/alibaba/neug/pull/1122)): storage checksums moved from OpenSSL's MD5 to an internal implementation, with the on-disk format unchanged.
+- **`NEUG_LITE` build mode** ([#1133](https://github.com/alibaba/neug/pull/1133)): for mobile/embedded, builds without core OpenSSL dependencies, runtime extension management, or the HTTP server.
+- **Cross-platform extensions** ([#1136](https://github.com/alibaba/neug/pull/1136)): MSVC symbol-export fixes, `fnmatch`/`gmtime_r` shims, and replacing GCC `__atomic` builtins with `std::atomic_ref`, so extensions compile and load on Windows x64/arm64. `vector_search` followed once ZVec was ported to MSVC, so all six extensions are in place ([#1141](https://github.com/alibaba/neug/pull/1141)); extension packages are built by the release workflow and published to OSS, so Windows users only need to `INSTALL` them ([#1140](https://github.com/alibaba/neug/pull/1140)).
+
+### Robustness and stability fixes
+
+- **Deterministic query plans** ([#1134](https://github.com/alibaba/neug/pull/1134)): ordered maps/sets stabilize optimizer plan enumeration so equal-cost candidates order consistently across platforms.
+- **Hardened deserialization** ([#1120](https://github.com/alibaba/neug/pull/1120)): `Bitset::Deserialize` validates size fields before allocating, so unchecked archive data can't drive memory allocation.
+
+Full release notes: [GitHub Release](https://github.com/alibaba/neug/releases/tag/v0.3.0).
+
+---
+
+## Give It a Try
+
+On Windows (and equally on Linux / macOS):
+
+```powershell
+pip install --only-binary=:all: neug
+```
+
+```python
+from contextlib import closing
+from neug import Database
+
+with closing(Database("my_graph", mode="w")) as db:
+    with closing(db.connect()) as conn:
+        conn.execute("CREATE NODE TABLE Person(id INT64, name STRING, PRIMARY KEY(id));")
+        conn.execute("CREATE (:Person {id: 1, name: 'Alice'});")
+        for row in conn.execute("MATCH (p:Person) RETURN p.name;"):
+            print(row[0])
+```
+
+If you've been waiting for native Windows support in NeuG, now's the time to try it on your desktop — build a graph, query it, run full-text search, all behind one `pip install` and the Cypher you already know. Feedback and issues welcome.
+
+---
+
+**About NeuG**
+
+NeuG is an embedded graph database built for AI scenarios, unifying vector, full-text, and graph retrieval in a single engine. It runs embedded in your application or behind a service, and is now natively supported on Linux / macOS / Windows (x86_64 and arm64). It's open source — you're welcome to try it and contribute:
+
+- GitHub: https://github.com/alibaba/neug
+- Release notes: https://github.com/alibaba/neug/releases/tag/v0.3.0
+
+Follow our blog for more from the NeuG team.
