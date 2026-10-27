@@ -1,8 +1,8 @@
-# 快速入门
+# 入门指南
 
-本指南将引导您创建第一个图数据库、查询关系、添加 NeuG v0.2 中引入的索引，并探索嵌入式和服务两种模式。示例采用 **Python** 编写。
+本指南将引导您创建第一个图数据库、查询关系、添加存储索引，并探索嵌入式模式和服务模式。示例使用 **Python**。
 
-> **使用其他语言？** 请参阅 [Node.js API 参考](../../reference/nodejs_api/index)、[Java API 参考](../../reference/java_api/index) 或 [C++ API 参考](../../reference/cpp_api/index)，获取这些语言的等效示例。
+> **使用其他语言？** 请参阅 [Node.js API 参考](../../reference/nodejs_api/index)、[Java API 参考](../../reference/java_api/index) 或 [C++ API 参考](../../reference/cpp_api/index)，以获取这些语言的等效示例。
 
 ## 前提条件
 
@@ -55,28 +55,26 @@ db.close()
 ```
 
 ### 服务模式
-基于网络的访问 - 适合多用户应用程序：
+基于网络的访问 - 非常适合多用户应用程序：
 
 **启动服务：**
 ```python
 import neug
 
-# 以服务形式启动 NeuG
+# Start NeuG as a service
 db = neug.Database("/path/to/database")
 service = db.serve(host="localhost", port=10000, blocking=False, thread_num=0)
 ```
 
-`thread_num` 控制服务线程的数量。
-默认值 `0` 会根据数据库的 `max_thread_num` 自动选择。在默认数据库线程配置下，`max_thread_num` 将依据硬件并发能力自动推导；若运行时无法检测到硬件并发数，则回退为 `1`。
-服务线程可并发执行 TP 查询，但每个查询仅使用一个执行上下文和一个线程。
+`thread_num` 控制并发执行的服务查询的最大数量。默认值 `0` 遵循数据库 `max_thread_num`。使用默认的数据库线程设置时，`max_thread_num` 根据硬件并发度确定，如果运行时无法检测到该值，则回退到 `1`。每个并发执行的 TP 查询占用一个服务执行槽位。
 
-嵌入式（AP）查询目前为单线程；利用 `max_thread_num` 实现查询内部并行化属于后续工作。
+嵌入式（AP）查询当前为单线程；使用 `max_thread_num` 实现查询内并行是未来的工作。
 
 **从客户端连接：**
 ```python
 from neug import Session
 
-# 连接到服务
+# Connect to the service
 session = Session("http://localhost:10000/")
 
 session.close()
@@ -223,17 +221,16 @@ for record in result:
     # Bob Smith knows Alice Johnson who works at TechCorp
 ```
 
-### 对相同数据建立索引（NeuG v0.2+）
+### 对相同数据建立索引
 
-NeuG v0.2 引入了存储索引、HNSW 向量搜索以及 BM25 全文搜索功能。这些能力在 NeuG v0.1.x 中不可用。以下示例将语义索引和关键词索引添加到上文图查询所使用的相同 `Person` 节点上。
+NeuG 提供存储索引、HNSW 向量搜索和 BM25 全文搜索。以下示例为上述图查询所使用的相同 `Person` 节点添加语义索引和关键词索引。
 
 ```python
-
-# 加载索引扩展
+# Load the index extensions
 conn.execute("LOAD vector_search;")
 conn.execute("LOAD fts;")
 
-# 使用 HNSW 为语义嵌入建立索引
+# Index semantic embeddings with HNSW
 conn.execute("""
     CREATE INDEX person_embedding_idx IF NOT EXISTS
     ON Person
@@ -241,14 +238,14 @@ conn.execute("""
     WITH (metric = 'l2')
 """)
 
-# 为人物简介建立 BM25 全文索引
+# Index biography text for BM25 retrieval
 conn.execute("""
     CREATE INDEX person_bio_idx IF NOT EXISTS
     ON Person
     USING FTS (bio)
 """)
 
-# 查询语义相似性
+# Query semantic similarity
 semantic_results = conn.execute("""
     MATCH (p:Person)
     RETURN p.name,
@@ -257,7 +254,7 @@ semantic_results = conn.execute("""
     LIMIT 5
 """)
 
-# 查询精确关键词并使用 BM25 排序
+# Query exact keywords and rank with BM25
 keyword_results = conn.execute("""
     MATCH (p:Person)
     RETURN p.name, bm25(p.bio, 'graph databases') AS score
@@ -270,7 +267,7 @@ print(list(keyword_results))
 print(list(conn.execute("CALL SHOW_INDEXES() RETURN *;")))
 ```
 
-图结构与两种存储索引均基于同一份数据进行维护。插入、更新和删除操作均会在同一事务中同步更新这些索引。有关索引生命周期及恢复保障的详细信息，请参阅[存储索引](../../storage_index/index)。有关完整的搜索选项，请参阅[向量搜索](../../extensions/vector_search)和[全文搜索](../../extensions/fts_search)。
+图结构和两个存储索引都基于相同的数据进行维护。插入、更新和删除操作会在同一事务中更新索引。有关索引生命周期和恢复保证，请参阅 [存储索引](../../storage_index/index)。有关完整的搜索选项，请参阅 [向量搜索](../../extensions/vector_search) 和 [全文搜索](../../extensions/fts_search)。
 
 ### 转换结果为 Apache Arrow
 

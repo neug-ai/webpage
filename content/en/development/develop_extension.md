@@ -1,4 +1,4 @@
-# Developing Out-of-Tree Extensions
+# Developing Extensions
 
 NeuG can build extensions that live **outside** the NeuG source tree. This is the recommended layout when NeuG is a git submodule (or sibling checkout) of your extension repository.
 
@@ -60,4 +60,6 @@ At runtime, name-based `LOAD <name>` resolves under `$NEUG_EXTENSION_HOME_PYENV/
 LOAD my_ext;
 ```
 
-Build the extension against the same NeuG version as the runtime you load into.
+Build the extension against the NeuG runtime you load it into.
+
+In [lite builds](dev_guide.md#lite-builds), `INSTALL`, `LOAD`, and `UNINSTALL` return `ERR_NOT_SUPPORTED`.

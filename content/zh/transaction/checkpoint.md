@@ -55,7 +55,7 @@ conn.execute("CHECKPOINT", access_mode="update")
 
 ## 嵌入式模式
 
-常规写入不需要手动创建检查点：
+普通写入不需要手动检查点：
 
 ```python
 import neug
@@ -68,17 +68,24 @@ conn.close()
 db.close()
 ```
 
-持久化批量导入也会自动处理检查点：
+在自动提交模式下，持久化批量导入也是自动的：
 
 ```python
 conn.execute("COPY Person FROM 'people.csv'")
-# Success means the import has been published in a checkpoint.
+# In auto-commit mode, success means the import has been published in a checkpoint.
 ```
 
-导入具有原子性。如果读取、校验或检查点发布失败，导入的数据都不会变为可见，数据库会
-保持在之前已经发布的状态。
+导入是原子的。如果读取、验证或检查点发布失败，
+任何导入的数据都不会变得可见，之前的数据库状态
+仍然可用。
 
-`COPY TEMP` 不同：它只更新当前连接的内存临时图，连接或数据库关闭后数据即丢失。
+在显式读写事务中，成功的
+`COPY ... FROM` 不会自行发布；检查点会推迟到
+`commit()`，它可能会一起发布多个 COPY 语句。请参阅
+[显式事务](explicit_transactions.mdx)。
+
+`COPY TEMP` 不同：它仅更新连接的内存临时
+图，并在连接或数据库关闭时丢失。
 
 ## 服务模式
 

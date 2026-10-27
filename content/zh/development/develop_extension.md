@@ -1,6 +1,6 @@
-# 开发树外扩展
+# 开发扩展
 
-NeuG 可以构建位于 **NeuG 源码树之外** 的扩展。当 NeuG 作为 Git 子模块（或与你的扩展仓库并列检出）时，这种布局是推荐的。
+NeuG 可以构建位于 NeuG 源代码树**外部**的扩展。当 NeuG 作为扩展仓库的 git 子模块（或同级检出）时，这是推荐的布局。
 
 ## 目录结构
 
@@ -46,18 +46,20 @@ cmake --build my-extension/build/release --target neug_my_ext_extension -j$(npro
 
 若 `BUILD_EXTENSIONS` 中指定了某个扩展名，而该扩展既非内置扩展，也未通过 `neug_extension_load` 注册，则配置过程将失败，并给出明确的错误提示。
 
-## 构建产物与 LOAD
+## 构件与 LOAD
 
-共享库将被写入以下路径：
+共享库写入到：
 
 ```text
 <build>/extension/<name>/lib<name>.neug_extension
 ```
 
-运行时，基于名称的 `LOAD <name>` 会解析为 `$NEUG_EXTENSION_HOME_PYENV/extension/<name>/` 目录下的文件。请将该环境变量指向你的 NeuG 构建目录（或把构建产物复制/符号链接到你已安装的 NeuG 所使用的目录），然后执行：
+在运行时，基于名称的 `LOAD <name>` 会在 `$NEUG_EXTENSION_HOME_PYENV/extension/<name>/` 下解析。将该主目录指向你的 NeuG 构建目录（或将构件复制或符号链接到已安装 NeuG 所使用的目录），然后：
 
 ```cypher
 LOAD my_ext;
 ```
 
-请确保扩展所构建针对的 NeuG 版本与你实际加载运行时所用的 NeuG 版本一致。
+针对你加载扩展所在的 NeuG 运行时来构建该扩展。
+
+在 [lite builds](dev_guide.md#lite-builds) 中，`INSTALL`、`LOAD` 和 `UNINSTALL` 返回 `ERR_NOT_SUPPORTED`。

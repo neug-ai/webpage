@@ -4,11 +4,13 @@
 
 A variant — **`COPY TEMP`** — imports external data as a **temporary graph** whose lifetime is bound to the current connection. Temporary tables are automatically removed when the connection closes, making `COPY TEMP` ideal for ad-hoc analytics without polluting the persistent schema.
 
+> **Tip:** You can group multiple `COPY FROM` statements (and interleave ordinary DML/DDL) into a single Embedded read-write explicit transaction so they publish as one checkpoint instead of one checkpoint per statement. See [Explicit Transactions](../transaction/explicit_transactions.mdx).
+
 ## Schema Requirement
 
 You can create a **predefined schema** — that is, define node/relationship tables before importing data — where the columns in the external file must match the table properties.
 
-Since v0.1.2, NeuG supports schema-flexible persistent import — allowing `COPY FROM` to leverage the capability of type inference of `LOAD FROM`, without requiring a predefined schema. This will make it much easier to quickly onboard new datasets. See [Import without a predefined schema](#import-without-a-predefined-schema) for more usages.
+NeuG supports schema-flexible persistent import, allowing `COPY FROM` to use `LOAD FROM` type inference without requiring a predefined schema. This makes it easier to onboard new datasets. See [Import without a predefined schema](#import-without-a-predefined-schema) for more examples.
 
 > **COPY TEMP** always infers the schema automatically. The first column becomes the primary key for nodes; for relationships, the first two columns are source/destination keys.
 
@@ -262,7 +264,11 @@ COPY Person FROM (
 
 ### JSON/JSONL
 
-Since NeuG v0.1.2, JSON/JSONL is a built-in feature. You can use `COPY FROM` to import JSON or JSONL files directly into the graph — without creating the table first. NeuG infers the schema automatically from the file content.
+JSON/JSONL is built in. You can use `COPY FROM` to import JSON or JSONL files directly into the graph without creating the table first. NeuG infers the schema automatically from the file content.
+
+The `.json` extension selects a JSON array, while `.jsonl` selects JSON Lines
+with one object per line. See [LOAD FROM](load_data.md) for example input files
+and relational preprocessing options.
 
 ```cypher
 // JSON array file — schema auto-detected,
@@ -272,8 +278,6 @@ COPY Person FROM "person.json";
 // JSONL file — same auto-detection
 COPY Person FROM "person.jsonl";
 ```
-
-> **Version Note:** Since version v0.1.2, we made JSON support a built-in functionality, so you do not need to install the JSON extension before using it. For NeuG version < 0.1.2, JSON support was provided via the [JSON Extension](../extensions/load_json) and required `INSTALL json; LOAD json;` before use.
 
 ### Parquet
 
@@ -353,8 +357,8 @@ For the full set of relational operations available in `LOAD FROM` subqueries, s
 
 | Option         | Type  | Default           | Description                                                       |
 | -------------- | ----- | ----------------- | ----------------------------------------------------------------- |
-| `batch_read` | bool  | `false`         | Read data incrementally in batches.                               |
-| `batch_size` | int64 | `1048576` (1MB) | Batch size in bytes when `batch_read` is enabled.               |
+| `batch_read` | bool  | `true`          | Read data incrementally in batches.                               |
+| `batch_rows` | int64 | `65536`          | Number of **rows** per batch/chunk when `batch_read` is enabled. |
 | `parallel`   | bool  | `false` | Enable parallel reading using multiple threads (max core number). When enabled for Parquet files, row groups are scanned concurrently and row order is **not** preserved. |
 
 ```cypher

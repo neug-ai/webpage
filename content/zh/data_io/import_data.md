@@ -1,16 +1,18 @@
 # COPY FROM
 
-`COPY FROM` 将外部数据持久化到 NeuG 的图存储中。它构建于 [`LOAD FROM`](load_data) 之上——在内部，`COPY FROM` 使用 `LOAD FROM` 来读取和解析外部文件，然后将结果写入节点表或关系表。
+`COPY FROM` 将外部数据持久化到 NeuG 的图存储中。它构建在 [`LOAD FROM`](load_data) 之上——在内部，`COPY FROM` 使用 `LOAD FROM` 来读取和解析外部文件，然后将结果写入节点表或关系表。
 
-其变体 **`COPY TEMP`** 将外部数据作为**临时图**导入，其生命周期与当前连接绑定。连接关闭时，临时表会被自动清除，这使得 `COPY TEMP` 非常适合用于即席分析，且不会污染持久化模式。
+一个变体——**`COPY TEMP`**——将外部数据导入为**临时图**，其生命周期绑定到当前连接。当连接关闭时，临时表会自动被移除，这使得 `COPY TEMP` 非常适合用于即席分析，而不会污染持久化模式。
+
+> **提示：** 您可以将多个 `COPY FROM` 语句（并交错普通的 DML/DDL）分组到一个嵌入式读写显式事务中，以便它们作为一个检查点发布，而不是每个语句一个检查点。请参阅 [显式事务](../transaction/explicit_transactions.mdx)。
 
 ## 模式要求
 
-您可以创建**预定义模式**——即在导入数据前定义节点/关系表，且外部文件中的列必须与表属性相匹配。
+您可以创建**预定义模式**——即在导入数据之前定义节点/关系表，此时外部文件中的列必须与表属性匹配。
 
-自 v0.1.2 起，NeuG 支持灵活模式的持久化导入——允许 `COPY FROM` 利用 `LOAD FROM` 的类型推断能力，而无需预定义模式。这将使快速接入新数据集变得更加轻松。更多用法请参阅[无需预定义模式的导入](#import-without-a-predefined-schema)。
+NeuG 支持模式灵活的持久化导入，允许 `COPY FROM` 使用 `LOAD FROM` 类型推断，而无需预定义模式。这使得新数据集的接入更加容易。更多示例请参见 [不使用预定义模式进行导入](#import-without-a-predefined-schema)。
 
-> **COPY TEMP** 始终自动推断模式。第一列将作为节点的主键；对于关系，前两列则作为源/目标键。
+> **COPY TEMP** 始终自动推断模式。第一列将成为节点的主键；对于关系，前两列分别是源/目标键。
 
 ---
 
@@ -259,18 +261,18 @@ COPY Person FROM (
 
 ### JSON/JSONL
 
-自 NeuG v0.1.2 起，JSON/JSONL 已成为内置功能。您可以使用 `COPY FROM` 将 JSON 或 JSONL 文件直接导入图中，而无需预先创建表。NeuG 会根据文件内容自动推断模式。
+内置支持 JSON/JSONL。您可以使用 `COPY FROM` 将 JSON 或 JSONL 文件直接导入图中，无需先创建表。NeuG 会根据文件内容自动推断模式。
+
+`.json` 扩展用于选择 JSON 数组，而 `.jsonl` 用于选择每行一个对象的 JSON Lines。有关示例输入文件和关系预处理选项，请参阅 [LOAD FROM](load_data.md)。
 
 ```cypher
-// JSON 数组文件 — 自动检测模式，
-// 第一列作为主键
+// JSON array file — schema auto-detected,
+// first column becomes primary key
 COPY Person FROM "person.json";
 
-// JSONL 文件 — 同样自动检测
+// JSONL file — same auto-detection
 COPY Person FROM "person.jsonl";
 ```
-
-> **版本说明：** 自 v0.1.2 版本起，我们将 JSON 支持设为内置功能，因此您在使用前无需安装 JSON 扩展。对于 NeuG < 0.1.2 版本，JSON 支持通过 [JSON 扩展](../extensions/load_json) 提供，使用前需要执行 `INSTALL json; LOAD json;`。
 
 ### Parquet
 
@@ -348,11 +350,11 @@ COPY Person FROM (
 
 ## 性能选项
 
-| 选项           | 类型   | 默认值             | 描述                                                                 |
-| -------------- | ------ | ------------------ | -------------------------------------------------------------------- |
-| `batch_read`   | bool   | `false`            | 以批处理方式增量读取数据。                                           |
-| `batch_size`   | int64  | `1048576`（1 MB）  | 启用 `batch_read` 时，每批次的字节数。                               |
-| `parallel`     | bool   | `false`            | 启用多线程并行读取（最多使用 CPU 核心数）。对 Parquet 文件启用时，将并发扫描行组，但**不保证**行的原始顺序。 |
+| 选项 | 类型 | 默认值 | 描述 |
+| -------------- | ----- | ----------------- | ----------------------------------------------------------------- |
+| `batch_read` | bool | `true` | 以批处理方式增量读取数据。 |
+| `batch_rows` | int64 | `65536` | 当启用 `batch_read` 时，每批/每个块中的**行数**。 |
+| `parallel` | bool | `false` | 启用使用多个线程（最多为核心数）的并行读取。对 Parquet 文件启用时，行组将被并发扫描，且**不**保留行顺序。 |
 
 ```cypher
 COPY User FROM "large_users.csv" (header=true, parallel=true);

@@ -66,20 +66,45 @@ RETURN id, name, CAST(address, 'STRING[3]') AS addresses;
 
 ### JSON / JSONL
 
-Since NeuG v0.1.2, JSON/JSONL is a built-in format — no extension installation is needed. You can use `LOAD FROM` to read `.json` and `.jsonl` files directly:
+JSON and JSONL are built-in formats. The format is inferred from the file extension:
+
+| Extension | Format | Description |
+| --------- | ------ | ----------- |
+| `.json` | JSON array | One JSON array containing all rows as objects |
+| `.jsonl` | JSON Lines | One JSON object per line |
+
+For example, a JSON array contains multiple objects:
+
+```json
+[
+  {"id": 1, "name": "Alice", "age": 30},
+  {"id": 2, "name": "Bob", "age": 25}
+]
+```
+
+A JSONL file stores one object per line:
+
+```jsonl
+{"id": 1, "name": "Alice", "age": 30}
+{"id": 2, "name": "Bob", "age": 25}
+```
+
+Use `LOAD FROM` with either format without installing or loading an extension:
 
 ```cypher
 LOAD FROM "person.json"
 RETURN *;
+
+LOAD FROM "person.jsonl"
+RETURN *;
 ```
 
-> **Version Note:** Since version v0.1.2, we made JSON support a built-in functionality, so you do not need to install the JSON extension before using it. For NeuG version < 0.1.2, JSON support was provided via the JSON Extension and required `INSTALL json; LOAD json;` before use.
-
-See the [JSON Extension](../extensions/load_json) page for format-specific options and examples.
+All relational operations described below, including projection, aliases,
+filtering, aggregation, sorting, and limiting, work with both formats.
 
 ### Parquet
 
-Parquet is supported via the PARQUET extension (available since v0.1.1). After a one-time install and load, you can use `LOAD FROM` to read `.parquet` files directly:
+Parquet is supported via the PARQUET extension. After a one-time install and load, you can use `LOAD FROM` to read `.parquet` files directly:
 
 ```cypher
 INSTALL PARQUET;
@@ -89,7 +114,7 @@ LOAD FROM "person.parquet"
 RETURN *;
 ```
 
-See the [Parquet Extension](../extensions/load_parquet) page for format-specific options (`buffered_stream`, `pre_buffer`, `enable_io_coalescing`, `parquet_batch_rows`) and examples, including how to export query results to Parquet via `COPY TO`.
+See the [Parquet Extension](../extensions/load_parquet) page for format-specific options (`batch_size`, `buffered_stream`, `pre_buffer`, `enable_io_coalescing`, `batch_rows`) and examples, including how to export query results to Parquet via `COPY TO`.
 
 ## Relational Operations
 
@@ -140,6 +165,30 @@ RETURN name, CAST(age, 'DOUBLE') AS double_age;
 
 ### WHERE Filtering
 
+Only rows whose predicate evaluates to `true` are returned. Comparisons with
+`NULL` produce an unknown result; use `IS NULL` or `IS NOT NULL` to test for
+missing values. Boolean expressions preserve that unknown result unless the
+other operand determines the answer: `NULL AND false` is `false`, while
+`NULL OR true` is `true`.
+
+Predicates can include arithmetic, casts, and parameters. For example:
+
+```cypher
+LOAD FROM "person.jsonl"
+WHERE CAST(age, 'DOUBLE') + 1 > 30
+RETURN name;
+```
+
+Each file reader receives the complete predicate. It can filter during IO
+when its backend supports the expression; otherwise it evaluates the predicate
+on decoded data using NeuG's query expressions, before returning the requested
+columns. Filtering still applies when the predicate uses columns omitted from
+`RETURN`. Parameters use the values supplied for each query execution.
+
+This choice belongs to the reader: changing the file format does not require
+changing the query or discarding an unsupported filter. Decoded-data filtering
+may read more rows than native pushdown.
+
 Filter rows using the `WHERE` clause. Multiple conditions can be combined using `AND`, `OR`, and `NOT`:
 
 ```cypher
@@ -183,7 +232,7 @@ For large files, the following option can improve read performance:
 | ------------ | ----- | -------------- | ----------- |
 | `parallel`   | bool  | `false` | Enable parallel reading using multiple threads (max core number). When enabled for Parquet files, row groups are scanned concurrently and row order is **not** preserved. |
 
-> **Note:** Batch reading options (`batch_read`, `batch_size`) are currently supported in [`COPY FROM`](import_data#performance-options), not in `LOAD FROM`. 
+> **Note:** Batch reading options (`batch_read`, `batch_rows`) are currently supported in [`COPY FROM`](import_data#performance-options), not in `LOAD FROM`. 
 
 Example:
 

@@ -1,14 +1,16 @@
 # 数据管道教程：云存储 → 图查询 → Parquet 导出
 
-本教程将引导您使用 NeuG v0.1.3 或更高版本完成一个完整的数据管道：
+本教程将引导你使用 NeuG 完成一个完整的数据管道：
 
 1. 直接从云存储读取 Parquet 文件（无需下载）
-2. 自动创建图结构表，无需编写 DDL
-3. 执行图查询
-4. 将查询结果导出为 Parquet 格式（本地或云存储）
+2. 自动创建图表，无需编写 DDL
+3. 运行图查询
+4. 将结果导出回 Parquet（本地或云端）
 
 **耗时**：约 10 分钟
-**前提条件**：`pip install neug==0.2.0`，并确保网络连接正常
+**前提条件**：`pip install neug`，互联网访问
+
+---
 
 ## 步骤 1：安装和加载扩展
 
@@ -72,9 +74,9 @@ result = conn.execute('''
 
 ## 步骤 3：导入节点 — 一行代码，无需 DDL
 
-> **注意：** `COPY FROM` 仅在[嵌入式模式](../data_io/index.md#embedded-mode-only)下受支持，服务模式下不可用。
+> **注意：** `COPY FROM` 仅在 [嵌入式模式](../data_io/index.md#embedded-mode-only) 中受支持，服务模式不支持。
 
-传统上，将数据导入图数据库需要首先使用 `CREATE NODE TABLE` 语句定义模式（列名、类型、主键）。在 NeuG v0.1.3 中，您可以跳过所有这些步骤：
+传统上，将数据导入图数据库需要你先通过 `CREATE NODE TABLE` 语句定义模式（列名、类型、主键）。使用 NeuG，你可以跳过所有这些步骤：
 
 ```python
 conn.execute('''
@@ -85,11 +87,11 @@ conn.execute('''
 ''')
 ```
 
-NeuG 会自动执行以下操作：
+NeuG 会自动：
 
 - 从 Parquet 文件模式中推断所有列名和类型
-- 将第一列作为主键
-- 一步完成节点表创建和数据导入
+- 使用第一列作为主键
+- 一步创建节点表并导入数据
 
 验证：
 
@@ -98,7 +100,7 @@ result = conn.execute("MATCH (p:Person) RETURN count(p)")
 print(list(result))  # [[8]]
 ```
 
-该文件包含 16 列（INT64、STRING、BOOL、DOUBLE、DATE）——所有类型均已正确推断。
+该文件包含 16 列（INT64、STRING、BOOL、DOUBLE、DATE）— 全部正确推断。
 
 ---
 

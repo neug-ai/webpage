@@ -1,4 +1,4 @@
-# 开发者指南
+# 开发 NeuG
 
 ### 从源码构建
 
@@ -22,6 +22,42 @@ brew install cmake git python3 openssl@3
 
 # 无需安装 g++，因为也支持 Apple Clang。
 ```
+
+#### 在 Windows 上
+
+NeuG 使用 MSVC 在 Windows 上进行原生构建。该工具链使用 Ninja
+生成器和 [vcpkg](https://github.com/microsoft/vcpkg)（经典模式）来管理
+少数未包含在 `third_party/` 下的依赖项（当前为
+OpenSSL）。前置条件：
+
+- **Visual Studio 2022 生成工具**，需安装“使用 C++ 的桌面开发”
+  工作负载（提供 `cl`/`link`、CMake 和 Ninja）
+- **Python 3.8+**、**Git**
+
+一个辅助脚本会通过 vcpkg 安装依赖项并写入一个环境
+文件。请在 *VS 2022 开发人员 PowerShell* 中运行它：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_deps.ps1
+# Load the generated environment (sets VCPKG_ROOT, OPENSSL_ROOT_DIR, etc.)
+. $HOME\.neug_env.ps1
+```
+
+然后构建核心库和 Python 绑定：
+
+```powershell
+scripts\build_windows.bat
+```
+
+`build_windows.bat` 会调用 `vcvarsall.bat x64`，使用
+Ninja 生成器和 vcpkg 工具链（三元组 `x64-windows-static-md`）配置 CMake，并将
+`neug` 和 `neug_py_bind` 目标构建到 `build\` 中。事先设置 `VCPKG_ROOT`
+和 `PYTHON_EXE` 以覆盖默认值。对于 ARM64，请使用
+`arm64-windows-static-md` 三元组。
+
+> **注意**：下面的 `make python-dev` / `make cpp-build` 流程是 shell
+> 目标，在 Windows 上无法原生使用；请改用上述脚本
+>（或等效的原生 `cmake` 命令）。
 
 #### 在 CentOS7 上
 
@@ -150,6 +186,18 @@ NEUG_PACKAGE_BUILD=OFF NEUG_NATIVE_ARCH=ON make -C tools/python_bind build
 NEUG_NATIVE_ARCH=ON make -C tools/nodejs_bind dev
 ```
 
+##### 轻量版构建
+
+启用轻量模式（默认：`OFF`）：
+
+```bash
+EXTRA_CMAKE_FLAGS="-DNEUG_LITE=ON" make cpp-build
+```
+
+轻量版构建最大限度地减少了 NeuG 的外部依赖，使其更易于在不同环境（包括移动平台）中使用。它移除了核心对 OpenSSL 的依赖，并禁用了 HTTP 服务器支持和动态扩展加载。
+
+要恢复完整构建，请设置 `NEUG_LITE=OFF`，并在需要时重新启用 `BUILD_HTTP_SERVER=ON`。
+
 #### 调试
 
 默认情况下，C++ 日志处于禁用状态。如需启用，请使用：
@@ -249,19 +297,19 @@ cd tools/nodejs_bind && make pack
 3. 检查加载器实际查找的路径：
    `python3 -c "from neug import __init__; print(__init__._find_neug_py_bind_dir())"`
 
-#### `Library not loaded: @rpath/libneug.dylib` 或传递依赖的第三方库
+#### `Library not loaded: @rpath/libneug.dylib` 或传递性第三方库
 
-`neug_py_bind*.so` 配置了 `BUILD_RPATH=@loader_path/../../src`，以便在根构建目录中自动查找同级的 `libneug.dylib`。
-如果遇到此错误：
+`neug_py_bind*.so` 已使用 `BUILD_RPATH=@loader_path/../../src` 进行配置，因此它会在根构建树中自动找到同级的 `libneug.dylib`。
+如果您看到此错误：
 
-- **如果是 `libneug` 本身报错**：你的构建目录不完整或移动了文件。
-  重新运行 `cmake --build build --target neug_py_bind`。
-- **如果是第三方依赖**（arrow、openssl 等）：未找到 `libneug.dylib` 的
-  传递依赖。将 `DYLD_LIBRARY_PATH=/opt/neug/lib`（macOS）
+- **对于 `libneug` 本身**：您的构建树不完整，或者您移动了文件。
+  请重新运行 `cmake --build build --target neug_py_bind`。
+- **对于第三方依赖项**（openssl、protobuf 等）：未找到 `libneug.dylib` 的
+  传递性依赖项。将 `DYLD_LIBRARY_PATH=/opt/neug/lib`（macOS）
   或 `LD_LIBRARY_PATH=/opt/neug/lib:/opt/neug/lib64`（Linux）设置为它们的
-  安装路径，或者重新构建并静态链接这些依赖。
+  安装位置，或者重新构建并静态链接这些依赖项。
 
-要检查 `.so` 文件依赖了哪些库：
+要检查 `.so` 正在请求什么：
 ```bash
 otool -L build/tools/python_bind/neug_py_bind*.so   # macOS
 ldd     build/tools/python_bind/neug_py_bind*.so    # Linux

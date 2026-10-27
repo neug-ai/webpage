@@ -8,19 +8,18 @@
 
 ## 可用扩展
 
-以下扩展当前已支持，或计划在 NeuG 中支持：
+NeuG 目前支持或计划支持以下扩展：
 
-| 类别            | 扩展                             | 描述                                                                 | 起始版本   |
-| --------------- | -------------------------------- | -------------------------------------------------------------------- | ---------- |
-| 数据源          | [JSON](load_json.md)                | 从 JSON 文件格式导入与导出数据（自 v0.1.2 起内置）                   | v0.1       |
-| 数据源          | [PARQUET](load_parquet.md)          | 从 PARQUET 格式文件导入与导出数据                                    | v0.1.1     |
-| 文件系统        | [HTTP/HTTPS/S3/OSS](load_httpfs.md) | 基于 HTTP/HTTPS/S3/OSS 协议提供数据源                                | v0.1.2     |
-| 图算法          | [GDS](load_gds.md)               | 图数据科学算法（PageRank、BFS、SSSP、WCC、LCC、K-Core、标签传播、Louvain、Leiden） | v0.1.3     |
-| 图查询          | [模式匹配](pattern_match.md)        | 子图模式匹配，支持精确 DAF 匹配及采样 FaSTest 匹配                    | v0.2.0     |
-| 向量搜索        | [向量搜索](vector_search.md)      | 向量距离函数及基于 HNSW 的近似最近邻搜索                             | v0.2.0     |
-| 搜索            | [全文搜索](fts_search.md)         | 基于 SQLite FTS5 索引的字符串属性 BM25 排序全文搜索                  | v0.2.0     |
+| 类别 | 扩展 | 描述 |
+| --------------- | -------------------------------- | ------------------------------------------------------------------------- |
+| 数据源 | [PARQUET](load_parquet.md) | 以 Parquet 格式导入和导出数据 |
+| 文件系统 | [HTTP/HTTPS/S3/OSS](load_httpfs.md) | 通过 HTTP、HTTPS、S3 和 OSS 提供数据源 |
+| 图算法 | [GDS](load_gds.md) | 图数据科学算法（PageRank、BFS、SSSP、WCC、LCC、K-Core、标签传播、Louvain、Leiden） |
+| 图查询 | [Pattern Match](pattern_match.md) | 子图模式匹配，支持精确 DAF 匹配和采样 FaSTest 匹配 |
+| 向量搜索 | [Vector Search](vector_search.md) | 向量距离函数和基于 HNSW 的近似最近邻搜索 |
+| 搜索 | [Full-Text Search](fts_search.md) | 基于 SQLite FTS5 索引对字符串属性进行 BM25 排序的全文搜索 |
 
-如需在 NeuG 项目树外部（将 NeuG 作为子模块）开发自定义扩展，请参阅[开发树外扩展](develop_extension.md)。
+若要在 NeuG 代码树之外（将 NeuG 作为子模块）编写自定义扩展，请参阅 [Developing Extensions](../development/develop_extension.md)。
 
 ## 使用扩展
 

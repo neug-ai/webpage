@@ -1,8 +1,8 @@
 # 简介
 
-**NeuG** 是一款高性能、原生图结构的事务型数据库，可嵌入您的应用程序中，或作为后端服务运行。它提供持久化存储、显式事务、原生 Cypher 查询，以及就地图分析能力。
+**NeuG** 是一款高性能、图原生的事务型数据库，可作为嵌入式模式运行于您的应用程序中，也可通过服务模式部署。它提供持久化存储、显式事务、原生 Cypher 查询以及原位图分析能力。
 
-自 **NeuG v0.2** 起，NeuG 引入了存储-索引框架，支持 HNSW 向量搜索与 BM25 全文搜索。结合 NeuG 原生的图结构，这些能力使 NeuG 成为**面向智能体（agentic）应用的统一数据索引**——在同一套受管数据之上，融合结构化信息、语义关联与精确关键词检索。这些索引能力在 NeuG v0.1.x 中不可用。如有疑问或需社区支持，请访问 [NeuG 仓库](https://github.com/alibaba/neug)。
+NeuG 提供了一个存储-索引框架，支持 HNSW 向量搜索和 BM25 全文搜索。结合 NeuG 的原生图结构，这些能力使 NeuG 成为**您智能体应用的统一数据索引**——在相同的托管数据之上，将结构、语义和精确关键词融为一体。如有问题或需要社区支持，请访问 [NeuG 仓库](https://github.com/alibaba/neug)。
 
 ## 核心能力
 
@@ -30,7 +30,7 @@ NeuG 为同一张图提供互补的访问路径：
 
 ## 快速示例
 
-以下 NeuG v0.2 示例对相同的 `Runbook` 数据同时按语义和关键词建立索引，同时保持其图结构可直接查询：
+以下示例按语义和关键词对相同的 `Runbook` 数据进行索引，同时保持其图结构可直接查询：
 
 ```cypher
 LOAD vector_search;
@@ -42,23 +42,23 @@ USING HNSW (embedding) WITH (metric = 'l2');
 CREATE INDEX runbook_text ON Runbook
 USING FTS (content);
 
-// 结构：遍历关系
+// Structure: follow relationships
 MATCH (:Service {name: 'PaymentService'})-[:HAS_RUNBOOK]->(r:Runbook)
 RETURN r.title;
 
-// 语义：查找语义相似的内容
+// Semantics: find similar meaning
 MATCH (r:Runbook)
 RETURN r.title,
        vector_distance_l2(r.embedding, [0.1, 0.2, 0.3, 0.4]) AS distance
 ORDER BY distance ASC LIMIT 5;
 
-// 关键词：对精确匹配的词项进行排序
+// Keywords: rank exact terms
 MATCH (r:Runbook)
 RETURN r.title, bm25(r.content, 'retry timeout') AS score
 ORDER BY score ASC LIMIT 5;
 ```
 
-有关安装配置、索引选项及完整示例，请参阅[向量搜索](../../extensions/vector_search)和[全文搜索](../../extensions/fts_search)。
+有关设置、索引选项和完整示例，请参阅[向量搜索](../../extensions/vector_search)和[全文搜索](../../extensions/fts_search)。
 
 ## 开始探索
 

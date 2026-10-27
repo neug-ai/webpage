@@ -1,6 +1,7 @@
 export default {
-  dev_guide: "Development Guide",
+  dev_guide: "Developing NeuG",
+  develop_extension: "Developing Extensions",
+  ai_coding: "AI-Assisted Development",
   code_style_guide: "Code Style Guide",
-  ai_coding: "AI Coding",
-  error_code: "Error Codes",
+  error_code: "NeuG Error Codes",
 };
