@@ -1,5 +1,0 @@
-User-Agent: *
-Allow: /
-
-Host: https://neug.io
-Sitemap: https://neug.io/sitemap.xml
