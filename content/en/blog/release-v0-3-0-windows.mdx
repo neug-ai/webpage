@@ -48,7 +48,7 @@ For developers on Windows, or enterprise desktop environments, these were real b
 **As of v0.3.0, none of that is needed.** We ship prebuilt Windows packages (both x86_64 and arm64):
 
 ```powershell
-pip install --only-binary=:all: neug
+pip install neug
 ```
 
 Install and go — the same experience as on Linux / macOS.
@@ -90,7 +90,7 @@ Then install and verify:
 
 ```powershell
 & $python -m pip install --upgrade pip
-& $python -m pip install --only-binary=:all: neug
+& $python -m pip install neug
 & $python -c "from neug import Database; print('NeuG is ready')"
 ```
 
@@ -281,7 +281,7 @@ Full release notes: [GitHub Release](https://github.com/alibaba/neug/releases/ta
 On Windows (and equally on Linux / macOS):
 
 ```powershell
-pip install --only-binary=:all: neug
+pip install neug
 ```
 
 ```python
