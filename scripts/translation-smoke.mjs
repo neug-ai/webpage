@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { translateMarkdownSection, splitProtectedMarkdown } from "./translate-neug-docs.mjs";
+import { translateMarkdownSection, splitProtectedMarkdown, segmentMarkdownSections } from "./translate-neug-docs.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const source = path.resolve(root, process.env.NEUG_SOURCE_DIR || ".temp-source-repo");
@@ -18,7 +18,7 @@ const cases = [
 ];
 for (const item of cases) {
   const content = fs.readFileSync(path.join(source, "doc", "source", item.file), "utf8");
-  const section = content.split(/(?=^#{1,6}\s)/m).filter(value => value.trim()).map(value => value.trim())[item.section];
+  const section = segmentMarkdownSections(content)[item.section];
   if (!section?.startsWith(item.heading)) throw new Error(`Smoke fixture heading changed: ${item.file}`);
   const translated = await translateMarkdownSection(section, `${item.file} smoke section ${item.section + 1}`);
   const codeBlocks = value => value.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g) || [];

@@ -7,6 +7,7 @@ import {
   restoreMarkdownTranslation,
   validateDatabaseTerminology,
   validateMarkdownTokens,
+  segmentMarkdownSections,
 } from "./translate-neug-docs.mjs";
 
 test("protected Markdown is excluded from translation and restored byte-for-byte", () => {
@@ -43,6 +44,14 @@ try (Session session = driver.session()) {
   assert.match(restored, /<Callout type="info">[\s\S]*<\/Callout>/);
   assert.ok(restored.includes('](../extensions/load_parquet "Formats")'));
   assert.ok(restored.includes("](#local-anchor)"));
+});
+
+test("Python and shell comments inside fenced code never become documentation sections", () => {
+  const source = '# API\n\n```python\n# Python comment\nconn.execute("RETURN 1")\n```\n\n## Usage\n\n~~~sh\n## Shell comment\nprintf hello\n~~~\n';
+  const sections = segmentMarkdownSections(source);
+  assert.equal(sections.length, 2);
+  assert.ok(sections[0].includes('# Python comment\nconn.execute'));
+  assert.ok(sections[1].includes('## Shell comment\nprintf hello'));
 });
 
 test("context tokens avoid source collisions, stay whole at chunk boundaries, and validate markup structure", () => {

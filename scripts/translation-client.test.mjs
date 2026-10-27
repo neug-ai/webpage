@@ -162,6 +162,18 @@ test("the failing C++ Returns sentence translates as one unit with natural Chine
   assert.equal(client.counters.requests, 1);
 });
 
+test("document translation keeps fenced comment lines and executable code outside the model", async () => {
+  const f = fixture();
+  const source = '# Example\n\nDescription.\n\n```python\n# Create the schema first.\nconn.execute("RETURN 1")\n```\n';
+  const client = f.make(async (_url, options) => {
+    const batch = JSON.parse(JSON.parse(options.body).messages[1].content);
+    assert.doesNotMatch(JSON.stringify(batch), /Create the schema|conn\.execute|RETURN 1/);
+    return success(JSON.stringify(Object.fromEntries(Object.entries(batch).map(([key, value]) => [key, value.replace('Example', '示例').replace('Description.', '说明。')]))));
+  });
+  const translated = await translateDocument(source, '', '', 'comments.md', client);
+  assert.equal(translated, source.replace('Example', '示例').replace('Description.', '说明。'));
+});
+
 test("protected tokens cannot be dropped, duplicated, invented, or moved into another text unit", async () => {
   for (const response of [
     { t0: '丢失', t1: '保留 ⟦N1⟧' },

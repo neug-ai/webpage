@@ -79,11 +79,13 @@ function normalizeSource(content, relativePath) {
   return content;
 }
 
-function segmentByHeadings(content) {
-  return content
-    .split(/(?=^#{1,6}\s)/m)
-    .filter((section) => section.trim())
-    .map((section) => section.trim());
+export function segmentMarkdownSections(content) {
+  const fences = [...content.matchAll(/```[\s\S]*?```|~~~[\s\S]*?~~~/g)]
+    .map(match => [match.index, match.index + match[0].length]);
+  const boundaries = [0, ...[...content.matchAll(/^#{1,6}\s/gm)]
+    .map(match => match.index)
+    .filter(index => index > 0 && !fences.some(([start, end]) => start <= index && index < end))];
+  return boundaries.map((start, index) => content.slice(start, boundaries[index + 1]).trim()).filter(Boolean);
 }
 
 function extractMetaKeys(content) {
@@ -274,9 +276,9 @@ export async function translateMarkdownSection(section, relativePath, client = t
 }
 
 export async function translateDocument(newEnglish, oldEnglish, existingChinese, relativePath, client = translationClient) {
-  const oldSections = segmentByHeadings(oldEnglish);
-  const newSections = segmentByHeadings(newEnglish);
-  const chineseSections = segmentByHeadings(existingChinese);
+  const oldSections = segmentMarkdownSections(oldEnglish);
+  const newSections = segmentMarkdownSections(newEnglish);
+  const chineseSections = segmentMarkdownSections(existingChinese);
   const cachedTranslations = new Map();
 
   for (let index = 0; index < Math.min(oldSections.length, chineseSections.length); index += 1) {
