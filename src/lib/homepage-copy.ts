@@ -80,10 +80,9 @@ export const homepageCopy = {
       groups: [
         ["Data formats", "Apache Arrow · Parquet"],
         ["Object storage", "S3 · OSS"],
-        ["Operating systems", "Linux · macOS"],
+        ["Operating systems", "Linux · macOS · Windows"],
         ["Architectures", "x86_64 · ARM64"],
       ],
-      roadmap: "Windows · Roadmap",
     },
     close: ["One index. Fewer moving parts", "Start embedded. Move behind a service when your application needs it."],
     footer: "The one data index for your agentic applications.",
@@ -167,10 +166,9 @@ export const homepageCopy = {
       groups: [
         ["数据格式", "Apache Arrow · Parquet"],
         ["对象存储", "S3 · OSS"],
-        ["操作系统", "Linux · macOS"],
+        ["操作系统", "Linux · macOS · Windows"],
         ["处理器架构", "x86_64 · ARM64"],
       ],
-      roadmap: "Windows · 路线图",
     },
     close: ["一个索引，更少组件", "从嵌入式开始，在应用需要时切换为服务模式。"],
     footer: "面向你的 Agent 应用的全能数据索引。",
