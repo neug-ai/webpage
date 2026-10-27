@@ -42,7 +42,7 @@ NeuG v0.3.0 正式发布。这个版本的核心主题是：**NeuG 原生支持 
 **v0.3.0 之后，这些都不需要了。** 我们发布了 Windows 的预编译包（x86_64 和 arm64 都有），直接：
 
 ```powershell
-pip install --only-binary=:all: neug
+pip install neug
 ```
 
 装完就能用，和在 Linux / macOS 上的体验一致。
@@ -84,7 +84,7 @@ $python = Join-Path $demoDir '.venv\Scripts\python.exe'
 
 ```powershell
 & $python -m pip install --upgrade pip
-& $python -m pip install --only-binary=:all: neug
+& $python -m pip install neug
 & $python -c "from neug import Database; print('NeuG is ready')"
 ```
 
@@ -275,7 +275,7 @@ RETURN time_bucket(INTERVAL('2 months'), DATE('2024-03-20'), DATE('2024-01-01'))
 Windows（也适用于 Linux / macOS）：
 
 ```powershell
-pip install --only-binary=:all: neug
+pip install neug
 ```
 
 ```python
