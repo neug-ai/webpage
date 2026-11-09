@@ -60,6 +60,7 @@ constructor(options = {}) {
     maxThreadNum = 0,
     checkpointOnClose = true,
     bufferStrategy = 'M_FULL',
+    autoLoadExtension = false,
   } = options;
 }
 ```
@@ -78,7 +79,7 @@ constructor(options = {}) {
   - `options.maxThreadNum`（数字）
     数据库查询容量；`0` 选择硬件并发数（回退为 `1`），而更高的输入会发出警告并钳制到该值。
 
-    嵌入式（AP）查询当前是单线程的；将此设置用于查询内并行性是未来的工作。
+    嵌入式（AP）查询当前是单线程的；使用此设置实现查询内并行是未来的工作。
 
     在 TP 模式下，它是默认的服务执行槽容量。显式设置较小的服务并发数会减少服务本地池。
   - `options.checkpointOnClose`（布尔值）
@@ -87,17 +88,26 @@ constructor(options = {}) {
   - `options.bufferStrategy`（字符串）
     数据库使用的缓冲策略，可以是 'InMemory'（或 'M_FULL'）、'SyncToFile'（或 'M_LAZY'）
     或 'HugePagePreferred'（或 'M_HUGE'）。默认为 'M_FULL'。
-    - 'InMemory' / 'M_FULL'：数据库将完全在内存中打开，更改直到创建检查点后才会持久化到磁盘。
-    - 'SyncToFile' / 'M_LAZY'：数据库将按需加载到内存中，适用于无法装入内存的大型数据库。此外，更改直到创建检查点后才会持久化到磁盘。
-    - 'HugePagePreferred' / 'M_HUGE'：与 'InMemory' 类似，但会尝试使用大页进行内存分配，这可能会提高大型数据库的性能。
+    - 'InMemory' / 'M_FULL'：数据库将完全在内存中打开，更改直到创建检查点后才持久化到磁盘。
+    - 'SyncToFile' / 'M_LAZY'：数据库将按需加载到内存中，适用于无法装入内存的大型数据库。此外，更改直到创建检查点后才持久化到磁盘。
+    - 'HugePagePreferred' / 'M_HUGE'：类似于 'InMemory'，但会尝试使用大页进行内存分配，这可能会提高大型数据库的性能。
+
+  - `options.autoLoadExtension`（布尔值，默认 `false`）
+    控制在打开图/索引之前是否自动加载已安装的扩展，
+    例如 `new Database({ databasePath: '/data/graph', autoLoadExtension: false })`。
+    设置为 `true` 以启用它。省略或 `undefined` 使用默认值。
+    请参阅 [auto_load_extension 配置](../python_api/database.md)
+    了解目录解析、失败处理和数据库模式行为。
 
 - **抛出：**
+  - **TypeError**
+    如果 `autoLoadExtension` 不是布尔值。
   - **Error** (ERR_INVALID_PATH)
     如果数据库路径包含非法字符。
   - **Error** (ERR_INVALID_ARGUMENT)
-    如果模式不是受支持的模式之一。
+    如果模式不是支持的模式之一。
     如果 maxThreadNum 超过 CPU 核心数。
-    如果在只读模式下打开内存模式。
+    如果在只读模式下打开了内存模式。
   - **Error** (ERR_CONFIG_INVALID)
     如果 maxThreadNum 为负数。
 

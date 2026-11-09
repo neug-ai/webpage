@@ -293,6 +293,25 @@ COPY Person FROM "person.parquet";
 
 由于 `COPY FROM` 基于 `LOAD FROM` 构建，你可以使用 `LOAD FROM` 子查询来**在持久化之前预处理数据**——包括列重新排序、重命名、类型转换和过滤。
 
+### 列类型匹配
+
+`COPY FROM` **按位置而非名称**将源列映射到目标列：子查询返回的第一列填充表的第一列（对于关系表，位置 0 和 1 分别是源键和目标键），第二列填充第二列，依此类推。
+
+对于每个位置，源列的类型会与目标列的类型进行协调：
+
+- **相同类型**直接传递，保持不变。
+- **兼容类型**（例如，`INT64` 源列 targeting `DOUBLE` 列）会自动转换为目标类型。
+- **不兼容类型**（例如，`STRING` 源列 targeting `INT64` 列）没有隐式转换，因此 `COPY` 会在绑定阶段被拒绝，并抛出 `ERR_TYPE_CONVERSION` 错误，指明列名及两种类型。
+
+> **注意：** 兼容类型的自动转换和不兼容类型的拒绝机制是同时引入的。在早期版本中，`LOAD FROM` 子查询中的类型不匹配会静默地重新解释原始源字节并存储损坏的值。如果以前“正常工作的” `COPY` 现在因 `ERR_TYPE_CONVERSION` 而失败，请在 `RETURN` 子句中添加显式的 `CAST` 以将列转换为目标类型：
+
+```cypher
+COPY Person FROM (
+    LOAD FROM "person.csv"
+    RETURN id, name, CAST(age, 'INT64') AS age
+);
+```
+
 ### 重新排列列
 
 当文件中的列顺序与表模式不一致时：

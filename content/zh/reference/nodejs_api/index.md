@@ -24,28 +24,28 @@ Node.js API 提供了一种简单而强大的方式，可用于：
 ### 安装
 
 ```bash
-npm install @graphscope-neug/neug
+npm install @neug-ai/neug
 ```
 
 ### 基本用法
 
 ```javascript
-const { Database } = require('@graphscope-neug/neug');
+const { Database } = require('@neug-ai/neug');
 
-// 连接数据库
+// Connect to database
 const db = new Database({ databasePath: '/path/to/database', mode: 'w' });
 const conn = db.connect();
 
-// 执行简单查询
+// Execute a simple query
 const result = conn.execute('MATCH (n) RETURN n LIMIT 10');
 
-// 处理结果
+// Process results
 for (const record of result) {
   const node = record['n'];
   console.log(`Node ID: ${node.id}, Labels: ${node.labels}`);
 }
 
-// 关闭连接
+// Close connection
 conn.close();
 db.close();
 ```
@@ -53,9 +53,9 @@ db.close();
 ### 内存数据库
 
 ```javascript
-const { Database } = require('@graphscope-neug/neug');
+const { Database } = require('@neug-ai/neug');
 
-// 打开一个内存数据库
+// Open an in-memory database
 const db = new Database({ databasePath: '', mode: 'w' });
 const conn = db.connect();
 

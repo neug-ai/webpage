@@ -125,17 +125,20 @@ cmake --build build --target rt_server -j$(nproc)
 #### 2. 启动服务器
 
 ```bash
-./build/bin/rt_server --data-path /path/to/graph --http-port 10000 --host 0.0.0.0 --thread-num 0
+./build/bin/rt_server --data-path /path/to/graph --http-port 10000 --host 0.0.0.0 --thread-num 0 --auto-load-extension=false
 ```
 
 常用选项：
 
+- `--auto-load-extension`：控制在打开图/索引之前自动加载已安装的扩展，默认为 `false`。设置为 `true` 以在服务器上启用它。
+  请参阅 [auto_load_extension 配置](../python_api/database.md)
+  了解目录解析、故障处理和数据库模式行为。
 - `--data-path`：NeuG 数据目录的路径
 - `--http-port`：Java 客户端的 HTTP 端口，默认为 `10000`
 - `--host`：绑定地址，默认为 `127.0.0.1`
-- `--thread-num`：数据库 `max_thread_num` 和服务 `thread_num`。默认值为 `0`：NeuG 首先确定数据库线程数，然后根据所得的数据库 `max_thread_num` 确定服务并发度。在默认数据库线程设置下，数据库线程数根据硬件并发度确定，如果运行时无法检测到硬件并发度，则回退到 `1`。每个并发执行的 TP 查询占用一个服务执行槽位。
+- `--thread-num`：数据库 `max_thread_num` 和服务 `thread_num`。默认值为 `0`：NeuG 首先解析数据库线程数，然后根据生成的数据库 `max_thread_num` 解析服务并发度。使用默认的数据库线程设置时，数据库线程数根据硬件并发度解析，如果运行时无法检测到硬件并发度，则回退到 `1`。每个并发执行的 TP 查询占用一个服务执行槽位。
 
-> **注意：** 在调用 `db.serve()` 之前，请确保所有本地连接已关闭。
+> **注意：** 在调用 `db.serve()` 之前，请确保所有本地连接均已关闭。
 > 服务器运行后，在调用 `db.stop_serving()` 之前不允许建立新的本地连接。
 
 ### 从 Java 连接
