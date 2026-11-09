@@ -1,0 +1,15 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), geolocation=(), microphone=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/_pagefind/*
+  Cache-Control: public, max-age=3600
+
+/images/*
+  Cache-Control: public, max-age=86400
