@@ -92,7 +92,7 @@ db.Open("/path/to/graph", 8, neug::DBMode::READ_WRITE, "gopt");
 
 使用配置对象打开数据库。
 
-使用提供全面配置选项的 NeugDBConfig 结构打开数据库。
+使用 NeugDBConfig 结构打开数据库，该结构提供全面的配置选项。
 
 **使用示例：** 
 ```cpp
@@ -101,12 +101,13 @@ config.data_dir = "/path/to/graph";
 config.max_thread_num = 8;
 config.mode = neug::DBMode::READ_WRITE;
 config.memory_level = 1;  // Use memory-mapped virtual memory
+config.auto_load_extension = false;  // Disabled by default
 neug::NeugDB db;
 db.Open(config);
 ```
 
 - **参数：**
-  - `config`：包含所有数据库设置的配置对象
+  - `config`：包含所有数据库设置的配置对象。config.auto_load_extension（布尔值，默认为 false）控制在打开索引之前是否自动加载已安装的扩展。详见 [Python 配置参考](../python_api/database.md)。
 
 - **返回值：** 如果数据库成功打开则返回 `true`，否则返回 `false`
 

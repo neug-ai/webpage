@@ -56,7 +56,8 @@ def __init__(db_path: str = None,
              mode: str = "read-write",
              max_thread_num: int = 0,
              checkpoint_on_close: bool = True,
-             buffer_strategy: str = "M_FULL")
+             buffer_strategy: str = "M_FULL",
+             auto_load_extension: bool = False)
 ```
 
 打开数据库。
@@ -73,19 +74,39 @@ def __init__(db_path: str = None,
 
     嵌入式（AP）查询当前是单线程的；使用此设置实现查询内并行是未来的工作。
 
-    在 TP 模式下，它是默认的服务执行槽容量。显式设置较小的
+    在 TP 模式下，它是默认的服务执行槽容量。显式设置更小的
     ``serve(thread_num=...)`` 会减少服务本地池的大小。
   - `checkpoint_on_close` (bool)
     是否在关闭数据库时自动创建检查点。默认为 True。
     如果为 False，则在关闭数据库时不会自动创建检查点。
   - `buffer_strategy` (str)
     数据库使用的缓冲策略，可以是 'InMemory'（或 'M_FULL'）、'SyncToFile'（或 'M_LAZY'）
-    或 'HugePagePreferred'（或 'M_HUGE'）。默认为 'M_FULL'。此设置控制图数据如何加载到内存中；它不影响持久性。
+    或 'HugePagePreferred'（或 'M_HUGE'）。默认为 'M_FULL'。此设置控制图数据如何
+    加载到内存中；它不影响持久性。
     - 'InMemory' / 'M_FULL'：完全在内存中打开数据库。
-    - 'SyncToFile' / 'M_LAZY'：按需加载数据库页面，适用于无法完全装入内存的数据库。
+    - 'SyncToFile' / 'M_LAZY'：按需加载数据库页，适用于无法完全装入内存的数据库。
     - 'HugePagePreferred' / 'M_HUGE'：与 'InMemory' 类似，但在可用时优先使用大页。
 
+  - `auto_load_extension` (bool)
+    默认为 False。
+    控制在打开图/索引之前是否加载已安装的扩展。
+    例如，`Database("/data/graph", auto_load_extension=False)` 保持自动
+    加载禁用；将选项设置为 `True` 以启用它。
+
+    启用后，NeuG 会扫描 `<extension home>/extension` 的直接子目录以查找 `<name>/lib<name>.neug_extension`，
+    而无需安装或下载包。
+
+    如果目录缺失或加载失败，会记录 ERROR 日志但不会中断数据库
+    打开过程，并且仍会尝试加载其他扩展。空目录不执行任何操作。
+    普通的数据库/索引打开错误保留其原有行为。该选项支持
+    只读、读写和内存数据库。只读数据库仍然拒绝
+    手动的 `LOAD` 请求，因此当它们的索引需要扩展时，请在打开时启用此选项。
+    每次打开时都需传递此参数；它不会持久化在检查点中。
+    使用 `False` 时，此数据库不会启动扩展加载。
+
 - **异常：**
+  - **TypeError**
+    如果 auto_load_extension 不是布尔值。
   - **RuntimeError**
     如果数据库文件不存在或模式无效。
   - **ValueError**

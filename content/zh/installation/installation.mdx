@@ -18,12 +18,6 @@ import { Tabs } from 'nextra/components'
 pip install neug
 ```
 
-在 Windows 上，请显式安装预构建的 wheel 包，以避免尝试从源码构建：
-
-```bash
-pip install --only-binary=:all: neug
-```
-
 使用虚拟环境（推荐）：
 
 ```bash
@@ -32,7 +26,7 @@ source neug-env/bin/activate
 pip install neug
 ```
 
-替代源（例如阿里云镜像）：
+其他源（例如阿里云镜像）：
 
 ```bash
 pip install neug -i https://mirrors.aliyun.com/pypi/simple/
@@ -83,7 +77,7 @@ pip install --upgrade neug
 ### 安装
 
 ```bash
-npm install @graphscope-neug/neug
+npm install @neug-ai/neug
 ```
 
 或者从本地 tarball 安装：
@@ -95,9 +89,9 @@ npm install /path/to/neug-<release>.tgz
 ### 验证安装
 
 ```javascript
-const { Database } = require('@graphscope-neug/neug');
+const { Database } = require('@neug-ai/neug');
 
-// 使用内存数据库进行测试
+// Test with in-memory database
 const db = new Database({ databasePath: '', mode: 'w' });
 const conn = db.connect();
 console.log("✅ NeuG is ready!");

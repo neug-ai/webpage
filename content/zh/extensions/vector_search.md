@@ -2,16 +2,16 @@
 
 NeuG 通过专用的 `vector_search` 扩展提供向量搜索功能。
 
-有关所有索引类型（包括检查、事务和恢复）共有的语法和保证，请参阅 [存储索引](../storage_index/index.md)。
+有关所有索引类型（包括检查、事务和恢复）共用的语法和保证，请参阅 [存储索引](../storage_index/index.md)。
 
-向量搜索扩展通过结合向量存储、距离计算和基于 HNSW 的近似最近邻 (ANN) 索引，实现对图数据的高效相似性搜索。
+向量搜索扩展通过结合向量存储、距离计算和基于 HNSW 的近似最近邻（ANN）索引，实现对图数据的高效相似性搜索。
 
 .. warning::
 
    **默认情况下，创建余弦 HNSW 索引会覆盖向量数据**
 
-   创建余弦 HNSW 索引时，默认使用 ``cosine_normalize = true``。
-   NeuG 可能会用其 L2 归一化值永久替换索引属性中的每个现有值。原始向量及其模长将丢失且无法恢复，即使在执行 ``DROP INDEX`` 后也是如此。
+   创建余弦 HNSW 索引时默认使用 ``cosine_normalize = true``。
+   NeuG 可能会将索引属性中的每个现有值永久替换为其 L2 归一化值。原始向量及其模长将丢失且无法恢复，即使在执行 ``DROP INDEX`` 后也是如此。
 
    若要保留现有的属性值，请显式设置
    ``cosine_normalize = false``。在该模式下，您有责任确保每个现有和未来的向量都是有效的 L2 归一化向量。
@@ -25,7 +25,7 @@ NeuG 通过专用的 `vector_search` 扩展提供向量搜索功能。
   - 用户可以根据需要安装并启用此扩展。
 
 - **原生向量数据类型支持**
-  - 向量使用固定长度的 `ARRAY` 列存储。
+  - 向量使用固定长度的 `ARRAY` 列进行存储。
   - 目前支持稠密 FP32 向量。
 
 - **多种距离度量**
@@ -42,7 +42,8 @@ NeuG 通过专用的 `vector_search` 扩展提供向量搜索功能。
   - `HNSWIndex` 支持以下两种操作：
     - 批量索引构建
     - 增量索引更新
-  - 当数据导入或更新时，相应的 HNSW 索引会自动更新。
+  - 导入和更新的向量会自动包含在基于索引的查询中。
+    增量写入可以在添加到 HNSW 图之前使用本地缓冲区。
 
 ---
 
@@ -216,12 +217,12 @@ COPY vector_node FROM (
 
 ## 创建 HNSW 索引
 
-NeuG 通过 HNSW 索引支持近似最近邻搜索。以下示例针对向量属性，对通用的 [`CREATE INDEX`](../storage_index/index.md#create-an-index) 语法进行了专门化。
+NeuG 通过 HNSW 索引支持近似最近邻搜索。以下示例将通用的 [CREATE INDEX](../storage_index/index.md#create-an-index) 语法专门化，用于向量属性。
 
 示例：
 
 ```cypher
-// 在向量属性上创建 HNSW 索引
+// Create HNSW index on vector property
 CREATE INDEX vec_hnsw_index IF NOT EXISTS
 ON vector_node
 USING HNSW (vec)
@@ -235,24 +236,24 @@ WITH (
 
 在该语句中：
 
-- `vec_hnsw_index` 是索引名称。它必须在数据库内唯一，并在删除索引时用于标识该索引。
+- `vec_hnsw_index` 是索引名称。它在数据库中必须唯一，并在删除索引时用于标识该索引。
 - `vector_node` 是包含向量属性的节点类型。
-- `HNSW` 指定使用分层可导航小世界（Hierarchical Navigable Small World）索引类型。
-- `vec` 是待索引的向量属性。
+- `HNSW` 选择分层导航小世界（Hierarchical Navigable Small World）索引类型。
+- `vec` 是要建立索引的向量属性。
 
-以下参数用于控制 HNSW 索引的构建与搜索行为：
+以下参数控制 HNSW 索引的构建和搜索行为：
 
-| 参数               | 描述                                                                 | 默认值 |
-| ------------------ | -------------------------------------------------------------------- | ------ |
-| `metric`           | 距离度量方式。支持的取值包括 `l2`（或 `l2sq`）、`cosine` 和 `ip`（或 `inner_product`） | `l2` |
-| `cosine_normalize` | 是否允许 **cosine** 类型的 HNSW 索引永久性地对被索引属性值执行 L2 归一化 | `true` |
-| `m`                | HNSW 图中每个节点所允许创建的最大连接数                              | `50`   |
-| `ef_construction`  | 构建索引过程中所使用的候选列表大小。更大的值通常可提升索引质量，但会增加构建时间和内存开销 | `500`  |
+| 参数 | 描述 | 默认值 |
+| ----------------- | --------------------------------------------------------------------- | ------- |
+| `metric` | 距离度量。支持的值为 `l2`（或 `l2sq`）、`cosine` 和 `ip`（或 `inner_product`） | `l2` |
+| `cosine_normalize` | **余弦** HNSW 索引是否可以对已索引的属性值进行永久 L2 归一化 | `true` |
+| `m` | HNSW 图中为每个节点创建的最大连接数 | `50` |
+| `ef_construction` | 构建索引时使用的候选列表大小。较大的值通常以提高构建时间和内存为代价来提升索引质量 | `500` |
 
-在创建索引时：
+创建索引时：
 
-- 已存在的节点将被自动索引。
-- 索引创建后插入的新节点将自动加入 HNSW 索引。
+- 现有节点会自动建立索引。
+- 在创建索引后插入的节点可以通过索引自动进行搜索，包括下文所述的本地缓冲区（Local Buffer）中的向量。
 
 ### 向量归一化
 
@@ -512,17 +513,17 @@ LIMIT 3;
 
 ## 向量修改
 
-创建 HNSW 索引后，您可以修改向量数据。插入、更新和删除操作会自动更新相应的索引，因此后续的 HNSW 查询将直接基于最新数据执行，无需手动同步索引。
+在创建 HNSW 索引后，您可以修改向量数据。插入、更新和删除操作会根据通常的事务可见性规则，自动反映在后续基于索引的查询中。增量写入可以保留在本地缓冲区中，直到进行 HNSW 维护，无需为查询可见性进行手动同步。
 
 ### 插入向量数据
 
-您可以使用标准的 Cypher 写操作来插入向量属性。
+您可以使用常规的 Cypher 写操作来插入向量属性。
 
 示例：
 
 ```cypher
-// 插入节点属性数据
-// 自动更新对应的 HNSW 索引
+// Insert node property data
+// Make the vector searchable through the index automatically
 CREATE (
     n:vector_node {
         id: 3,
@@ -547,14 +548,28 @@ DELETE n;
 
 ### 更新向量数据
 
-更新向量属性会自动更新 HNSW 索引。
+更新向量属性会自动使新值可通过索引进行搜索，在适用时也包括通过本地缓冲区（Local Buffer）进行搜索。
 
 示例：
 
 ```cypher
-// 更新向量属性
-// 自动更新 HNSW 索引
+// Update vector property
+// Make the updated vector searchable through the index automatically
 MATCH (n:vector_node)
 WHERE n.id = 1
 SET n.vec = [0.2, 0.2, 0.1, 0.1];
 ```
+
+---
+
+## 通过本地缓冲区实现更快的写入
+
+NeuG 通过将新插入或更新的向量放入**本地缓冲区**，而不是立即将每个向量添加到 HNSW 图中，从而降低了增量向量写入的延迟。这对于通过 `CREATE`（插入）、`MERGE` 或 `SET` 持续写入单个向量的应用程序非常有益。它适用于由归一化向量列支持的 L2、内积和余弦索引。
+
+缓冲区的向量在通常的事务可见性规则下仍然可搜索。查询会同时搜索 HNSW 和本地缓冲区，使用 Flat 索引来高效搜索缓冲区中的向量。应用程序可以继续使用相同的写入和查询语句；无需手动优化即可使新提交的数据可搜索。
+
+### 何时以及如何优化
+
+使用 `show_indexes` 检查 `buffered_count`，并使用 `optimize_indexes` 将缓冲向量合并到 HNSW 中。有关参数、示例和输出列，请参阅 [Inspect Indexes](../storage_index/index.md#inspect-indexes) 和 [Optimize Indexes](../storage_index/index.md#optimize-indexes)。
+
+NeuG 不会在缓冲区达到大小阈值时自动运行 `optimize_indexes` 或触发后台合并。建议在 `buffered_count` 达到 **5,000–10,000** 时显式进行优化，最好是在一批写入操作之后或在较安静的时段进行。这是一个起始指导原则：最佳间隔取决于向量维度以及读写之间的平衡。缓冲向量在优化之前仍然可搜索。
