@@ -1,0 +1,203 @@
+---
+title: 'NeuG v0.3.1: Better Vector Search, a More Stable System'
+description: >-
+  NeuG v0.3.1 is out. This release makes vector search easier to use: inserting
+  a vector no longer blocks on index maintenance, and committed data is
+  searchable right away. It also fixes a batch of problems exposed since the
+  last release,...
+date: '2026-11-10'
+author: NeuG Team
+category: release
+tags:
+  - NeuG
+  - release
+  - v0.3.1
+  - vector search
+  - Cypher
+  - graph database
+  - RAG
+translationKey: release-v0-3-1-vector-search
+draft: false
+aliases: []
+cover: /images/blog/release-v0-3-1-vector-search/banner_en.png
+locale: en
+---
+![Article cover](/images/blog/release-v0-3-1-vector-search/banner_en.png)
+
+NeuG v0.3.1 is out. This release makes vector search easier to use: inserting a vector no longer blocks on index maintenance, and committed data is searchable right away. It also fixes a batch of problems exposed since the last release, such as the NeuG Node.js SDK being unusable on Linux and Windows, so overall stability takes a clear step up.
+
+---
+
+## What's New: Writes Don't Wait, Reopen Just Works
+
+### HNSW writes now log first, compact later
+
+Previously every vector insert or update waited synchronously for HNSW graph maintenance, so write-heavy workloads were throttled by the index. This release buffers incoming vectors in the vector column instead; at query time an external flat index covers them and merges with the HNSW results into a single top-K. Committed writes are searchable immediately, and graph maintenance happens whenever you choose ([#1190](https://github.com/alibaba/neug/pull/1190)). The idea is the same as an LSM-tree: write the memtable first, compact in the background.
+
+Two new commands control when merging happens:
+
+```sql
+-- Check how many buffered increments each index holds
+CALL show_indexes('hnsw') RETURN type, name, buffered_count;
+
+-- Merge buffered increments into the HNSW graph (single transaction; can filter by type/name)
+CALL optimize_indexes();
+```
+
+`optimize_indexes()` completes the merge in a single transaction, supports WAL replay, and can be retried after a failure. Running it once after a bulk import, or during off-peak hours, is usually enough.
+
+### No manual LOAD after reopening
+
+Reopening a database used to require a manual `LOAD` of installed extensions, which is especially painful for embedded use where processes start and stop frequently. Now a single open-time flag discovers and loads installed extensions automatically, so they are ready to use right after reopen ([#1162](https://github.com/alibaba/neug/pull/1162)):
+
+```python
+db = Database("my_graph", mode="r", auto_load_extension=True)
+```
+
+Node.js calls it `autoLoadExtension`; the server CLI takes `--auto-load-extension`. The flag is off by default, and an extension that fails to load only writes a log entry — it never blocks the database from opening.
+
+One more vector-related fix: under concurrent reads and writes, search now skips vectors that are not yet visible at the snapshot boundary instead of reading invalid memory ([#1170](https://github.com/alibaba/neug/pull/1170)). And with `vector_search` packaging and ARM64 testing filled in on Windows, every platform now builds, packages, and tests all six extensions ([#1177](https://github.com/alibaba/neug/pull/1177), [#1182](https://github.com/alibaba/neug/pull/1182)).
+
+---
+
+## Verifying with Two Processes
+
+The dataset is just six 4-dimensional vectors, and the expected top-3 for the query `[1, 0, 0, 0]` can be checked by eye: alpha (0), beta (0.02), epsilon (1.64).
+
+The first process creates the database, writes, optimizes, and checkpoints:
+
+```python
+from contextlib import closing
+from neug import Database
+
+ITEMS = [
+    (1, "alpha",   [1.0, 0.0, 0.0, 0.0]),
+    (2, "beta",    [0.9, 0.1, 0.0, 0.0]),
+    (3, "gamma",   [0.0, 1.0, 0.2, 0.0]),
+    (4, "delta",   [0.0, 0.0, 1.0, 0.0]),
+    (5, "epsilon", [0.2, 0.0, 0.0, 1.0]),
+    (6, "zeta",    [-1.0, 0.0, 0.0, 0.0]),
+]
+KNN = (
+    "MATCH (n:Item) RETURN n.id, n.name, "
+    "vector_distance_l2(n.embedding, [1.0, 0.0, 0.0, 0.0]) AS distance "
+    "ORDER BY distance ASC LIMIT 3;"
+)
+
+with closing(Database("vector-demo-graph", mode="w", max_thread_num=2)) as db:
+    with closing(db.connect()) as conn:
+        conn.execute("INSTALL vector_search;")  # one-time download of the extension package for this platform
+        conn.execute("LOAD vector_search;")
+        conn.execute(
+            "CREATE NODE TABLE Item("
+            "id INT64, name STRING, embedding FLOAT[4], PRIMARY KEY(id));"
+        )
+        conn.execute(
+            "CREATE INDEX items_hnsw ON Item USING HNSW (embedding) "
+            "WITH (metric='l2');"
+        )
+        for item_id, name, vec in ITEMS:
+            conn.execute(
+                "CREATE (:Item {id: $id, name: $name, embedding: $vec});",
+                parameters={"id": item_id, "name": name, "vec": vec},
+            )
+
+        for row in conn.execute(KNN):  # nothing merged into the HNSW graph yet, already searchable
+            print(f"before: id={row[0]} {row[1]} {row[2]:.4f}")
+        print(list(conn.execute(
+            "CALL show_indexes('hnsw') RETURN type, name, buffered_count;"
+        )))
+        for row in conn.execute("CALL optimize_indexes();"):
+            print(f"optimize: {row[1]} indexed={row[2]} skipped={row[3]}")
+        conn.execute("CHECKPOINT;")
+```
+
+The second process simulates a service restart and never writes a single `LOAD`:
+
+```python
+from contextlib import closing
+from neug import Database
+
+KNN = (
+    "MATCH (n:Item) RETURN n.id, n.name, "
+    "vector_distance_l2(n.embedding, [1.0, 0.0, 0.0, 0.0]) AS distance "
+    "ORDER BY distance ASC LIMIT 3;"
+)
+
+with closing(
+    Database("vector-demo-graph", mode="r", max_thread_num=2,
+             auto_load_extension=True)
+) as db:
+    with closing(db.connect()) as conn:
+        for row in conn.execute(KNN):
+            print(f"reopened: id={row[0]} {row[1]} {row[2]:.4f}")
+        result = conn.execute("PROFILE " + KNN)
+        list(result)
+        ops = [op["operator_name"] for op in result.get_profile_metrics()["operators"]]
+        print(f"Uses index scan: {'IndexScanOpr' in ops}")
+```
+
+Output of the two scripts (database logs omitted):
+
+```text
+before: id=1 alpha 0.0000
+before: id=2 beta 0.0200
+before: id=5 epsilon 1.6400
+[['hnsw', 'items_hnsw', 6]]
+optimize: items_hnsw indexed=6 skipped=0
+
+reopened: id=1 alpha 0.0000
+reopened: id=2 beta 0.0200
+reopened: id=5 epsilon 1.6400
+Uses index scan: True
+```
+
+The output confirms both claims from earlier. When the query ran, all six vectors were still in the buffer (`buffered_count = 6`) and none had entered the HNSW graph, yet the top-3 was already correct — that's the flat index covering them. After `optimize_indexes()` merged all six increments into the graph in one pass, the reopened second process wrote no `LOAD` at all, returned exactly the same results as the first, and `PROFILE` confirmed the query used an `IndexScanOpr` index scan.
+
+---
+
+## Stability Fixes
+
+- **`properties(n)` no longer takes the process down** ([#1189](https://github.com/alibaba/neug/pull/1189)): this unsupported single-argument form used to crash the whole process with a SIGSEGV. In setups where an LLM generates Cypher, one stray `properties(n)` from the model could kill the host process; it now returns a clean, catchable binder error.
+- **`COPY FROM` subquery type mismatches no longer corrupt data** ([#1188](https://github.com/alibaba/neug/pull/1188)): when source and target column types differed, values were silently reinterpreted as raw bytes and garbage was written; now convertible types (e.g. `INT64 → DOUBLE`) are cast automatically, and non-convertible ones fail with an error.
+- **Linux `require('@neug-ai/neug')` segfault fixed** ([#1161](https://github.com/alibaba/neug/pull/1161)): `libneug.so` no longer re-exports its bundled OpenSSL symbols, so it can't clash with the OpenSSL inside Node.js and crash at load time.
+- **Windows Node SDK extension LOAD error 127 fixed** ([#1163](https://github.com/alibaba/neug/pull/1163)): two root causes — the extension-directory environment variable being invisible to the MSVC CRT, and a mimalloc ABI mismatch — were fixed separately, and all six extensions now LOAD. The libstdc++ ABI between the npm package and wheel extensions on Linux was aligned as well ([#1155](https://github.com/alibaba/neug/pull/1155)).
+- **Normal lifecycle no longer logs misleading messages** ([#1158](https://github.com/alibaba/neug/pull/1158)): a repeated `Close()` returns silently, and a missing `store_type` no longer raises ERROR/WARNING.
+
+The release pipeline got a cleanup in the same pass: platform testing and the release workflow were merged into one ([#1147](https://github.com/alibaba/neug/pull/1147)), build artifacts are reused across language tests, releases package first and only ship after the packaged artifacts pass install verification, and version bumps are scripted behind a consistency gate ([#1166](https://github.com/alibaba/neug/pull/1166)). The package you download is now literally the package that was tested.
+
+Full release notes: [GitHub Release](https://github.com/alibaba/neug/releases/tag/v0.3.1).
+
+---
+
+## Give It a Try
+
+Linux / macOS / Windows (x86_64 & arm64):
+
+Python SDK:
+
+```bash
+pip install neug
+```
+
+Node.js SDK:
+
+```bash
+npm install @neug-ai/neug
+```
+
+Existing v0.3.0 database files open directly with v0.3.1; checkpoints are fully compatible. If your workload is vector search, RAG, or agent memory — frequent writes plus frequent process restarts — give the `optimize_indexes()` + `auto_load_extension` combination a try. Issues and feedback welcome.
+
+GitHub: https://github.com/alibaba/neug
+NeuG v0.3.1 release notes: https://github.com/alibaba/neug/releases/tag/v0.3.1
+
+---
+
+**About NeuG**
+
+NeuG is an embedded graph database built for AI scenarios, unifying vector, full-text, and graph retrieval in a single engine. It runs embedded in your application or behind a service, and is natively supported on Linux / macOS / Windows (x86_64 and arm64). It's open source — you're welcome to try it and contribute:
+
+- GitHub: https://github.com/alibaba/neug
+- Release notes: https://github.com/alibaba/neug/releases/tag/v0.3.1
+
+Follow our blog for more from the NeuG team.

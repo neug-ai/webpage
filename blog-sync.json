@@ -107,6 +107,21 @@
         "banner_en.png",
         "banner_zh.png"
       ]
+    },
+    "release-v0.3.1-vector-search": {
+      "siteSlug": "release-v0-3-1-vector-search",
+      "commit": "11c6b002286b930fa4877aa3d129faafb643b725",
+      "sourceHash": "4501fb8ef72be04dfb6ff7833492f0f22f8931102fdb6904d3eef00ec4e81015",
+      "chineseSourceFile": "mother.md",
+      "chineseSourceHash": "32f45d0f49568c4be64a006f36988a0bebd9930e49c6e8f37a593cc0de1807ee",
+      "fingerprint": "0fc5b028ddfeab12396a2a11c88267f989ef2adcd05caf8a36de1e089dc21820",
+      "syncSchemaVersion": "3",
+      "date": "2026-11-10",
+      "syncedAt": "2026-11-10T09:52:03.646Z",
+      "assets": [
+        "banner_en.png",
+        "banner_zh.png"
+      ]
     }
   }
 }

@@ -1,0 +1,191 @@
+---
+title: NeuG v0.3.1：更好用的向量检索，更稳定的系统
+description: >-
+  NeuG v0.3.1
+  正式发布。这一版我们优化了向量检索的写入路径：插入向量时不再同步等待索引维护，已提交的数据马上就能搜到；同时修复了上个版本暴露出的一些问题，比如 NeuG
+  Node.js SDK 在 Linux 和 Windows 上不可用，整体稳定性有了明显提升。
+date: '2026-11-10'
+author: NeuG Team
+category: release
+tags:
+  - NeuG
+  - release
+  - v0.3.1
+  - vector search
+  - Cypher
+  - graph database
+  - RAG
+translationKey: release-v0-3-1-vector-search
+draft: false
+aliases: []
+cover: /images/blog/release-v0-3-1-vector-search/banner_zh.png
+locale: zh
+---
+![文章封面](/images/blog/release-v0-3-1-vector-search/banner_zh.png)
+
+NeuG v0.3.1 正式发布。这一版我们优化了向量检索的写入路径：插入向量时不再同步等待索引维护，已提交的数据马上就能搜到；同时修复了上个版本暴露出的一些问题，比如 NeuG Node.js SDK 在 Linux 和 Windows 上不可用，整体稳定性有了明显提升。
+
+---
+
+## 新特性：写入不等待，重开即查
+
+### HNSW 写入改成"先记账、后整理"
+
+以前每条向量的插入、更新都要同步等 HNSW 图维护完成，写入频繁时吞吐会被索引拖住。这一版改成了增量向量先缓冲在向量列里，查询时由一个外部 Flat 索引兜底，和 HNSW 的结果合并成统一的 top-K。也就是说，已提交的写入马上就能搜到，图维护推迟到你自己选的时机再做（[#1190](https://github.com/alibaba/neug/pull/1190)）。思路上和 LSM-tree 一样：先写 memtable，compaction 放到后台。
+
+什么时候合并，由两个新命令控制：
+
+```sql
+-- 查看各索引缓冲区里积压了多少增量
+CALL show_indexes('hnsw') RETURN type, name, buffered_count;
+
+-- 把缓冲的增量合并进 HNSW 图（单事务，支持按类型/名称筛选）
+CALL optimize_indexes();
+```
+
+`optimize_indexes()` 在单个事务里完成合并，支持 WAL 回放，失败后可以重试。一般批量导入完成后或者低峰期跑一次就够了。
+
+### 重开数据库不用手动 LOAD
+
+以前重开数据库必须先手动 `LOAD` 已安装的扩展，进程频繁启停的嵌入式场景尤其麻烦。现在打开时加一个开关，自动发现并加载已安装的扩展，重开后扩展直接可用（[#1162](https://github.com/alibaba/neug/pull/1162)）：
+
+```python
+db = Database("my_graph", mode="r", auto_load_extension=True)
+```
+
+Node.js 对应 `autoLoadExtension`，server CLI 对应 `--auto-load-extension`。开关默认是关的；扩展加载失败也只记日志，不会挡住数据库打开。
+
+向量相关的修复还有一处：并发读写时，搜索会按快照边界跳过还不可见的向量，不会再读到无效内存（[#1170](https://github.com/alibaba/neug/pull/1170)）。Windows 这边也补齐了 `vector_search` 的打包和 ARM64 测试，现在所有平台都会构建、打包并测试全部六个扩展（[#1177](https://github.com/alibaba/neug/pull/1177), [#1182](https://github.com/alibaba/neug/pull/1182)）。
+
+---
+
+## 两个进程验证一遍
+
+数据只有 6 个 4 维向量，对查询 `[1, 0, 0, 0]` 的 top-3 可以肉眼核对：alpha（0）、beta（0.02）、epsilon（1.64）。
+
+第一个进程负责建库、写入、优化、落盘：
+
+```python
+from contextlib import closing
+from neug import Database
+
+ITEMS = [
+    (1, "alpha",   [1.0, 0.0, 0.0, 0.0]),
+    (2, "beta",    [0.9, 0.1, 0.0, 0.0]),
+    (3, "gamma",   [0.0, 1.0, 0.2, 0.0]),
+    (4, "delta",   [0.0, 0.0, 1.0, 0.0]),
+    (5, "epsilon", [0.2, 0.0, 0.0, 1.0]),
+    (6, "zeta",    [-1.0, 0.0, 0.0, 0.0]),
+]
+KNN = (
+    "MATCH (n:Item) RETURN n.id, n.name, "
+    "vector_distance_l2(n.embedding, [1.0, 0.0, 0.0, 0.0]) AS distance "
+    "ORDER BY distance ASC LIMIT 3;"
+)
+
+with closing(Database("vector-demo-graph", mode="w", max_thread_num=2)) as db:
+    with closing(db.connect()) as conn:
+        conn.execute("INSTALL vector_search;")  # 一次性下载当前平台的扩展包
+        conn.execute("LOAD vector_search;")
+        conn.execute(
+            "CREATE NODE TABLE Item("
+            "id INT64, name STRING, embedding FLOAT[4], PRIMARY KEY(id));"
+        )
+        conn.execute(
+            "CREATE INDEX items_hnsw ON Item USING HNSW (embedding) "
+            "WITH (metric='l2');"
+        )
+        for item_id, name, vec in ITEMS:
+            conn.execute(
+                "CREATE (:Item {id: $id, name: $name, embedding: $vec});",
+                parameters={"id": item_id, "name": name, "vec": vec},
+            )
+
+        for row in conn.execute(KNN):  # 一条都还没合并进 HNSW 图，已经可搜
+            print(f"before: id={row[0]} {row[1]} {row[2]:.4f}")
+        print(list(conn.execute(
+            "CALL show_indexes('hnsw') RETURN type, name, buffered_count;"
+        )))
+        for row in conn.execute("CALL optimize_indexes();"):
+            print(f"optimize: {row[1]} indexed={row[2]} skipped={row[3]}")
+        conn.execute("CHECKPOINT;")
+```
+
+第二个进程模拟服务重启，全程不写一句 `LOAD`：
+
+```python
+from contextlib import closing
+from neug import Database
+
+KNN = (
+    "MATCH (n:Item) RETURN n.id, n.name, "
+    "vector_distance_l2(n.embedding, [1.0, 0.0, 0.0, 0.0]) AS distance "
+    "ORDER BY distance ASC LIMIT 3;"
+)
+
+with closing(
+    Database("vector-demo-graph", mode="r", max_thread_num=2,
+             auto_load_extension=True)
+) as db:
+    with closing(db.connect()) as conn:
+        for row in conn.execute(KNN):
+            print(f"reopened: id={row[0]} {row[1]} {row[2]:.4f}")
+        result = conn.execute("PROFILE " + KNN)
+        list(result)
+        ops = [op["operator_name"] for op in result.get_profile_metrics()["operators"]]
+        print(f"Uses index scan: {'IndexScanOpr' in ops}")
+```
+
+两段脚本的输出（省略数据库日志）：
+
+```text
+before: id=1 alpha 0.0000
+before: id=2 beta 0.0200
+before: id=5 epsilon 1.6400
+[['hnsw', 'items_hnsw', 6]]
+optimize: items_hnsw indexed=6 skipped=0
+
+reopened: id=1 alpha 0.0000
+reopened: id=2 beta 0.0200
+reopened: id=5 epsilon 1.6400
+Uses index scan: True
+```
+
+输出里能看到前面说的两件事：查询发生时 6 条向量还全在缓冲区里（`buffered_count = 6`），一条都没进 HNSW 图，但 top-3 已经是对的，这是 Flat 索引在兜底；`optimize_indexes()` 把 6 条增量一次性合并进图之后，重开的第二个进程一句 `LOAD` 都没写，查询结果和第一个进程完全一致，`PROFILE` 也确认走的是 `IndexScanOpr` 索引扫描。
+
+---
+
+## 稳定性修复
+
+- **`properties(n)` 不再把进程打崩**（[#1189](https://github.com/alibaba/neug/pull/1189)）：这个不支持的单参数写法以前会直接 SIGSEGV 崩掉整个进程。跑 LLM 生成 Cypher 的场景里，模型随手一句 `properties(n)` 就能把宿主进程带走；现在会返回干净、可捕获的 binder 报错。
+- **`COPY FROM` 子查询类型不匹配不再写坏数据**（[#1188](https://github.com/alibaba/neug/pull/1188)）：以前源列与目标列类型不同时会按原始字节静默重解释、写入垃圾数据；现在能隐式转换的（如 `INT64 → DOUBLE`）自动 cast，不能转的直接报错。
+- **Linux 上 `require('@neug-ai/neug')` 段错误修复**（[#1161](https://github.com/alibaba/neug/pull/1161)）：`libneug.so` 不再向外重导出内置的 OpenSSL 符号，避免与 Node.js 自带的 OpenSSL 互相干扰导致加载即崩。
+- **Windows Node SDK 扩展 LOAD error 127 修复**（[#1163](https://github.com/alibaba/neug/pull/1163)）：扩展目录环境变量对 MSVC CRT 不可见、mimalloc ABI 不一致两个根因分别修掉，六个扩展全部可 LOAD；Linux 侧 npm 包与 wheel 扩展的 libstdc++ ABI 也一并对齐（[#1155](https://github.com/alibaba/neug/pull/1155)）。
+- **正常生命周期不再刷误导性日志**（[#1158](https://github.com/alibaba/neug/pull/1158)）：重复 `Close()` 静默返回；未填 `store_type` 不再报 ERROR/WARNING。
+
+发布流水线也在这次一起整理了：平台测试和发布 workflow 合并成一套（[#1147](https://github.com/alibaba/neug/pull/1147)），构建产物在各语言测试之间复用，发布前先打包、装包验证通过才发，版本号 bump 交给脚本并加了一致性门禁（[#1166](https://github.com/alibaba/neug/pull/1166)）。发出去的包和被测过的包，从此是同一份产物。
+
+完整 release notes 见 [GitHub Release](https://github.com/alibaba/neug/releases/tag/v0.3.1)。
+
+---
+
+## 上手试试
+
+Linux / macOS / Windows（x86_64 & arm64）：
+
+Python SDK：
+
+```bash
+pip install neug
+```
+
+Node.js SDK：
+
+```bash
+npm install @neug-ai/neug
+```
+
+已有的 v0.3.0 数据库文件可以直接用 v0.3.1 打开，checkpoint 完全兼容。如果你的场景是向量检索、RAG 或者 Agent 记忆这类写入频繁、进程又经常重启的，可以试试 `optimize_indexes()` 加 `auto_load_extension` 的组合。遇到问题欢迎提 issue。
+
+- GitHub：[alibaba/neug](https://github.com/alibaba/neug)
+- Release notes：[NeuG v0.3.1](https://github.com/alibaba/neug/releases/tag/v0.3.1)
