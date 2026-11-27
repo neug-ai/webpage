@@ -122,6 +122,21 @@
         "banner_en.png",
         "banner_zh.png"
       ]
+    },
+    "riemann-proof-atlas": {
+      "siteSlug": "riemann-proof-atlas",
+      "commit": "45162dc4584ab2190f3bd333f68c285c9b930447",
+      "sourceHash": "ab958460b5fd289893741d3d203f891f05119c57628dc7b35b5e97815213a70a",
+      "chineseSourceFile": "mother.md",
+      "chineseSourceHash": "a25c1edc2a168b28b03f99869e039cb5d9eede4917bbf9049f7c313a8f10aeae",
+      "fingerprint": "39574cd9f34ce60f6c769ebae2a4b356a52b95589fb8e05c1333b8e380446b15",
+      "syncSchemaVersion": "3",
+      "date": "2026-11-27",
+      "syncedAt": "2026-11-27T02:41:58.919Z",
+      "assets": [
+        "banner_en.webp",
+        "banner_zh.webp"
+      ]
     }
   }
 }

@@ -1,0 +1,37 @@
+---
+title: 1700 万行 Lean，黎曼猜想的证明从哪里读起？
+description: 黎曼当年的手稿只有六页，今天的形式化证明有约 1700 万行代码。从临界线出发，沿着 23 个步骤追溯素数估计、原始论文和 Lean 证明。
+date: '2026-11-27'
+author: Longbin Lai
+category: case-study
+tags:
+  - NeuG
+  - Lean
+  - number theory
+  - knowledge graph
+  - case-study
+translationKey: riemann-proof-atlas
+draft: false
+aliases: []
+cover: /images/blog/riemann-proof-atlas/banner_zh.webp
+locale: zh
+---
+2026 年 11 月 20 日，Levent Alpöge 发布了他借助 Claude 完成的黎曼猜想证明。交到读者手里的是一个约 **1700 万行代码**的 Lean 库。第二天，Lean FRO 和 Mathlib Initiative 发表联合声明，报告他们已经核对了所证明的命题，也用多个检查器验证了证明。[Lean 与 Mathlib 的联合声明](https://leanprover-community.github.io/blog/posts/riemann-hypothesis/)
+
+1859 年，黎曼写下这个猜想时，那份手稿一共只有六页，标题朴素得很：《论小于给定数值的素数个数》。给你一个很大的数，在它之前有多少个素数？数学家已经能估出一个相当好的答案。黎曼看得更远一些：估计值和实际数目之间总会有偏差，这个偏差能有多大，竟然和一个复函数在哪些地方取零有关。他猜想，ζ 函数所有非平凡零点都落在同一条竖线上。数论里许多关于素数分布的结果，过去都要以“假设黎曼猜想成立”开头。人们等了 167 年，等的就是可以把这句话拿掉。[看看黎曼当年的手稿](https://www.claymath.org/collections/riemanns-1859-manuscript/)
+
+可要是我今天把这 1700 万行代码的地址发给一个对数学好奇的朋友，他该从哪个文件读起？即使他会 Lean，也很难靠逐行往下翻，看清素数、L 函数和自守形式究竟是在哪里碰到一起的。
+
+我为此做了一张中英文的**黎曼证明星图**。我把论证梳理成 23 个可以来回走的步骤。你可以先看全貌，也可以挑一个自己想弄明白的问题，从结论往回追。[打开整张星图](https://longbinlai.github.io/riemann-atlas/?lang=zh&step=reflection&view=overview)
+
+![黎曼证明星图全景。右上方选中的是最后一步「临界线」，每条连线都可以点开。](/images/blog/riemann-proof-atlas/banner_zh.webp)
+
+**第一次来，我建议从最后一步开始。** 想象一下那条竖线。证明走到这里，已经排除了临界带右半边的零点。可左半边怎么办？对 ζ 函数，函数方程给出了一种对称性。如果左边还藏着一个零点，右边就该有一个与它对应的零点。这与刚刚得到的结论矛盾。于是，临界带里剩下的零点只能在线上。你已经读懂了整条证明的最后一个转折。[进入最后一步「临界线」](https://longbinlai.github.io/riemann-atlas/?lang=zh&step=reflection)
+
+顺着图上的线退一步，问题立刻变难，也更有意思了：**凭什么能排除右半边的零点？** 点开前置结论，你会看到一个关于零点的问题，怎样牵出一个关于素数求和误差的问题。再往前，有人会想看这个误差具体怎样估，有人会想查这里用的定理是哪篇论文里的。双击节点，就能沿着自己的问题去读，回来时还在刚才的岔路口。
+
+这张图尤其要感谢 **Robin Zhang**。他的第二版笔记用了 76 页、列出 113 项参考文献，去追溯这份新证明背后许多代数学家留下的工作。星图里能从一步推导点回笔记的某一页，再找到那一页引的论文，很大程度上得益于这份考据。遇到笔记与精简 Lean 版走法不同的地方，我也尽量标了出来，方便读者自己对照。[Robin Zhang 的笔记](https://hexagonmath.org/2611.00809v2)
+
+星图用 NeuG 保存这些关系，再导出一份静态快照，你在浏览器里就能沿着它们读下去。[星图源码](https://github.com/longbinlai/riemann-atlas) · [NeuG](https://github.com/alibaba/neug)
+
+如果你也曾经很想知道黎曼猜想究竟是怎么证的，欢迎进来走一段。哪条线一头能懂、另一头突然看不懂了，把那颗星的链接发给我。我最想知道的，就是图上还有哪些地方，值得停下来再讲清楚一点。[进入星图](https://longbinlai.github.io/riemann-atlas/?lang=zh) · [给我留言](https://github.com/longbinlai/riemann-atlas/issues)
