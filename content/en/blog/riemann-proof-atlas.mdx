@@ -1,0 +1,40 @@
+---
+title: Where do you start reading 17 million lines of Lean?
+description: >-
+  Follow a proof of the Riemann hypothesis through 23 connected steps, from the
+  critical line back to the estimates on primes, papers and Lean declarations
+  that lead there.
+date: '2026-11-27'
+author: Longbin Lai
+category: case-study
+tags:
+  - NeuG
+  - Lean
+  - number theory
+  - knowledge graph
+  - case-study
+translationKey: riemann-proof-atlas
+draft: false
+aliases: []
+cover: /images/blog/riemann-proof-atlas/banner_en.webp
+locale: en
+---
+On November 20, 2026, Levent Alpöge released the proof of the Riemann hypothesis he had developed with Claude. It arrived as a Lean library containing some **17 million lines of code**. The next day, the Lean FRO and the Mathlib Initiative reported that they had verified the statement being proved and checked the proof with several independent checkers. [Read their joint statement](https://leanprover-community.github.io/blog/posts/riemann-hypothesis/)
+
+Riemann’s manuscript from 1859 runs to just six handwritten pages. Its title asks a disarmingly simple question. How many primes are there below a given number? We have a good estimate for that count. What Riemann saw was that the error in the estimate is intimately connected to the places where a particular function vanishes. He conjectured that every nontrivial zero of the zeta function lies on the same vertical line. A great many results about primes have been proved with the qualification “assuming the Riemann hypothesis.” After 167 years, a proof lets you drop those words. [See Riemann’s manuscript](https://www.claymath.org/collections/riemanns-1859-manuscript/)
+
+Suppose I send those 17 million lines to a friend who wants to understand what happened. Which file should they open? Even a reader who knows Lean could spend a very long time scrolling before finding the point where an estimate about primes meets an argument about zeros.
+
+That’s the problem I built **Riemann Proof Atlas** for. It’s a map of the argument, in English and Chinese, with 23 stops along the way. You can see the whole route at once, pick a conclusion that interests you, and work backwards. [Open the full map](https://longbinlai.github.io/riemann-atlas/?lang=en&step=reflection&view=overview)
+
+![The full proof map, with the critical line selected at the upper right. Each connection opens a step in the argument.](/images/blog/riemann-proof-atlas/banner_en.webp)
+
+**On a first visit, I’d start at the end.** Picture that vertical line. By the final step, the proof has ruled out zeros in the right half of the critical strip. What about the left half? For the zeta function, the functional equation gives a symmetry. If there were a zero on the left, it would have a partner on the right, precisely where we already know there are none. That leaves only the line itself. You now have the last turn of the argument in your head. [Try the final step](https://longbinlai.github.io/riemann-atlas/?lang=en&step=reflection)
+
+Take one step back on the map and you get a considerably harder question. **How did we rule out zeros on the right in the first place?** Follow that connection and a question about zeros becomes a question about the error in a sum over primes. From there you might want to see how the error is bounded. Or you might want to know whose theorem makes a particular step possible. Double-click a node to follow the reference. The map keeps your place at the fork.
+
+I owe a particular debt to **Robin Zhang**. The second edition of his note devotes 76 pages and 113 references to tracing the generations of mathematics behind this proof. Much of the route from a step on the map to a page of exposition and then to an original paper is possible because he did that work. Where his account and the condensed Lean development take different routes, I’ve marked the difference so you can read them side by side. [Read Robin Zhang’s note](https://hexagonmath.org/2611.00809v2)
+
+The atlas stores these connections in NeuG and publishes a static graph snapshot, so you can follow them in your browser. [Atlas source](https://github.com/longbinlai/riemann-atlas) · [NeuG](https://github.com/alibaba/neug)
+
+If you’ve ever wanted to know how anyone could prove the Riemann hypothesis, come and follow one piece of it. And if you find a connection where you understand the star at one end and feel completely lost at the other, send me that link. That’s a place where the map could use another explanation. [Explore the atlas](https://longbinlai.github.io/riemann-atlas/?lang=en) · [Tell me where you got stuck](https://github.com/longbinlai/riemann-atlas/issues)
